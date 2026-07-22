@@ -34,3 +34,12 @@ class DishCostOut(BaseModel):
     plate_cost: float
     margin_pounds: float
     margin_percent: float
+
+class RecipeIngredientDraft(BaseModel):
+    name: str
+    quantity: float
+    unit: UnitType
+
+class RecipeDraft(BaseModel):
+    dish_name: str
+    ingredients: list[RecipeIngredientDraft]
