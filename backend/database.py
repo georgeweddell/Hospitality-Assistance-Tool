@@ -27,7 +27,7 @@ def get_db():
 
 
 
-def get_current_user(db: Session = Depends(get_db)) -> "User":
+def get_current_user(db: Session = Depends(get_db)) -> "User": # type: ignore
     from models import User
     # Stub for now — always returns the one seeded dev user.
     # Phase 6 replaces this body with real login-token verification;

@@ -43,3 +43,32 @@ class RecipeIngredientDraft(BaseModel):
 class RecipeDraft(BaseModel):
     dish_name: str
     ingredients: list[RecipeIngredientDraft]
+
+class IngredientSuggestion(BaseModel):
+    id: int
+    name: str
+
+class MatchedIngredientDraft(BaseModel):
+    name: str
+    quantity: float
+    unit: UnitType
+    matched_ingredient_id: int | None
+    suggestions: list[IngredientSuggestion]
+
+class ConfirmedIngredient(BaseModel):
+    ingredient_id: int
+    quantity: float
+
+class RecipeConfirm(BaseModel):
+    ingredients: list[ConfirmedIngredient]
+
+class DishIngredientOut(BaseModel):
+    ingredient_id: int
+    quantity: float
+
+    class Config:
+        from_attributes = True
+
+class RecipeSaveOut(BaseModel):
+    ingredients: list[DishIngredientOut]
+    cost: DishCostOut

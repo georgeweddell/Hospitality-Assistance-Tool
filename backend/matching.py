@@ -13,8 +13,28 @@ def match_ingredient(db, name: str) -> models.Ingredient | None:
 def suggest_ingredients(db, name: str, limit: int = 3) -> list[models.Ingredient]:
     ingredients = db.query(models.Ingredient).all()
     names = [ingredient.name for ingredient in ingredients]
-    matches = get_close_matches(name, names, n=limit, cutoff=0.6)
+    matches = get_close_matches(name, names, n=limit, cutoff=0.45)
     suggestions = []
     for match_name in matches:
         suggestions.append(match_ingredient(db, match_name))
     return suggestions 
+
+def match_recipe_ingredients(db, recipe: schemas.RecipeDraft) -> list[schemas.MatchedIngredientDraft]:
+    results = []
+    for ingredient in recipe.ingredients:
+        match = match_ingredient(db, ingredient.name)
+        if match:
+            matched_id = match.id
+            suggestion_names = []
+        else:
+            matched_id = None
+            suggestions = [schemas.IngredientSuggestion(name = s.name,id = s.id) for s in suggest_ingredients(db, ingredient.name)]
+
+        results.append(schemas.MatchedIngredientDraft(
+            name=ingredient.name,
+            quantity=ingredient.quantity,
+            unit=ingredient.unit,
+            matched_ingredient_id=matched_id,
+            suggestions=suggestions,
+        ))
+    return results

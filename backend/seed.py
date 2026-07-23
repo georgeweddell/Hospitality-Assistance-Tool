@@ -63,6 +63,9 @@ ingredients = [
     Ingredient(name="savoiardi biscuits", unit=UnitType.GRAM, price_per_unit=0.005), # £5.00/kg
     Ingredient(name="cocoa powder", unit=UnitType.GRAM, price_per_unit=0.008),      # £8.00/kg
     Ingredient(name="caster sugar", unit=UnitType.GRAM, price_per_unit=0.001),      # £1.00/kg
+
+    ## --- No Cost/Utilities ---
+    Ingredient(name="water", unit = UnitType.ML, price_per_unit=0.0)
 ]
 
 db.add_all(ingredients)

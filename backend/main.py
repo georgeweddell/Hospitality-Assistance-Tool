@@ -3,11 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from costing import cost_dish
 from database import Base, engine
 import models
-from fastapi import Depends
+import schemas
+from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
-from schemas import DishCostOut, IngredientCreate, IngredientOut, DishType, DishCreate, DishOut
-from models import Dish, Ingredient
+from schemas import DishCostOut, IngredientCreate, IngredientOut, DishType, DishCreate, DishOut, MatchedIngredientDraft, RecipeSaveOut
+from models import Dish, DishIngredient, Ingredient
+from recipe_ai import estimate_recipe
+from matching import match_recipe_ingredients
 
 Base.metadata.create_all(bind=engine)
 
@@ -60,4 +63,40 @@ def get_dish_cost(dish_id: int, db: Session = Depends(get_db)):
         plate_cost=plate_cost,
         margin_pounds=margin_pounds,
         margin_percent=margin_percent
+    )
+
+@app.post("/dishes/{dish_id}/estimate-recipe", response_model=list[MatchedIngredientDraft])
+def estimate_recipe_route(dish_id: int, db: Session = Depends(get_db)):
+    dish = db.query(Dish).filter(Dish.id == dish_id).first()
+    if not dish:
+        raise HTTPException(status_code=404, detail="Dish not found")
+
+    recipe = estimate_recipe(dish.name, dish.category)
+    matched = match_recipe_ingredients(db, recipe)
+    return matched
+
+@app.post("/dishes/{dish_id}/recipe", response_model=RecipeSaveOut)
+def save_recipe(dish_id: int, confirmed: schemas.RecipeConfirm, db: Session = Depends(get_db)):
+    dish = db.query(Dish).filter(Dish.id == dish_id).first()
+    recipe = []
+    if not dish:
+        raise HTTPException(status_code=404, detail="Dish not found")
+
+    db.query(models.DishIngredient).filter(models.DishIngredient.dish_id == dish_id).delete()
+
+    for item in confirmed.ingredients:
+        confirmed_ingredient = DishIngredient(dish_id=dish_id, ingredient_id=item.ingredient_id, quantity=item.quantity)
+        recipe.append(confirmed_ingredient)
+        db.add(confirmed_ingredient)
+    db.commit()
+
+    plate_cost, margin_pounds, margin_percent = cost_dish(db, dish_id)
+    cost_out = DishCostOut(
+            plate_cost=plate_cost,
+            margin_pounds=margin_pounds,
+            margin_percent=margin_percent
+        )
+    return RecipeSaveOut(
+        ingredients = recipe,
+        cost = cost_out
     )
