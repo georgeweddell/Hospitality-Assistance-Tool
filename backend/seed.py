@@ -8,7 +8,7 @@ ingredients = [
     # --- flour / leavening ---
     Ingredient(name="00 flour", unit=UnitType.GRAM, price_per_unit=0.0012),        # £1.20/kg
     Ingredient(name="semolina", unit=UnitType.GRAM, price_per_unit=0.001),         # £1.00/kg
-    Ingredient(name="fine sea salt", unit=UnitType.GRAM, price_per_unit=0.0006),   # £0.60/kg
+    Ingredient(name="salt", unit=UnitType.GRAM, price_per_unit=0.0006),   # £0.60/kg
     Ingredient(name="fresh yeast", unit=UnitType.GRAM, price_per_unit=0.003),      # £3.00/kg
 
     # --- dairy / cheese ---
@@ -62,10 +62,35 @@ ingredients = [
     Ingredient(name="egg", unit=UnitType.EACH, price_per_unit=0.30),                # £0.30 each
     Ingredient(name="savoiardi biscuits", unit=UnitType.GRAM, price_per_unit=0.005), # £5.00/kg
     Ingredient(name="cocoa powder", unit=UnitType.GRAM, price_per_unit=0.008),      # £8.00/kg
-    Ingredient(name="caster sugar", unit=UnitType.GRAM, price_per_unit=0.001),      # £1.00/kg
+    Ingredient(name="sugar", unit=UnitType.GRAM, price_per_unit=0.001),      # £1.00/kg
 
     ## --- No Cost/Utilities ---
-    Ingredient(name="water", unit = UnitType.ML, price_per_unit=0.0)
+    Ingredient(name="water", unit = UnitType.ML, price_per_unit=0.0),
+
+    # --- bread / sides ---
+    Ingredient(name="bread (sliced loaf)", unit=UnitType.GRAM, price_per_unit=0.003),
+    Ingredient(name="potatoes", unit=UnitType.GRAM, price_per_unit=0.0012),   # £1.20/kg
+    Ingredient(name="vegetable oil", unit=UnitType.ML, price_per_unit=0.0022),  # £2.20/l
+    Ingredient(name="mixed salad leaves", unit=UnitType.GRAM, price_per_unit=0.006),  # £6.00/kg
+    Ingredient(name="cucumber", unit=UnitType.GRAM, price_per_unit=0.0015),
+    Ingredient(name="white wine vinegar", unit=UnitType.ML, price_per_unit=0.003),
+    Ingredient(name="fresh parsley", unit=UnitType.GRAM, price_per_unit=0.02),
+
+    # --- dessert additions ---
+    Ingredient(name="double cream", unit=UnitType.ML, price_per_unit=0.0035),  # UK term for heavy cream
+    Ingredient(name="whole milk", unit=UnitType.ML, price_per_unit=0.001),
+    Ingredient(name="vanilla extract", unit=UnitType.ML, price_per_unit=0.03),
+    Ingredient(name="gelatine leaves", unit=UnitType.GRAM, price_per_unit=0.02),
+    Ingredient(name="icing sugar", unit=UnitType.GRAM, price_per_unit=0.0011),  # UK term for powdered sugar
+    Ingredient(name="dark chocolate chips", unit=UnitType.GRAM, price_per_unit=0.008),
+    Ingredient(name="candied citrus peel", unit=UnitType.GRAM, price_per_unit=0.012),
+
+    # --- arancini ---
+    Ingredient(name="arborio rice", unit=UnitType.GRAM, price_per_unit=0.0025),
+    Ingredient(name="chicken stock", unit=UnitType.ML, price_per_unit=0.0015),
+    Ingredient(name="cooked ham", unit=UnitType.GRAM, price_per_unit=0.009),
+    Ingredient(name="peas", unit=UnitType.GRAM, price_per_unit=0.002),
+    Ingredient(name="breadcrumbs", unit=UnitType.GRAM, price_per_unit=0.0018),
 ]
 
 db.add_all(ingredients)

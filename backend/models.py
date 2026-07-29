@@ -1,6 +1,7 @@
 import enum
-from sqlalchemy import Column, ForeignKey, Integer, String, Float, Enum
+from sqlalchemy import Column, ForeignKey, Integer, String, Float, Enum, Date
 from database import Base
+from datetime import date
 
 class User(Base):
     __tablename__ = "users"
@@ -41,3 +42,10 @@ class DishIngredient(Base):
     ingredient_id = Column(Integer, ForeignKey(Ingredient.id), nullable=False)
     quantity = Column(Float, nullable=False)
 
+class SalesRecord(Base):
+    __tablename__ = "sales_records"
+    id = Column(Integer, primary_key=True)
+    dish_id = Column(Integer, ForeignKey(Dish.id), nullable=False)
+    units_sold = Column(Integer, nullable=False)
+    period_start = Column(Date, nullable=False)
+    period_end = Column(Date, nullable=False)

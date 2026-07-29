@@ -25,7 +25,7 @@ def match_recipe_ingredients(db, recipe: schemas.RecipeDraft) -> list[schemas.Ma
         match = match_ingredient(db, ingredient.name)
         if match:
             matched_id = match.id
-            suggestion_names = []
+            suggestions = []
         else:
             matched_id = None
             suggestions = [schemas.IngredientSuggestion(name = s.name,id = s.id) for s in suggest_ingredients(db, ingredient.name)]

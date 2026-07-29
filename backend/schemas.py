@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from models import UnitType, DishType
 from typing import Optional
+from datetime import date
 
 class IngredientCreate(BaseModel):
     name: str
@@ -72,3 +73,33 @@ class DishIngredientOut(BaseModel):
 class RecipeSaveOut(BaseModel):
     ingredients: list[DishIngredientOut]
     cost: DishCostOut
+
+class SalesRecordCreate(BaseModel):
+    dish_id : int
+    units_sold: int
+    period_start: date
+    period_end: date
+
+class SalesRecordOut(BaseModel):
+    id: int
+    dish_id: int
+    units_sold: int
+    period_start: date
+    period_end: date
+
+    class Config:
+        from_attributes = True 
+
+class DishClassificationOut(BaseModel):
+    dish_id: int
+    quadrant: str
+    menu_mix_percent: float
+    margin_pounds: float
+    popularity_threshold: float
+    profitability_threshold: float
+
+class ActionItemOut(BaseModel):
+    dish_id: int
+    quadrant: str
+    action: str
+    impact_pounds: float

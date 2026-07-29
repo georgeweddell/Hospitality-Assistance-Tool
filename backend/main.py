@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from menu_engineering import classify_all_dishes, build_action_list
 from costing import cost_dish
 from database import Base, engine
 import models
@@ -7,10 +8,12 @@ import schemas
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
-from schemas import DishCostOut, IngredientCreate, IngredientOut, DishType, DishCreate, DishOut, MatchedIngredientDraft, RecipeSaveOut
-from models import Dish, DishIngredient, Ingredient
+from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, DishType, DishCreate, DishOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut
+from models import Dish, DishIngredient, Ingredient, SalesRecord
 from recipe_ai import estimate_recipe
 from matching import match_recipe_ingredients
+from datetime import date
+
 
 Base.metadata.create_all(bind=engine)
 
@@ -71,7 +74,7 @@ def estimate_recipe_route(dish_id: int, db: Session = Depends(get_db)):
     if not dish:
         raise HTTPException(status_code=404, detail="Dish not found")
 
-    recipe = estimate_recipe(dish.name, dish.category)
+    recipe = estimate_recipe(db, dish.name, dish.category)
     matched = match_recipe_ingredients(db, recipe)
     return matched
 
@@ -100,3 +103,38 @@ def save_recipe(dish_id: int, confirmed: schemas.RecipeConfirm, db: Session = De
         ingredients = recipe,
         cost = cost_out
     )
+
+@app.post("/dishes/{dish_id}/sales", response_model=SalesRecordOut)
+def save_sales_record(sales: SalesRecordCreate, dish_id: int, db: Session = Depends(get_db)):
+    dish = db.query(Dish).filter(Dish.id == dish_id).first()
+    if not dish:
+        raise HTTPException(status_code=404, detail="Dish not found")
+
+    new_sales_record = SalesRecord(
+        dish_id = dish_id,
+        units_sold = sales.units_sold,
+        period_start= sales.period_start,
+        period_end = sales.period_end
+    )
+    db.add(new_sales_record)
+    db.commit()
+    db.refresh(new_sales_record)
+
+    return new_sales_record
+
+@app.get("/dishes/{dish_id}/sales", response_model=list[SalesRecordOut])
+def get_sales_record(dish_id: int, db: Session = Depends(get_db)):
+    dish = db.query(Dish).filter(Dish.id == dish_id).first()
+    if not dish:
+        raise HTTPException(status_code=404, detail="Dish not found")
+
+    sales_record = db.query(SalesRecord).filter(SalesRecord.dish_id == dish_id).all()
+    return sales_record
+
+@app.get("/dishes/classifications", response_model=list[DishClassificationOut])
+def get_dish_classifications(db: Session = Depends(get_db)):
+    return classify_all_dishes(db)
+
+@app.get("/dishes/action-list", response_model=list[ActionItemOut])
+def get_action_list(db: Session = Depends(get_db)):
+    return build_action_list(db)
