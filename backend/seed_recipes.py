@@ -45,6 +45,8 @@ for dish in dishes:
             ))
             saved_count += 1
 
+    dish.skipped_ingredients = skipped + [m.split(" (")[0] for m in unit_mismatches]
+    
     db.commit()
 
     if skipped:

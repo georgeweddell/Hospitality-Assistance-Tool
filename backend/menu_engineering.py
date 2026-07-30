@@ -100,7 +100,8 @@ def classify_dish(db, dish_id: int, category: DishType) -> DishClassificationOut
     menu_mix_percent= dish_menu_mix,
     popularity_threshold= popularity_threshold,
     profitability_threshold= weighted_avg_margin,
-    quadrant= quadrant)
+    quadrant= quadrant,
+    skipped_ingredients= dish.skipped_ingredients)
 
 def classify_all_dishes(db) -> list[DishClassificationOut]:
     """

@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, ForeignKey, Integer, String, Float, Enum, Date
+from sqlalchemy import Column, ForeignKey, Integer, String, Float, Enum, Date, JSON
 from database import Base
 from datetime import date
 
@@ -34,6 +34,7 @@ class Dish(Base):
     name = Column(String, nullable=False)
     menu_price = Column(Float, nullable=False)
     category = Column(Enum(DishType))
+    skipped_ingredients = Column(JSON, nullable=False, default=list)
 
 class DishIngredient(Base):
     __tablename__ = "dish_ingredients"

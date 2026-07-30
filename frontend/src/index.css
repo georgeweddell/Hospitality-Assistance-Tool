@@ -109,3 +109,37 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+.card {
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  text-align: left;
+}
+
+.wide {
+  max-width: 900px;
+}
+
+.dish-card {
+  max-width: 400px;
+}
+
+.card td, .card th {
+  padding: 0.4rem 0.8rem; 
+  text-align: left;
+}
+
+.wide td {
+  white-space: nowrap;
+}
+
+.tooltip {
+  background: #1a1a1a;
+  border: 1px solid #555;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+
+.warning { color: #e06c75; }

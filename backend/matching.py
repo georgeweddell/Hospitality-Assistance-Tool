@@ -26,9 +26,11 @@ def match_recipe_ingredients(db, recipe: schemas.RecipeDraft) -> list[schemas.Ma
         if match:
             matched_id = match.id
             suggestions = []
+            units_agree = ingredient.unit == match.unit
         else:
             matched_id = None
             suggestions = [schemas.IngredientSuggestion(name = s.name,id = s.id) for s in suggest_ingredients(db, ingredient.name)]
+            units_agree = True
 
         results.append(schemas.MatchedIngredientDraft(
             name=ingredient.name,
@@ -36,5 +38,6 @@ def match_recipe_ingredients(db, recipe: schemas.RecipeDraft) -> list[schemas.Ma
             unit=ingredient.unit,
             matched_ingredient_id=matched_id,
             suggestions=suggestions,
+            units_agree=units_agree,
         ))
     return results

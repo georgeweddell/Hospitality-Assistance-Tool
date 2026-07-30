@@ -104,6 +104,7 @@ class DishClassificationOut(BaseModel):
     popularity_threshold: float
     profitability_threshold: float
     quadrant: QuadrantType
+    skipped_ingredients: list[str] = []
 
 class ActionItemOut(BaseModel):
     dish_id: int
