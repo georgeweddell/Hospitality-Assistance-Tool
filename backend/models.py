@@ -49,3 +49,9 @@ class SalesRecord(Base):
     units_sold = Column(Integer, nullable=False)
     period_start = Column(Date, nullable=False)
     period_end = Column(Date, nullable=False)
+
+class QuadrantType(enum.Enum):
+    STAR = "Star"
+    PLOWHORSE = "Plowhorse"
+    PUZZLE = "Puzzle"
+    DOG = "Dog"

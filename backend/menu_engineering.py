@@ -1,4 +1,4 @@
-from models import SalesRecord, Dish, DishType
+from models import SalesRecord, Dish, DishType, QuadrantType
 from costing import cost_dish
 from schemas import DishClassificationOut, ActionItemOut
 
@@ -72,28 +72,35 @@ def classify_dish(db, dish_id: int, category: DishType) -> DishClassificationOut
     dish_menu_mix = get_dish_menu_mix_percent(db, dish_id, category)
     weighted_avg_margin = get_category_weighted_avg_margin(db, category)
 
+    dish = db.query(Dish).filter(Dish.id == dish_id).first()
+
     plate_cost, margin_pounds, margin_percent = cost_dish(db, dish_id)
 
-    is_popular = dish_menu_mix > popularity_threshold
-    is_profitable = margin_pounds > weighted_avg_margin
+    is_popular = dish_menu_mix >= popularity_threshold
+    is_profitable = margin_pounds >= weighted_avg_margin
 
     if is_popular and is_profitable:
-        quadrant = "Star"
+        quadrant = QuadrantType.STAR
     elif is_popular and not is_profitable:
-        quadrant = "Plowhorse"
+        quadrant = QuadrantType.PLOWHORSE
     elif not is_popular and is_profitable:
-        quadrant = "Puzzle"
+        quadrant = QuadrantType.PUZZLE
     else:
-        quadrant = "Dog"
+        quadrant = QuadrantType.DOG
 
     return DishClassificationOut(
-        dish_id=dish_id,
-        quadrant=quadrant,
-        menu_mix_percent=dish_menu_mix,
-        margin_pounds=margin_pounds,
-        popularity_threshold=popularity_threshold,
-        profitability_threshold=weighted_avg_margin,
-    )
+    dish_id= dish_id,
+    dish_name= dish.name,
+    category= category,
+    menu_price= dish.menu_price,
+    plate_cost= plate_cost,
+    margin_pounds= margin_pounds,
+    margin_percent= margin_percent,
+    units_sold= get_dish_units_sold(db, dish_id),
+    menu_mix_percent= dish_menu_mix,
+    popularity_threshold= popularity_threshold,
+    profitability_threshold= weighted_avg_margin,
+    quadrant= quadrant)
 
 def classify_all_dishes(db) -> list[DishClassificationOut]:
     """
@@ -113,33 +120,41 @@ def classify_all_dishes(db) -> list[DishClassificationOut]:
 def build_action_list(db) -> list[ActionItemOut]:
     """
     Turns quadrant classifications into a ranked action list with £ impact.
+
+    cutting a Dog assumes its covers transfer to a category-average dish rather than being lost entirely.
     """
     classifications = classify_all_dishes(db)
     actions = []
 
     for c in classifications:
         dish_units = get_dish_units_sold(db, c.dish_id)
-        dish_category = db.query(Dish).filter(Dish.id == c.dish_id).first().category
+        dish = db.query(Dish).filter(Dish.id == c.dish_id).first()
+        dish_name = dish.name
+        dish_category = dish.category
 
-        if c.quadrant == "Star":
+        if c.quadrant == QuadrantType.STAR:
             continue  # no action needed
 
-        elif c.quadrant == "Plowhorse":
+        elif c.quadrant == QuadrantType.PLOWHORSE:
             impact = (c.profitability_threshold - c.margin_pounds) * dish_units
             action = "Reprice or re-engineer recipe to close margin gap"
 
-        elif c.quadrant == "Dog":
-            impact = c.margin_pounds * dish_units
+        elif c.quadrant == QuadrantType.DOG:
+            impact = (c.profitability_threshold - c.margin_pounds) * dish_units 
             action = "Consider cutting from menu"
 
-        elif c.quadrant == "Puzzle":
-            category_units = get_category_units_sold(db, dish_category)  # you'll need the dish's category here — see note below
+        elif c.quadrant == QuadrantType.PUZZLE:
+            category_units = get_category_units_sold(db, dish_category) 
             threshold_units = (c.popularity_threshold / 100) * category_units
             impact = c.margin_pounds * (threshold_units - dish_units)
             action = "Promote or reposition on menu"
 
+        else:
+            raise ValueError(f"Unrecognised quadrant: {c.quadrant}")
+
         actions.append(ActionItemOut(
             dish_id=c.dish_id,
+            dish_name=dish_name,
             quadrant=c.quadrant,
             action=action,
             impact_pounds=round(impact, 2)

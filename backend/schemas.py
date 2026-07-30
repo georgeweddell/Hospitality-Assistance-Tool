@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from models import UnitType, DishType
+from models import UnitType, DishType, QuadrantType
 from typing import Optional
 from datetime import date
 
@@ -55,6 +55,7 @@ class MatchedIngredientDraft(BaseModel):
     unit: UnitType
     matched_ingredient_id: int | None
     suggestions: list[IngredientSuggestion]
+    units_agree: bool = True
 
 class ConfirmedIngredient(BaseModel):
     ingredient_id: int
@@ -92,14 +93,21 @@ class SalesRecordOut(BaseModel):
 
 class DishClassificationOut(BaseModel):
     dish_id: int
-    quadrant: str
-    menu_mix_percent: float
+    dish_name: str
+    category: Optional[DishType] = None
+    menu_price: float
+    plate_cost: float
     margin_pounds: float
+    margin_percent: float
+    units_sold: int
+    menu_mix_percent: float
     popularity_threshold: float
     profitability_threshold: float
+    quadrant: QuadrantType
 
 class ActionItemOut(BaseModel):
     dish_id: int
-    quadrant: str
+    dish_name: str
+    quadrant: QuadrantType
     action: str
     impact_pounds: float

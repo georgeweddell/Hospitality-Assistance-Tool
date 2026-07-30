@@ -28,21 +28,30 @@ for dish in dishes:
 
     saved_count = 0
     skipped = []
+    unit_mismatches = []
+
     for item in matched:
-        if item.matched_ingredient_id is not None:
+        if item.matched_ingredient_id is None:
+            skipped.append(item.name)
+
+        elif not item.units_agree:
+            unit_mismatches.append(f"{item.name} (AI said {item.unit.value})")
+
+        else:
             db.add(DishIngredient(
                 dish_id=dish.id,
                 ingredient_id=item.matched_ingredient_id,
                 quantity=item.quantity
             ))
             saved_count += 1
-        else:
-            skipped.append(item.name)
 
     db.commit()
 
     if skipped:
         print(f"  Skipped (no ingredient match): {', '.join(skipped)}")
+
+    if unit_mismatches:
+        print(f"  Skipped (unit mismatch): {', '.join(unit_mismatches)}")
 
     plate_cost, margin_pounds, margin_percent = cost_dish(db, dish.id)
     print(f"  Saved {saved_count} ingredients — plate cost £{plate_cost}, margin £{margin_pounds} ({margin_percent}%)")
