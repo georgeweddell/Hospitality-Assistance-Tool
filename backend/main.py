@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from menu_engineering import classify_all_dishes, build_action_list
+from menu_engineering import classify_all_dishes, build_action_list, list_incomplete_dishes
 from costing import cost_dish
 from database import Base, engine
 import models
@@ -8,7 +8,7 @@ import schemas
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
-from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, DishType, DishCreate, DishOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut
+from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, DishType, DishCreate, DishOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut
 from models import Dish, DishIngredient, Ingredient, SalesRecord
 from recipe_ai import estimate_recipe
 from matching import match_recipe_ingredients
@@ -138,3 +138,7 @@ def get_dish_classifications(db: Session = Depends(get_db)):
 @app.get("/dishes/action-list", response_model=list[ActionItemOut])
 def get_action_list(db: Session = Depends(get_db)):
     return build_action_list(db)
+
+@app.get("/dishes/incomplete", response_model=list[IncompleteDishOut])
+def get_incomplete_dishes(db: Session = Depends(get_db)):
+    return list_incomplete_dishes(db)

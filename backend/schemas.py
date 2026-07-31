@@ -76,7 +76,6 @@ class RecipeSaveOut(BaseModel):
     cost: DishCostOut
 
 class SalesRecordCreate(BaseModel):
-    dish_id : int
     units_sold: int
     period_start: date
     period_end: date
@@ -112,3 +111,9 @@ class ActionItemOut(BaseModel):
     quadrant: QuadrantType
     action: str
     impact_pounds: float
+
+class IncompleteDishOut(BaseModel):
+    dish_id: int
+    dish_name: str
+    category: Optional[DishType] = None
+    reasons: list[str]
