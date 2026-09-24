@@ -2,9 +2,8 @@
 
 const NAV = [
   { page: 'overview', label: 'Overview', icon: 'M4 5h6v6H4zM14 5h6v6h-6zM4 15h6v4H4zM14 15h6v4h-6z' },
-  { page: 'analysis', label: 'Analysis', icon: 'M4 4v16h16M8 14l3-3 3 2 5-6' },
-  { page: 'dishes', label: 'Dishes', icon: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01' },
-  { page: 'setup', label: 'Menu setup', icon: 'M12 5v14M5 12h14' },
+  { page: 'menu', label: 'Menu', icon: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01' },
+  { page: 'analysis', label: 'Insights', icon: 'M4 4v16h16M8 14l3-3 3 2 5-6' },
 ]
 
 function NavIcon({ path }) {
@@ -74,7 +73,7 @@ function Layout({ page, title, badges = {}, children }) {
 
       <main className="min-w-0 flex-1">
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 lg:py-8">
-          <h1 className="mb-6 text-2xl font-semibold tracking-tight">{title}</h1>
+          {title && <h1 className="mb-6 text-2xl font-semibold tracking-tight">{title}</h1>}
           {children}
         </div>
       </main>

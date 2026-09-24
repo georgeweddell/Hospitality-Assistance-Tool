@@ -1,25 +1,29 @@
 import { useEffect, useState } from 'react'
 
-// Page navigation using the URL hash (e.g. /#/dishes). Works on any static
+// Page navigation using the URL hash (e.g. /#/menu/12). Works on any static
 // host without server config, and the browser back button works as expected.
-export const PAGES = ['overview', 'analysis', 'dishes', 'setup']
+export const PAGES = ['overview', 'menu', 'analysis']
 
-function currentPage() {
-  const page = window.location.hash.replace('#/', '')
-  return PAGES.includes(page) ? page : 'overview'
+function currentRoute() {
+  const [page, id] = window.location.hash.replace('#/', '').split('/')
+  return PAGES.includes(page) ? { page, id: id ? Number(id) : null } : { page: 'overview', id: null }
+}
+
+export function navigate(path) {
+  window.location.hash = `#/${path}`
 }
 
 export default function useHashRoute() {
-  const [page, setPage] = useState(currentPage)
+  const [route, setRoute] = useState(currentRoute)
 
   useEffect(() => {
     const onChange = () => {
-      setPage(currentPage())
+      setRoute(currentRoute())
       window.scrollTo(0, 0)
     }
     window.addEventListener('hashchange', onChange)
     return () => window.removeEventListener('hashchange', onChange)
   }, [])
 
-  return page
+  return route
 }

@@ -5,37 +5,35 @@ import Layout from './components/Layout'
 import MenuSummary from './components/MenuSummary'
 import ActionList from './components/ActionList'
 import QuadrantChart from './components/QuadrantChart'
-import DishTable from './components/DishTable'
-import IncompleteDishes from './components/IncompleteDishes'
-import AddDishForm from './components/AddDishForm'
-import RecipeReview from './components/RecipeReview'
+import MenuPage from './components/MenuPage'
+import DishPage from './components/DishPage'
 import { QuadrantLegend } from './components/QuadrantBadge'
 
 const TITLES = {
   overview: 'Overview',
-  analysis: 'Menu analysis',
-  dishes: 'Dishes',
-  setup: 'Menu setup',
+  menu: 'Menu',
+  analysis: 'Insights',
 }
 
 function App() {
-  const page = useHashRoute()
+  const { page, id } = useHashRoute()
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
 
-  // Load everything the dashboard needs once, in 3 calls, and share it across
-  // pages. Bumping refreshKey (e.g. after adding a dish) reloads it.
+  // Load everything the dashboard and menu need once, in 4 calls, and share it
+  // across pages. Bumping refreshKey (e.g. after a dish changes) reloads it.
   useEffect(() => {
     let ignore = false
     Promise.all([
       getJson('/dishes/classifications'),
       getJson('/dishes/action-list'),
       getJson('/dishes/incomplete'),
+      getJson('/dishes'),
     ])
-      .then(([dishes, actions, incomplete]) => {
+      .then(([dishes, actions, incomplete, allDishes]) => {
         if (ignore) return
-        setData({ dishes, actions, incomplete })
+        setData({ dishes, actions, incomplete, allDishes })
         setError(null)
       })
       .catch((err) => {
@@ -48,9 +46,8 @@ function App() {
 
   const refresh = () => setRefreshKey((k) => k + 1)
 
-  const needsData = page !== 'setup'
   let content
-  if (needsData && error) {
+  if (error) {
     content = (
       <div className="rounded-xl border border-danger/40 bg-surface p-5">
         <p className="font-medium text-danger">Couldn't load your menu data</p>
@@ -60,19 +57,24 @@ function App() {
         </button>
       </div>
     )
-  } else if (needsData && !data) {
+  } else if (!data) {
     content = (
       <div className="flex items-center gap-3 text-muted">
         <span className="h-4 w-4 animate-spin rounded-full border-2 border-line border-t-accent" />
         Loading menu data…
       </div>
     )
-  } else if (page === 'overview') {
+  } else if (page === 'menu' && id) {
     content = (
-      <div className="space-y-8">
-        <MenuSummary dishes={data.dishes} actions={data.actions} excludedCount={data.incomplete.length} />
-        <ActionList actions={data.actions} dishes={data.dishes} />
-      </div>
+      <DishPage
+        dishId={id}
+        analysed={data.dishes.find((d) => d.dish_id === id)}
+        onChanged={refresh}
+      />
+    )
+  } else if (page === 'menu') {
+    content = (
+      <MenuPage allDishes={data.allDishes} analysed={data.dishes} incomplete={data.incomplete} onChanged={refresh} />
     )
   } else if (page === 'analysis') {
     const categories = [...new Set(data.dishes.map((d) => d.category))].filter(Boolean)
@@ -86,25 +88,17 @@ function App() {
         </div>
       </div>
     )
-  } else if (page === 'dishes') {
-    content = (
-      <div className="space-y-6">
-        <DishTable dishes={data.dishes} />
-        <IncompleteDishes items={data.incomplete} />
-      </div>
-    )
   } else {
     content = (
-      <div className="grid items-start gap-5 lg:grid-cols-2">
-        <AddDishForm onDishAdded={refresh} />
-        {/* key remounts it after a dish is added, so the new dish appears in its dropdown */}
-        <RecipeReview key={refreshKey} />
+      <div className="space-y-8">
+        <MenuSummary dishes={data.dishes} actions={data.actions} excludedCount={data.incomplete.length} />
+        <ActionList actions={data.actions} dishes={data.dishes} />
       </div>
     )
   }
 
   return (
-    <Layout page={page} title={TITLES[page]} badges={{ dishes: data?.incomplete.length }}>
+    <Layout page={page} title={page === 'menu' && id ? null : TITLES[page]} badges={{ menu: data?.incomplete.length }}>
       {content}
     </Layout>
   )

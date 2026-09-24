@@ -93,7 +93,7 @@ function ActionList({ actions, dishes }) {
                     <tr key={item.dish_id} className="border-b border-line last:border-0">
                       <td className="py-3 pl-5 tabular-nums text-muted">{i + 1}</td>
                       <td className="px-3 py-3">
-                        <div className="font-medium">{item.dish_name}</div>
+                        <a href={`#/menu/${item.dish_id}`} className="font-medium hover:text-accent">{item.dish_name}</a>
                         <div className="text-xs text-muted">{dish?.category}</div>
                       </td>
                       <td className="px-3 py-3">

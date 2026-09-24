@@ -9,14 +9,14 @@ A web app for small independent UK restaurants. A restaurant brings its data in 
 ### The target journey (what we're building towards)
 
 1. **Setup:** the user describes the business (type of restaurant, location, rough covers per day) and uploads a menu (PDF, photo or website link). Claude extracts dishes (name, price, category, description), and the user checks the list before it's saved.
-2. **Recipes:** Claude estimates each dish's recipe from its name and description, grounded in the ingredient list. The user checks each one on the Recipe Review screen ("AI proposes, human verifies").
+2. **Recipes:** Claude estimates each dish's recipe from its name and description, grounded in the ingredient list. The user checks each one in the recipe editor on the dish page ("AI proposes, human verifies").
 3. **Costs:** ingredients start on benchmark prices. The user uploads supplier invoices, Claude extracts the lines, and they're matched to ingredients and normalised to base units. **Every price records its source and date**, and costing uses the best available. Each dish shows how much of its cost comes from the restaurant's own data. Price changes raise alerts.
 4. **Sales:** the user uploads a till export (CSV/Excel). Claude identifies which column is which, then code reads the numbers and matches items to dishes. A direct connection to Square's test environment is a stretch goal.
 5. **Results:** Kasavana-Smith menu engineering (Star / Plowhorse / Puzzle / Dog), a ranked action list with £ impact, a menu summary, and rule-based business-wide suggestions.
 
 ### Where it is now
 
-Steps 2 (estimate only, since the review screen is unfinished) and 5 (menu-level only) exist. Dishes are typed in one at a time, prices are a single fixed table, and sales can only be added through the API. The demo database comes from `seed_demo.py`.
+Step 2 works (dish page with recipe editor and AI draft), and step 5 works at menu level. Dishes are added one at a time on the Menu page. Prices have history and sources, but there's no Ingredients page or invoice upload yet. Sales can only be added through the API. The demo database comes from `seed_demo.py`.
 
 **Purpose:** a portfolio piece for Forward Deployed Engineer / Solutions Engineer interviews. It is NOT being built as a commercial product. Clarity, correctness and explainability matter more than features. The aim is **one complete journey that works end to end and can be demoed in five minutes**, not every possible integration.
 
@@ -48,14 +48,15 @@ Steps 2 (estimate only, since the review screen is unfinished) and 5 (menu-level
   - `seed_demo.py`: wipes and rebuilds `menu.db` with realistic demo data (a month at a small UK pizzeria, hand-written recipes). It backs up the old database to `menu.backup-<timestamp>.db` first. This is the way to reset the demo.
   - `seed_recipes.py`: re-estimates every dish's recipe with the real API and auto-accepts matches. It overwrites the hand-written demo recipes, so it's for AI testing only.
   - `ai_test_v1.py`, `ai_test_v2.py`, `dish_check.py`, `match_check.py`, `costing_check.py`, `ingredient_list.py`: one-off scripts written during development. They are **not** pytest tests. Don't name scripts `test_*.py`, or pytest will run them.
-  - `tests/`: pytest tests. `conftest.py` gives every test a fresh in-memory database, never `menu.db`. `pytest.ini` sets the test path.
+  - `tests/`: pytest tests. `conftest.py` gives every test a fresh in-memory database. Tests never read or write `menu.db` data (importing `main` runs `create_all`, which only creates missing tables). `pytest.ini` sets the test path.
   - The SQLite database is `backend/menu.db` (git-ignored). The API key lives in `backend/.env` (git-ignored).
   - The Python virtual environment is at `backend/venv/`.
   - Use `backend/venv/Scripts/python.exe`, not the system Python.
 - `frontend/` holds the React app.
-  - `src/App.jsx` loads all dashboard data once and picks the page. Pages (Overview, Analysis, Dishes, Menu setup) are switched by the URL hash (`#/dishes`) via `src/useHashRoute.js`, with no router library. `components/Layout.jsx` holds the sidebar navigation.
-  - Components live in `src/components/`. Quadrant colours live in `src/quadrants.js`, and number formatting lives in `src/format.js`.
-  - All API calls go through `src/api.js`, using the `getJson` / `postJson` helpers. Don't call `fetch` directly from components.
+  - `src/App.jsx` loads the shared data once and picks the page. Pages are switched by the URL hash via `src/useHashRoute.js`, with no router library: Overview (`#/overview`), Menu (`#/menu`), a dish page (`#/menu/12`) and Insights (`#/analysis`). `components/Layout.jsx` holds the sidebar navigation.
+  - The dish page (`DishPage.jsx`) loads its own detail (`GET /dishes/{id}/detail` plus `/ingredients`). `RecipeEditor.jsx` edits the recipe there. "Estimate with AI" fills the editor as a draft, and nothing is saved until Save. The editor's plate cost is a live preview; the saved figures always come from the backend costing engine.
+  - Components live in `src/components/`. Quadrant colours live in `src/quadrants.js`, menu categories in `src/categories.js`, and number and unit formatting in `src/format.js` (prices are shown as £/kg, £/l or each).
+  - All API calls go through `src/api.js`, using the `getJson` / `postJson` / `putJson` / `deleteJson` helpers. Don't call `fetch` directly from components.
   - The backend URL comes from `VITE_API_URL`, defaulting to `http://localhost:8000`.
 
 ### Starting the app
@@ -103,7 +104,7 @@ These were hard-won. Don't undo them.
 - **Excluded dishes come out of the denominator too.** When a dish is excluded from analysis (e.g. its recipe is incomplete), it must also be removed from the totals used for thresholds. Otherwise every other dish's popularity threshold silently shifts.
 - **Every number in the action list is the same kind of number.** Every £ impact is a *change* (delta) in contribution, not a current level. For example, Dog impact = (category weighted-average margin − dish margin) × units. "Weighted" means each dish's margin counts in proportion to its units sold (the Kasavana-Smith method). Plowhorse impact deliberately uses the same formula.
 - **The recipe prompt is grounded in the live ingredient list.** That list is fetched from the database on every call, so AI output uses the same ingredient names as the table.
-- **The API serves the dashboard efficiently.** The dashboard loads with a fixed number of calls, never one per dish: `/dishes/classifications`, `/dishes/action-list` and `/dishes/incomplete` (plus `/dishes` for the Recipe Review dropdown). Don't reintroduce per-dish calls.
+- **The API serves the dashboard efficiently.** The app loads its shared data in a fixed number of calls, never one per dish: `/dishes/classifications`, `/dishes/action-list`, `/dishes/incomplete` and `/dishes`. The dish page makes its own call for the one dish it shows. Don't reintroduce per-dish calls on list pages.
 - **Validation happens before saving.** Routes check failure conditions first and save last.
 - **SQLAlchemy JSON columns must be reassigned, not mutated in place.** Otherwise changes aren't detected. This applies to e.g. `skipped_ingredients`.
 - **AI output is never trusted raw.** It is always validated with Pydantic, and always shown to the user as an editable draft. This applies to every import (menus, invoices, sales), not only recipes.
@@ -114,25 +115,27 @@ These were hard-won. Don't undo them.
 
 ## Known open items
 
-1. **Recipe Review screen is unfinished.** "Estimate recipe" returns a draft, but it isn't displayed, editable or saveable (`rows` in `RecipeReview.jsx` is unused).
-2. **VAT decision (George).** Menu prices include 20% VAT, but margin % is currently calculated on the VAT-inclusive price. Industry reports gross margin excluding VAT. This would change the costing engine.
-3. **The dashboard endpoints are slow** (several seconds): `menu_engineering.py` runs many small queries per dish. Worth fixing before deployment. That file is core logic, so propose the change first.
+1. **VAT decision (George).** Menu prices include 20% VAT, but margin % is currently calculated on the VAT-inclusive price. Industry reports gross margin excluding VAT. This would change the costing engine.
+2. **The dashboard endpoints are slow** (several seconds): `menu_engineering.py` runs many small queries per dish. Worth fixing before deployment. That file is core logic, so propose the change first.
 
 ## Roadmap (in order)
 
 Done: tests for costing and menu engineering (`backend/tests/`), and the frontend redesign (pages, summary, action list). New tests should keep to small hand-checkable examples, with the working in comments.
 
 1. ~~**Price history and sources.**~~ Done. `IngredientPrice` holds one row per price seen (source, supplier, date). `costing.best_price` picks the price: the restaurant's own most recent, else the most recent benchmark, ignoring future-dated prices. Routes: `GET/POST /ingredients/{id}/prices`. Next small follow-up: show each dish's "% of cost from your own data".
-2. **Finish Recipe Review:** show the draft, edit quantities, pick between suggested matches, flag unit mismatches, save.
-3. **Broaden the benchmark price list** beyond Italian, to a few cuisines done well.
-4. **Invoice upload:** Claude extracts lines, then matching, unit normalisation and review before saving.
-5. **Menu upload:** PDF/photo/URL, then Claude extracts dishes, then review.
-6. **Sales upload:** CSV/Excel, then column mapping, then dish matching, then review.
-7. **Guided setup flow** tying 5, 2, 4 and 6 together, plus a business profile.
-8. **Business-wide suggestions:** rule-based and hand-checkable (e.g. GP vs typical for the restaurant type). Claude may reword them but doesn't invent them.
-9. **Authentication:** JWT login with per-user data isolation. **Use plan mode and get approval before starting.** It touches every query, and it's required before deployment because the app spends API credit.
-10. **Deployment**, so the app is reachable by a public link.
-11. **README write-up:** what the app does, how it works, which parts George wrote, and how Claude Code was used.
+**Principle: build the manual editors first, then the AI imports on top.** Every import ends in "check what the AI found before saving", and that check happens in the same editor. The app should be fully usable by hand after step 5. The owner's real routine is **monthly**: add invoices and sales → see what changed → act → check next month.
+
+2. ~~**Menu.**~~ Done: menu list with status, add/edit/delete dishes, a dish page with the recipe editor (manual entry, AI draft, suggested matches, unit warnings, checks before saving). The recipe save route now rejects unknown or duplicate ingredients and quantities ≤ 0 before touching the saved recipe.
+3. **Ingredients page:** view prices with source and history, edit a price (adds a manual price row), add ingredients.
+4. **Sales page:** enter one **month's** units per dish, plus a period selector on the dashboard. `menu_engineering.py` must then analyse one period instead of summing all sales ever: core logic, so George approves.
+5. **Home setup checklist and empty states**, plus a "start fresh" option (benchmark prices, no demo dishes). The demo stays the default database until login exists.
+6. **Broaden the benchmark price list** beyond Italian, to a few cuisines done well.
+7. **AI imports:** menu upload (PDF/photo/URL), invoice upload, sales file upload (CSV/Excel). Each ends in the matching editor from steps 2–4.
+8. **Monthly routine:** "what changed since last period", price-rise alerts, and each dish's "% of cost from your own data".
+9. **Business-wide suggestions:** rule-based and hand-checkable (e.g. GP vs typical for the restaurant type). Claude may reword them but doesn't invent them.
+10. **Authentication:** JWT login with per-user data isolation. **Use plan mode and get approval before starting.** It touches every query, and it's required before deployment because the app spends API credit.
+11. **Deployment**, so the app is reachable by a public link.
+12. **README write-up:** what the app does, how it works, which parts George wrote, and how Claude Code was used.
 
 **Out of scope for now:** review analysis, demand/rota forecasting, a free-form AI narrative layer, menu-gap analysis, scraping supplier/supermarket sites, and live integrations beyond one Square sandbox. Don't start these.
 
