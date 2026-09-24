@@ -378,9 +378,9 @@ body {
     cursor: help;
   }
   .hint-pop {
-    position: absolute;
-    top: calc(100% + 8px);
-    z-index: 50;
+    /* Drawn at page level (Hint.jsx uses a portal); top/left are set from the trigger. */
+    position: fixed;
+    z-index: 100;
     width: max-content;
     max-width: 18rem;
     padding: 0.625rem 0.75rem;
