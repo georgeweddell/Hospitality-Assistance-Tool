@@ -91,6 +91,8 @@ class DishOut(BaseModel):
     category: Optional[DishType] = None
     on_menu_from: date
     on_menu_until: Optional[date] = None
+    description: Optional[str] = None
+    recipe_check: bool = False
 
     class Config:
         from_attributes = True
@@ -157,6 +159,8 @@ class DishDetailOut(BaseModel):
     category: Optional[DishType] = None
     on_menu_from: date
     on_menu_until: Optional[date] = None
+    description: Optional[str] = None
+    recipe_check: bool = False
     skipped_ingredients: list[str] = []
     prices: list[MenuPriceOut]   # newest first
     lines: list[RecipeLineOut]
@@ -416,3 +420,64 @@ class TillColumnsDraft(BaseModel):
 
 class TillItemHints(BaseModel):
     items: list[TillItemHint]
+
+
+# --- Menu import ---------------------------------------------------------------------
+
+class MenuItemDraft(BaseModel):
+    """One item as Claude read it off the menu. Sizes are separate items."""
+    name: str
+    price: Optional[float] = None
+    section: Optional[str] = None             # the menu's own heading, e.g. "Pizze Rosse"
+    category: Optional[DishType] = None       # Claude's mapping of the section
+    description: Optional[str] = None
+    kind: Literal["dish", "other"] = "dish"   # "other": drinks, set menus, add-ons
+    likely_existing: Optional[str] = None     # a stored dish this is probably a renamed version of
+
+class MenuDraft(BaseModel):
+    items: list[MenuItemDraft]
+
+class MenuReviewItem(MenuItemDraft):
+    """A menu item compared with what's stored."""
+    status: Literal["new", "same", "price", "renamed", "returning", "not_a_dish"]
+    action: Optional[Literal["match", "new", "ignore"]] = None   # None: the owner must choose
+    dish_id: Optional[int] = None             # the stored dish it is ("match") or might be ("renamed")
+    copy_from: Optional[int] = None           # a returning dish: copy this old dish's recipe
+    current_name: Optional[str] = None
+    current_price: Optional[float] = None
+    current_category: Optional[DishType] = None
+    description_changed: bool = False
+    remembered: bool = False                  # ignored because the owner ignored it before
+    suggestions: list[DishSuggestion] = []
+
+class MenuLeavingOut(BaseModel):
+    """A dish on the menu now that isn't on the new one."""
+    dish_id: int
+    name: str
+    category: Optional[DishType] = None
+    price: Optional[float] = None
+
+class MenuReviewOut(BaseModel):
+    filename: Optional[str] = None
+    file_hash: Optional[str] = None
+    start_date: date
+    already_imported: Optional[int] = None
+    latest_sale: Optional[date] = None        # a start date on or before this changes past analysis
+    items: list[MenuReviewItem]
+    leaving: list[MenuLeavingOut]
+
+class MenuApplyItem(BaseModel):
+    name: str
+    price: Optional[float] = None
+    category: Optional[DishType] = None
+    description: Optional[str] = None
+    action: Literal["match", "new", "ignore"]
+    dish_id: Optional[int] = None             # for "match"
+    copy_from: Optional[int] = None           # for a returning dish
+
+class MenuApplyIn(BaseModel):
+    filename: Optional[str] = None
+    file_hash: Optional[str] = None
+    start_date: date
+    items: list[MenuApplyItem]
+    take_off: list[int] = []                  # dishes to take off the menu from start_date

@@ -96,6 +96,11 @@ class Dish(Base):
     # has genuinely sold 0; outside these dates it simply isn't analysed.
     on_menu_from = Column(Date, nullable=False, default=date.today)
     on_menu_until = Column(Date, nullable=True)   # None = still on the menu
+    description = Column(String, nullable=True)   # as on the menu; helps recipe estimates
+    # Set when a menu import finds the description has changed; cleared when the
+    # recipe is next saved. Only a reminder: the dish stays in the analysis.
+    recipe_check = Column(Boolean, nullable=False, default=False)
+    import_id = Column(Integer, ForeignKey(Import.id), nullable=True)   # set if a menu import created it
 
 class MenuPriceSource(enum.Enum):
     MANUAL = "manual"   # typed in on the Menu or dish page
@@ -111,6 +116,14 @@ class MenuPrice(Base):
     price = Column(Float, nullable=False)
     source = Column(Enum(MenuPriceSource), nullable=False)
     effective_date = Column(Date, nullable=False)
+    import_id = Column(Integer, ForeignKey(Import.id), nullable=True)   # set if it came from a menu import
+
+class MenuIgnoredItem(Base):
+    # A menu item the owner chose to ignore (a drink, set menu, add-on), so the
+    # next menu import starts it as ignored. Stored normalised (invoices.normalise).
+    __tablename__ = "menu_ignored_items"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False, unique=True)
 
 class DishIngredient(Base):
     __tablename__ = "dish_ingredients"

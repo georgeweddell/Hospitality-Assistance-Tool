@@ -8,7 +8,8 @@ load_dotenv()
 
 client = Anthropic()  # reads ANTHROPIC_API_KEY from the environment
 
-def build_recipe_prompt(dish_name: str, category: DishType, ingredient_names: list[str]) -> str:
+def build_recipe_prompt(dish_name: str, category: DishType, ingredient_names: list[str],
+                        description: str | None = None) -> str:
 
     if category == DishType.MAIN:
         portion_note = "NOTE: this is a Main Course for 1"
@@ -22,6 +23,8 @@ def build_recipe_prompt(dish_name: str, category: DishType, ingredient_names: li
         portion_note = ""
 
     ingredient_list_text = ", ".join(ingredient_names)
+    # The dish's description from the menu (if imported), e.g. what's on a pizza.
+    description_note = f"Menu description: {description}" if description else ""
 
     return f"""Determine the ingredients and quantities needed to make one portion of {dish_name}.
 
@@ -30,6 +33,7 @@ def build_recipe_prompt(dish_name: str, category: DishType, ingredient_names: li
     All quantities must be in grams, millilitres, or a plain numeric count — no vague measures like "a pinch" or "to taste."
     
     {portion_note}
+    {description_note}
 
     List ingredients as raw components you'd buy from a wholesaler, not prepared items — for example, list flour, water, yeast, and salt individually rather than 'pizza dough' or 'pizza base.'
 
@@ -39,11 +43,11 @@ def build_recipe_prompt(dish_name: str, category: DishType, ingredient_names: li
     """
 
 
-def estimate_recipe(db, dish_name: str, category: DishType) -> RecipeDraft:
+def estimate_recipe(db, dish_name: str, category: DishType, description: str | None = None) -> RecipeDraft:
     ingredients = db.query(models.Ingredient).all()
     ingredient_names = [ingredient.name for ingredient in ingredients]
 
-    prompt = build_recipe_prompt(dish_name, category, ingredient_names)
+    prompt = build_recipe_prompt(dish_name, category, ingredient_names, description)
 
     response = client.messages.parse(
         model="claude-haiku-4-5-20251001",

@@ -8,7 +8,7 @@ import schemas
 from fastapi import Depends, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 from database import get_db
-from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, MenuPriceOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn, BenchmarkSyncOut, InvoiceDraft, InvoiceReviewOut, InvoiceApplyIn, ImportOut, SalesReviewIn, SalesReviewOut, SalesApplyIn
+from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, MenuPriceOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn, BenchmarkSyncOut, InvoiceDraft, InvoiceReviewOut, InvoiceApplyIn, ImportOut, SalesReviewIn, SalesReviewOut, SalesApplyIn, MenuApplyIn
 from models import Dish, DishIngredient, Import, ImportKind, Ingredient, IngredientPrice, MenuPrice, MenuPriceSource, SalesRecord, TillItemAlias
 from recipe_ai import estimate_recipe
 from matching import match_recipe_ingredients
@@ -22,6 +22,7 @@ from seed_demo import backup_database, reset_database
 from benchmarks import sync_benchmarks
 from invoices import ImportProblem, apply_invoice, review_invoice, undo_import
 from invoice_ai import read_invoice
+from menus import apply_menu
 from tills import apply_sales, decode, items_needing_hints, read_csv, remembered_mapping, review_sales, undo_sales_import
 from till_ai import propose_columns, suggest_items
 import re
@@ -135,7 +136,8 @@ def add_ingredient_price(ingredient_id: int, price: IngredientPriceCreate, db: S
 def dish_out(db, dish):
     """A dish with its menu price today."""
     return DishOut(id=dish.id, name=dish.name, menu_price=menu_price_on(db, dish.id), category=dish.category,
-                   on_menu_from=dish.on_menu_from, on_menu_until=dish.on_menu_until)
+                   on_menu_from=dish.on_menu_from, on_menu_until=dish.on_menu_until,
+                   description=dish.description, recipe_check=dish.recipe_check)
 
 @app.get("/dishes", response_model=list[DishOut])
 def fetch_dish(db: Session = Depends(get_db)):
@@ -230,6 +232,8 @@ def get_dish_detail(dish_id: int, start: date | None = Query(None, alias="from")
         category=dish.category,
         on_menu_from=dish.on_menu_from,
         on_menu_until=dish.on_menu_until,
+        description=dish.description,
+        recipe_check=dish.recipe_check,
         skipped_ingredients=dish.skipped_ingredients,
         prices=list(reversed(menu_prices(db, dish_id))),
         lines=lines,
@@ -253,7 +257,7 @@ def estimate_recipe_route(dish_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Dish not found")
 
     try:
-        recipe = estimate_recipe(db, dish.name, dish.category)
+        recipe = estimate_recipe(db, dish.name, dish.category, dish.description)
     except anthropic.APIConnectionError:
         # Never reached Anthropic: no internet, DNS failure, or timeout.
         raise HTTPException(status_code=503, detail="Couldn't reach the AI recipe service. Check your internet connection and try again.")
@@ -283,6 +287,7 @@ def save_recipe(dish_id: int, confirmed: schemas.RecipeConfirm, db: Session = De
     recipe = []
 
     dish.skipped_ingredients = confirmed.skipped_ingredients
+    dish.recipe_check = False   # a saved recipe answers any "check recipe" reminder
 
     db.query(models.DishIngredient).filter(models.DishIngredient.dish_id == dish_id).delete()
 
@@ -594,6 +599,13 @@ def apply_sales_route(data: SalesApplyIn, db: Session = Depends(get_db)):
     except ImportProblem as e:
         raise HTTPException(status_code=422, detail=str(e))
 
+@app.post("/imports/menu/apply", response_model=ImportOut)
+def apply_menu_route(data: MenuApplyIn, db: Session = Depends(get_db)):
+    try:
+        return apply_menu(db, data)
+    except ImportProblem as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
 @app.post("/imports/{import_id}/undo", response_model=ImportOut)
 def undo_import_route(import_id: int, db: Session = Depends(get_db)):
     record = db.get(Import, import_id)
@@ -602,6 +614,8 @@ def undo_import_route(import_id: int, db: Session = Depends(get_db)):
     try:
         if record.kind == ImportKind.SALES:
             return undo_sales_import(db, record)
+        if record.kind == ImportKind.MENU:
+            raise ImportProblem("Menu imports can't be undone. Change the dishes by hand on the Menu page.")
         return undo_import(db, import_id)
     except ImportProblem as e:
         raise HTTPException(status_code=422, detail=str(e))
