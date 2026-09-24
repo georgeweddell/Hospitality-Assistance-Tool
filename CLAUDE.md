@@ -16,7 +16,7 @@ This file gives Claude Code the context it needs to work on this project. Read i
 
 ### Where it is now
 
-Step 2 works (dish page with recipe editor and AI draft), and step 5 works at menu level. Dishes are added one at a time on the Menu page. Menu prices have dated history (edit a dish's price and pick when it starts; the dish page lists the history). Ingredient prices have history and sources, and the Ingredients page lets owners enter them from invoices by hand (no invoice upload yet). Sales are stored per dish per day (or as a total for a period), and every analysis runs over a chosen date range; the Sales page shows which days have data and takes manual totals (no till-file upload yet). The demo database comes from `seed_demo.py`.
+Step 2 works (dish page with recipe editor and AI draft), and step 5 works at menu level. Dishes are added one at a time on the Menu page. Menu prices have dated history (edit a dish's price and pick when it starts; the dish page lists the history). Ingredient prices have history and sources. Owners enter them by hand on the Ingredients page, or upload a supplier invoice on the Imports page: Claude reads it, the owner checks the lines, and applying saves dated invoice prices (undoable). Sales are stored per dish per day (or as a total for a period), and every analysis runs over a chosen date range; the Sales page shows which days have data and takes manual totals (no till-file upload yet). The demo database comes from `seed_demo.py`.
 
 **Purpose:** a portfolio piece for Forward Deployed Engineer / Solutions Engineer interviews. It is NOT being built as a commercial product. Clarity, correctness and explainability matter more than features. The aim is **one complete journey that works end to end and can be demoed in five minutes**, not every possible integration.
 
@@ -46,7 +46,10 @@ Step 2 works (dish page with recipe editor and AI draft), and step 5 works at me
   - `recipe_ai.py`: recipe-estimation prompt and the Anthropic call.
   - `matching.py`: exact match first, then `difflib` fuzzy suggestions.
   - `periods.py`: month maths and the default range (the month containing the latest sale). Analysis routes take `?from=YYYY-MM-DD&to=YYYY-MM-DD`; without them they use that default.
-  - `units.py`: converts a pack price ("£93.60 for 12 kg") into a price per base unit. **Every price input path goes through it** (the price routes do via `base_unit_price` in `main.py`, and invoice import must too).
+  - `units.py`: converts a pack price ("£93.60 for 12 kg") into a price per base unit. **Every price input path goes through it** (the price routes do via `base_unit_price` in `main.py`; invoice import via `invoices.line_price`).
+  - `invoices.py`: invoice import after Claude has read the invoice, all plain Python: `review_invoice` (price per base unit from pack count × size, totals check, matching, flags; saves nothing), `apply_invoice` (checks everything, then saves `invoice` prices dated on the invoice date, each carrying `import_id`, and remembers matches in `SupplierAlias`), `undo_import` (all or nothing; refused if an ingredient the invoice created is now in a recipe). Matching order: remembered match for this supplier and description → exact match on Claude's `likely_ingredient` → fuzzy suggestions from `matching.py` (never auto-chosen).
+  - `invoice_ai.py`: the invoice-reading prompt and the Claude call (Sonnet 5; PDFs sent as documents, photos as images). Claude only reads: numbers as printed, pack as count/size/unit, line kind, likely ingredient from the live list. Routes: `POST /imports/invoice/read` (upload; checks type, size and file signature, keeps the file in git-ignored `backend/uploads/<sha256>.<ext>`), `/imports/invoice/review`, `/imports/invoice/apply`, `GET /imports`, `POST /imports/{id}/undo`.
+  - `samples/make_sample_invoice.py` writes `samples/sample-invoice.pdf`, a made-up invoice (fictional supplier) for trying the import by hand against the demo data: it includes a new ingredient (guanciale), a line whose total doesn't add up (ricotta) and two lines to ignore.
   - `benchmarks.py` + `data/benchmark_prices.csv`: the benchmark ingredient list (~250 items: Italian, British pub, Indian and general staples; 2026 UK wholesale estimates, not supplier quotes). The CSV is written as a kitchen reads prices (`beef mince,gram,8.50,kg`) and converted through `units.py` on load. `sync_benchmarks` adds missing ingredients and records changed benchmark prices as new dated rows; it never deletes, never touches own prices, and skips (reports) unit conflicts. Settings → Benchmark prices → Update runs it (`POST /setup/benchmarks`). Edit the CSV to change or add benchmarks.
   - `onboarding.py`: `setup_status` (counts for the Overview's setup checklist). Routes: `GET /setup/status`, and `POST /setup/reset` with `{"mode": "fresh" | "demo", "confirm": "reset"}`, which backs up `menu.db` and then rebuilds it (the Settings page calls it).
   - `seed_demo.py`: wipes and rebuilds `menu.db` with realistic demo data (June–August 2026 of daily sales at a small UK pizzeria, hand-written recipes; June's days add up to the original June totals). It backs up the old database to `menu.backup-<timestamp>.db` first. `reset_database(engine, with_demo)` is the shared function: `with_demo=False` is "start fresh" (benchmark ingredients only). It takes the engine as a parameter so tests run it on the in-memory database. Run as a script, or use Settings in the app.
@@ -57,7 +60,8 @@ Step 2 works (dish page with recipe editor and AI draft), and step 5 works at me
   - The Python virtual environment is at `backend/venv/`.
   - Use `backend/venv/Scripts/python.exe`, not the system Python.
 - `frontend/` holds the React app.
-  - `src/App.jsx` loads the shared data once and picks the page. Pages are switched by the URL hash via `src/useHashRoute.js`, with no router library: Overview (`#/overview`), Actions (`#/actions`), Menu (`#/menu`), a dish page (`#/menu/12`), Ingredients (`#/ingredients`), Sales (`#/sales`) and Insights (`#/analysis`).
+  - `src/App.jsx` loads the shared data once and picks the page. Pages are switched by the URL hash via `src/useHashRoute.js`, with no router library: Overview (`#/overview`), Actions (`#/actions`), Menu (`#/menu`), a dish page (`#/menu/12`), Ingredients (`#/ingredients`), Sales (`#/sales`), Imports (`#/imports`) and Insights (`#/analysis`).
+  - `ImportsPage.jsx`: Upload invoice and the import history (with Undo). After an upload it shows `InvoiceReview.jsx`, where every line can be edited before Apply; the prices and warning chips there are a live preview (`src/invoices.js`), and the backend works them out again on Apply.
   - Overview (`OverviewPage.jsx`) is deliberately light: four figures with their change since the previous period, the top three actions as cards, "Since <previous period>" (quadrant changes, dishes joining or leaving) and menu health. The full ranked table lives on the Actions page (`ActionList.jsx`). Action wording shared by both is in `src/actionText.js`. `components/Layout.jsx` holds the sidebar navigation.
   - The dish page (`DishPage.jsx`) loads its own detail (`GET /dishes/{id}/detail` plus `/ingredients`). `RecipeEditor.jsx` edits the recipe there. "Estimate with AI" fills the editor as a draft, and nothing is saved until Save. The editor's plate cost is a live preview; the saved figures always come from the backend costing engine.
   - `IngredientsPage.jsx` loads `/ingredients` itself (current price, source, date and `used_in` count). Prices are entered as a pack price (`PriceFields.jsx`, helpers in `src/prices.js`). The £/kg shown while typing is only a preview; the backend does the real conversion.
@@ -69,7 +73,7 @@ Step 2 works (dish page with recipe editor and AI draft), and step 5 works at me
   - **Never use `window.confirm` / `alert` / `prompt`.** The app's embedded browser pane blocks them (confirm silently returns false). Destructive actions use `components/ConfirmDialog.jsx` (an in-page `<dialog>`).
   - A new restaurant sees `SetupChecklist.jsx` on the Overview (dishes, recipes, sales; own prices optional) until setup is complete; the step logic is in `src/setup.js`. Settings (`SettingsPage.jsx`, bottom of the sidebar) has Start fresh and Load demo data.
   - Components live in `src/components/`. Quadrant colours live in `src/quadrants.js`, menu categories in `src/categories.js`, and number and unit formatting in `src/format.js` (prices are shown as £/kg, £/l or each).
-  - All API calls go through `src/api.js`, using the `getJson` / `postJson` / `putJson` / `deleteJson` helpers. Don't call `fetch` directly from components.
+  - All API calls go through `src/api.js`, using the `getJson` / `postJson` / `putJson` / `deleteJson` helpers (and `postFile` for uploads). Don't call `fetch` directly from components.
   - The backend URL comes from `VITE_API_URL`, defaulting to `http://localhost:8000`.
 
 ### Starting the app
@@ -91,6 +95,8 @@ Frontend (http://localhost:5173):
 cd frontend
 npm run dev
 ```
+
+If Tailwind classes used in a newly created component don't take effect (the element keeps the shared class's width, for example), restart the frontend dev server: it can keep serving a stylesheet built before the file existed.
 
 Tests (from inside `backend/`):
 
@@ -143,7 +149,7 @@ Done: tests for costing and menu engineering (`backend/tests/`), and the fronten
 4. ~~**Sales and date ranges.**~~ Done: dishes have on-the-menu dates; sales are daily (or period totals); analysis runs over any date range with presets (latest month by default); Sales page with a coverage strip and manual totals.
 5. ~~**Setup checklist, start fresh, empty states.**~~ Done: Settings → Start fresh / Load demo data (both back up first), a setup checklist on the Overview, short empty states.
 6. ~~**Broaden the benchmark price list.**~~ Done: `data/benchmark_prices.csv`, ~250 ingredients across Italian, British pub, Indian and staples, with an update button in Settings.
-7. **AI imports** (plan agreed with George, 24 Sep 2026; build in the order below, each its own approved step with tests). See "Step 7 plan" below. (a) menu price history: done.
+7. **AI imports** (plan agreed with George, 24 Sep 2026; build in the order below, each its own approved step with tests). See "Step 7 plan" below. (a) menu price history: done. (b) invoice import: done.
 8. **Monthly routine:** "what changed since last period", price-rise alerts, and each dish's "% of cost from your own data".
 9. **Business-wide suggestions:** rule-based and hand-checkable (e.g. GP vs typical for the restaurant type). Claude may reword them but doesn't invent them.
 10. **Authentication:** JWT login with per-user data isolation. **Use plan mode and get approval before starting.** It touches every query, and it's required before deployment because the app spends API credit.
