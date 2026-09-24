@@ -41,7 +41,8 @@ A web app for small independent UK restaurants. It turns a menu into a costed, r
   - `recipe_ai.py`: recipe-estimation prompt and the Anthropic call.
   - `matching.py`: exact match first, then `difflib` fuzzy suggestions.
   - `seed.py`, `seed_Phase4.py`, `seed_dish.py`, `seed_recipes.py`: seed scripts. `seed_recipes.py` calls the real API and auto-accepts matches (test data only).
-  - `ai_test_v1.py`, `ai_test_v2.py`, `dish_check.py`, `match_check.py`, `test_costing.py`, `ingredient_list.py`: one-off scripts written during development. They are **not** pytest tests.
+  - `ai_test_v1.py`, `ai_test_v2.py`, `dish_check.py`, `match_check.py`, `costing_check.py`, `ingredient_list.py`: one-off scripts written during development. They are **not** pytest tests. Don't name scripts `test_*.py`, or pytest will run them.
+  - `tests/`: pytest tests. `conftest.py` gives every test a fresh in-memory database, never `menu.db`. `pytest.ini` sets the test path.
   - The SQLite database is `backend/menu.db` (git-ignored). The API key lives in `backend/.env` (git-ignored).
   - The Python virtual environment is at `backend/venv/`.
   - Use `backend/venv/Scripts/python.exe`, not the system Python.
@@ -68,6 +69,13 @@ Frontend (http://localhost:5173):
 ```powershell
 cd frontend
 npm run dev
+```
+
+Tests (from inside `backend/`):
+
+```powershell
+cd backend
+.\venv\Scripts\python.exe -m pytest
 ```
 
 ## Core logic — do not change without asking first
@@ -100,7 +108,7 @@ None at the moment.
 ## Roadmap (in order)
 
 1. Fix the open items above.
-2. Add automated tests (pytest) for the costing engine and menu-engineering logic. Use small hand-checkable examples where the right answer is known in advance. Before starting: add pytest to the venv and `requirements.txt`, and rename or remove `backend/test_costing.py`. It's a dev script that reads the real database, not a test, and pytest would collect it because of its `test_` name.
+2. ~~Add automated tests (pytest) for the costing engine and menu-engineering logic.~~ Done (`backend/tests/`). New tests should keep to small hand-checkable examples, with the working in comments.
 3. Visual polish / styling pass on the frontend.
 4. Authentication: JWT-based login with per-user data isolation. **Use plan mode and get approval before starting.** This touches every query.
 5. Deployment, so the app is reachable by a public link.
@@ -113,7 +121,7 @@ None at the moment.
 - **For anything touching more than a couple of files, propose a plan first.** Wait for approval.
 - **Make small, focused changes.** Suggest a commit after each logical step, with a clear one-line message (e.g. "Add error handling to recipe estimation").
 - **Explain changes after making them.** Briefly say what changed, why, and how to check it works.
-- **Run the tests after changes to backend logic,** once tests exist.
+- **Run the tests after changes to backend logic.** All must pass before committing.
 - **The main branch is `main`** (renamed from `master` in September 2026).
 - **Never commit secrets.** The Anthropic API key stays in an environment variable / `.env` file that is git-ignored.
 - **If something George asks for would break a design decision above, say so** before doing it.
