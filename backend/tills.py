@@ -257,6 +257,14 @@ def plan_sales(db, text, mapping, choices=(), hints=None):
             "to_save": to_save, "first": first, "last": last}
 
 
+def items_needing_hints(db, text, mapping):
+    """Item names in the file that aren't remembered or exactly a dish name: only these go to Claude."""
+    totals, _ = parse_sales(*read_csv(text), mapping)
+    dish_names = {d.name.strip().lower() for d in db.query(Dish).all()}
+    known = {a.item for a in db.query(TillItemAlias).all()}
+    return [item for item in totals if item.strip().lower() not in dish_names and normalise(item) not in known]
+
+
 def already_imported(db, file_hash):
     return db.query(Import).filter(Import.kind == ImportKind.SALES, Import.status == ImportStatus.APPLIED,
                                    Import.file_hash == file_hash).first()

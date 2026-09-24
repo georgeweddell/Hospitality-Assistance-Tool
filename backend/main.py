@@ -22,7 +22,8 @@ from seed_demo import backup_database, reset_database
 from benchmarks import sync_benchmarks
 from invoices import ImportProblem, apply_invoice, review_invoice, undo_import
 from invoice_ai import read_invoice
-from tills import apply_sales, decode, review_sales, undo_sales_import
+from tills import apply_sales, decode, items_needing_hints, read_csv, remembered_mapping, review_sales, undo_sales_import
+from till_ai import propose_columns, suggest_items
 import re
 import hashlib
 from pathlib import Path
@@ -490,12 +491,16 @@ def read_upload(file):
     if not any(content.startswith(s) for s in signatures):
         raise HTTPException(status_code=422, detail=f"That file isn't a readable {extension[1:].upper()}")
 
+    return content, media_type, save_upload(content, extension)
+
+def save_upload(content, extension):
+    """Keeps a copy of an uploaded file, named by its SHA-256 hash. Returns the hash."""
     file_hash = hashlib.sha256(content).hexdigest()
     UPLOAD_DIR.mkdir(exist_ok=True)
     saved = UPLOAD_DIR / f"{file_hash}{extension}"
     if not saved.exists():
         saved.write_bytes(content)
-    return content, media_type, file_hash
+    return file_hash
 
 @app.post("/imports/invoice/read", response_model=InvoiceReviewOut)
 def read_invoice_route(file: UploadFile, db: Session = Depends(get_db)):
@@ -531,6 +536,46 @@ def load_upload(file_hash, extension):
     if not path.exists():
         raise HTTPException(status_code=422, detail="That upload has gone. Upload the file again.")
     return decode(path.read_bytes())
+
+@app.post("/imports/sales/read", response_model=SalesReviewOut)
+def read_sales_route(file: UploadFile, db: Session = Depends(get_db)):
+    """
+    Reads an uploaded till export. Claude proposes the columns (unless this
+    layout is remembered) and what unknown item names are. If Claude can't be
+    reached, the review still opens and the owner chooses the columns.
+    Saves nothing but the file.
+    """
+    if Path(file.filename or "").suffix.lower() != ".csv":
+        raise HTTPException(status_code=422, detail="Upload a CSV file exported from your till")
+    content = file.file.read(MAX_UPLOAD_BYTES + 1)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=422, detail="That file is over 10 MB")
+    try:
+        text = decode(content)
+        header, rows = read_csv(text)
+    except (UnicodeDecodeError, ImportProblem):
+        raise HTTPException(status_code=422, detail="That file isn't a readable CSV")
+    if len(header) < 3 or not rows:
+        raise HTTPException(status_code=422, detail="That doesn't look like a sales export (it needs date, item and quantity columns)")
+    file_hash = save_upload(content, ".csv")
+
+    mapping, hints, ai_unavailable = remembered_mapping(db, header), None, False
+    try:
+        if mapping is None:
+            mapping = propose_columns(header, rows)
+        if mapping is not None:
+            hints = suggest_items(items_needing_hints(db, text, mapping), [d.name for d in db.query(Dish).all()])
+    except (anthropic.APIConnectionError, anthropic.APIStatusError):
+        ai_unavailable = True
+    except ImportProblem:
+        mapping = None   # Claude named a column that isn't there: the owner chooses
+
+    try:
+        review = review_sales(db, text, file_hash, file.filename, mapping, hints=hints)
+    except ImportProblem as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    review.ai_unavailable = ai_unavailable
+    return review
 
 @app.post("/imports/sales/review", response_model=SalesReviewOut)
 def review_sales_route(data: SalesReviewIn, db: Session = Depends(get_db)):

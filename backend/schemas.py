@@ -396,9 +396,22 @@ class SalesReviewOut(BaseModel):
     replace_days: int = 0
     conflict_days: int = 0
     items: list[SalesItemOut] = []
+    ai_unavailable: bool = False              # Claude couldn't be reached: columns chosen by hand
 
 class SalesApplyIn(BaseModel):
     file_hash: str
     filename: Optional[str] = None
     mapping: TillMappingIn
     choices: list[TillItemChoice]
+
+class TillColumnsDraft(BaseModel):
+    """Claude's proposed column mapping. Checked against the file before use (till_ai.py)."""
+    date_column: Optional[str] = None
+    item_column: Optional[str] = None
+    quantity_column: Optional[str] = None
+    date_format: Optional[DateFormat] = None
+    refund_column: Optional[str] = None
+    refund_value: Optional[str] = None
+
+class TillItemHints(BaseModel):
+    items: list[TillItemHint]
