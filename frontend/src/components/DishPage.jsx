@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Card from './Card'
+import ConfirmDialog from './ConfirmDialog'
 import DishForm from './DishForm'
 import QuadrantBadge from './QuadrantBadge'
 import RecipeEditor from './RecipeEditor'
@@ -28,6 +29,7 @@ function DishPage({ dishId, range, analysed, onChanged }) {
   const [ingredients, setIngredients] = useState(null)
   const [error, setError] = useState(null)
   const [editing, setEditing] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [version, setVersion] = useState(0)   // bump to refetch
   // Counts completed loads. The recipe editor is keyed on it, so it restarts
   // from the saved recipe once fresh data has arrived (not before).
@@ -63,13 +65,16 @@ function DishPage({ dishId, range, analysed, onChanged }) {
     })
 
   const remove = () => {
-    if (!window.confirm(`Delete ${dish.name}? Its recipe and sales records are deleted too. This can't be undone.`)) return
     deleteJson(`/dishes/${dishId}`)
       .then(() => {
+        setConfirmingDelete(false)
         onChanged()
         navigate('menu')
       })
-      .catch((err) => setError(err.message))
+      .catch((err) => {
+        setConfirmingDelete(false)
+        setError(err.message)
+      })
   }
 
   const back = <a href="#/menu" className="text-sm font-medium text-muted hover:text-ink">← Menu</a>
@@ -107,7 +112,7 @@ function DishPage({ dishId, range, analysed, onChanged }) {
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={() => setEditing(true)} className="btn btn-secondary">Edit details</button>
-            <button type="button" onClick={remove} className="btn btn-danger">Delete</button>
+            <button type="button" onClick={() => setConfirmingDelete(true)} className="btn btn-danger">Delete</button>
           </div>
         </div>
       )}
@@ -120,6 +125,11 @@ function DishPage({ dishId, range, analysed, onChanged }) {
       </div>
 
       <RecipeEditor key={loads} dish={dish} ingredients={ingredients} onSaved={reload} />
+
+      <ConfirmDialog open={confirmingDelete} title={`Delete ${dish.name}?`} confirmLabel="Delete"
+                     onConfirm={remove} onCancel={() => setConfirmingDelete(false)}>
+        Its recipe and sales records are deleted too. This can't be undone.
+      </ConfirmDialog>
     </div>
   )
 }

@@ -10,6 +10,9 @@ import MenuPage from './components/MenuPage'
 import DishPage from './components/DishPage'
 import IngredientsPage from './components/IngredientsPage'
 import SalesPage from './components/SalesPage'
+import SettingsPage from './components/SettingsPage'
+import SetupChecklist from './components/SetupChecklist'
+import { setupComplete } from './setup'
 import RangePicker from './components/RangePicker'
 import { QuadrantLegend } from './components/QuadrantBadge'
 
@@ -20,6 +23,7 @@ const TITLES = {
   ingredients: 'Ingredients',
   sales: 'Sales',
   analysis: 'Insights',
+  settings: 'Settings',
 }
 
 // Pages whose figures depend on the chosen period.
@@ -86,10 +90,11 @@ function App() {
       getJson('/dishes'),
       getJson(`/sales/coverage?${q}`),
       getJson(`/dishes/classifications?${rangeQuery(previousRange(range))}`),   // for "since last period"
+      getJson('/setup/status'),
     ])
-      .then(([dishes, actions, incomplete, allDishes, coverage, prevDishes]) => {
+      .then(([dishes, actions, incomplete, allDishes, coverage, prevDishes, setup]) => {
         if (ignore) return
-        setData({ dishes, actions, incomplete, allDishes, coverage, prevDishes, range })
+        setData({ dishes, actions, incomplete, allDishes, coverage, prevDishes, setup, range })
         setError(null)
       })
       .catch((err) => {
@@ -101,6 +106,20 @@ function App() {
   }, [range, refreshKey])
 
   const refresh = () => setRefreshKey((k) => k + 1)
+
+  // After starting fresh or loading the demo: forget the chosen period and
+  // menu view (they may point at data that's gone) and reload everything.
+  const afterReset = () => {
+    try {
+      sessionStorage.removeItem(RANGE_KEY)
+      sessionStorage.removeItem('menu-view')
+    } catch {
+      // nothing stored
+    }
+    setRange(null)
+    setData(null)
+    refresh()
+  }
   const changeRange = (r) => {
     setRange(r)
     saveRange(r)
@@ -118,6 +137,8 @@ function App() {
     )
   } else if (page === 'ingredients') {
     content = <IngredientsPage onChanged={refresh} />
+  } else if (page === 'settings') {
+    content = <SettingsPage onReset={afterReset} />
   } else if (!data) {
     content = (
       <div className="flex items-center gap-3 text-muted">
@@ -141,6 +162,17 @@ function App() {
     )
   } else if (page === 'sales') {
     content = <SalesPage range={data.range} coverage={data.coverage} onSaved={refresh} />
+  } else if (page === 'overview' && data.setup && !setupComplete(data.setup)) {
+    // A new restaurant: the checklist first, then any results there already are.
+    content = (
+      <div className="space-y-6">
+        <SetupChecklist status={data.setup} />
+        {hasSales && (
+          <OverviewPage dishes={data.dishes} prevDishes={data.prevDishes} actions={data.actions}
+                        allDishes={data.allDishes} range={data.range} />
+        )}
+      </div>
+    )
   } else if (!hasSales) {
     content = <NoSales />
   } else if (page === 'actions') {

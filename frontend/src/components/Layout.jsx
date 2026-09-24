@@ -8,6 +8,10 @@ const NAV = [
   { page: 'sales', label: 'Sales', icon: 'M4 20h16M7 16v-5M12 16V6M17 16v-8' },
   { page: 'analysis', label: 'Insights', icon: 'M4 4v16h16M8 14l3-3 3 2 5-6' },
 ]
+const SETTINGS = {
+  page: 'settings', label: 'Settings',
+  icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
+}
 
 function NavIcon({ path }) {
   return (
@@ -59,6 +63,9 @@ function Layout({ page, title, toolbar, badges = {}, children }) {
               <NavLink key={item.page} item={item} active={page === item.page} badge={badges[item.page]} />
             ))}
           </nav>
+          <div className="mt-auto">
+            <NavLink item={SETTINGS} active={page === 'settings'} />
+          </div>
         </div>
       </aside>
 
@@ -68,7 +75,7 @@ function Layout({ page, title, toolbar, badges = {}, children }) {
           <Brand />
         </div>
         <nav className="flex gap-1 overflow-x-auto px-3 py-3" aria-label="Main">
-          {NAV.map((item) => (
+          {[...NAV, SETTINGS].map((item) => (
             <NavLink key={item.page} item={item} active={page === item.page} badge={badges[item.page]} compact />
           ))}
         </nav>

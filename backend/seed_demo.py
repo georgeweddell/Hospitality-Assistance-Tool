@@ -26,7 +26,9 @@ import os
 import shutil
 from datetime import date, datetime, timedelta
 
-from database import Base, SessionLocal, engine
+from sqlalchemy.orm import sessionmaker
+
+from database import Base, engine
 from models import (Dish, DishIngredient, DishType, Ingredient, IngredientPrice, PriceSource,
                     SalesRecord, UnitType, User)
 from costing import cost_dish
@@ -294,17 +296,29 @@ def month_total(name, june_units, month):
     return round(june_units * factor)
 
 
-def backup_database():
-    if os.path.exists("menu.db"):
-        backup = f"menu.backup-{datetime.now():%Y%m%d-%H%M%S}.db"
-        shutil.copy("menu.db", backup)
-        print(f"Backed up existing database to {backup}")
+def backup_database(path="menu.db"):
+    """Copy the database aside before it's wiped. Returns the backup's name (None if no database yet)."""
+    if not os.path.exists(path):
+        return None
+    backup = f"menu.backup-{datetime.now():%Y%m%d-%H%M%S}.db"
+    shutil.copy(path, backup)
+    return backup
 
 
-def seed():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
+def reset_database(target_engine, with_demo, verbose=False):
+    """
+    Wipes the database and rebuilds it.
+
+    with_demo=False: "start fresh". Only the benchmark ingredient list (and
+        the dev user), so a restaurant can cost dishes from day one.
+    with_demo=True: the full demo pizzeria (invoice prices, dishes, recipes,
+        three months of daily sales).
+
+    Takes the engine as a parameter so tests can run it on a throwaway database.
+    """
+    Base.metadata.drop_all(bind=target_engine)
+    Base.metadata.create_all(bind=target_engine)
+    db = sessionmaker(bind=target_engine)()
 
     db.add(User(email="dev@example.com"))
 
@@ -317,6 +331,12 @@ def seed():
     for name, unit, price in INGREDIENTS:
         db.add(IngredientPrice(ingredient_id=ingredients[name].id, price_per_unit=price,
                                source=PriceSource.BENCHMARK, effective_date=BENCHMARK_DATE))
+    db.commit()
+
+    if not with_demo:
+        db.close()
+        return {"ingredients": len(INGREDIENTS), "dishes": 0}
+
     for name, price, invoice_date in INVOICE_PRICES:
         db.add(IngredientPrice(ingredient_id=ingredients[name].id, price_per_unit=price,
                                source=PriceSource.INVOICE, supplier=DEMO_SUPPLIER,
@@ -350,14 +370,18 @@ def seed():
                     db.add(SalesRecord(dish_id=dish.id, units_sold=units, period_start=day, period_end=day))
         db.commit()
 
-        plate_cost, margin, margin_percent = cost_dish(db, dish.id)
-        sales = "  ".join(f"{m:>4}" for m in monthly)
-        print(f"  {name:<26} £{price:>5.2f}  cost £{plate_cost:>4.2f}  GP {margin_percent:>5.1f}%  Jun/Jul/Aug {sales}")
+        if verbose:
+            plate_cost, margin, margin_percent = cost_dish(db, dish.id)
+            sales = "  ".join(f"{m:>4}" for m in monthly)
+            print(f"  {name:<26} £{price:>5.2f}  cost £{plate_cost:>4.2f}  GP {margin_percent:>5.1f}%  Jun/Jul/Aug {sales}")
 
     db.close()
-    print(f"\nSeeded {len(INGREDIENTS)} ingredients and {len(DISHES)} dishes.")
+    return {"ingredients": len(INGREDIENTS), "dishes": len(DISHES)}
 
 
 if __name__ == "__main__":
-    backup_database()
-    seed()
+    backup = backup_database()
+    if backup:
+        print(f"Backed up existing database to {backup}")
+    result = reset_database(engine, with_demo=True, verbose=True)
+    print(f"\nSeeded {result['ingredients']} ingredients and {result['dishes']} dishes.")

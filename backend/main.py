@@ -8,7 +8,7 @@ import schemas
 from fastapi import Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from database import get_db
-from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut
+from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn
 from models import Dish, DishIngredient, Ingredient, IngredientPrice, SalesRecord
 from recipe_ai import estimate_recipe
 from matching import match_recipe_ingredients
@@ -17,6 +17,8 @@ import anthropic
 from sqlalchemy import func
 from units import price_per_base_unit
 from periods import resolve_range
+from onboarding import setup_status
+from seed_demo import backup_database, reset_database
 
 
 Base.metadata.create_all(bind=engine)
@@ -393,3 +395,22 @@ def save_sales_entries(entries: list[SalesEntryIn], start: date = Query(alias="f
     db.commit()
 
     return get_sales_entries(start, end, db)
+
+# --- Setup --------------------------------------------------------------------------
+
+@app.get("/setup/status", response_model=SetupStatusOut)
+def get_setup_status(db: Session = Depends(get_db)):
+    return setup_status(db)
+
+@app.post("/setup/reset")
+def reset(request: ResetIn):
+    """
+    Wipes the database and rebuilds it: "fresh" = benchmark ingredients only,
+    "demo" = the demo pizzeria. The current database is backed up first.
+    """
+    if request.confirm != "reset":
+        raise HTTPException(status_code=422, detail='Send confirm: "reset" to wipe the database')
+
+    backup = backup_database()
+    result = reset_database(engine, with_demo=request.mode == "demo")
+    return {"mode": request.mode, "backup": backup, **result}

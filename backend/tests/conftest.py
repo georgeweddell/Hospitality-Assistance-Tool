@@ -17,19 +17,24 @@ from models import Dish, DishIngredient, Ingredient, IngredientPrice, PriceSourc
 
 
 @pytest.fixture
-def db():
+def engine():
     # StaticPool keeps one connection open, so the in-memory database
     # survives for the whole test instead of vanishing between queries.
-    engine = create_engine(
+    test_engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=test_engine)
+    yield test_engine
+    test_engine.dispose()
+
+
+@pytest.fixture
+def db(engine):
     session = sessionmaker(bind=engine)()
     yield session
     session.close()
-    engine.dispose()
 
 
 @pytest.fixture

@@ -211,3 +211,16 @@ class SalesEntryOut(BaseModel):
     category: Optional[DishType] = None
     units_sold: Optional[int] = None       # the total entered for exactly this period, if any
     other_records: int                     # other records inside the period (e.g. daily till data)
+
+class SetupStatusOut(BaseModel):
+    """What a restaurant has entered so far (dishes currently on the menu)."""
+    dishes: int
+    dishes_with_recipe: int
+    dishes_with_category: int
+    ingredients_in_use: int
+    ingredients_with_own_price: int
+    has_sales: bool
+
+class ResetIn(BaseModel):
+    mode: Literal["fresh", "demo"]
+    confirm: str   # must be "reset": guards against wiping the database by accident

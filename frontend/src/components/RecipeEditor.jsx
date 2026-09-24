@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Card from './Card'
+import ConfirmDialog from './ConfirmDialog'
 import Hint from './Hint'
 import { postJson } from '../api'
 import { percent, pounds, priceForDisplay, sourceLabel, unitLabel } from '../format'
@@ -52,6 +53,7 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [showProblems, setShowProblems] = useState(false)
+  const [confirmingEstimate, setConfirmingEstimate] = useState(false)
 
   const change = (updater) => {
     setRows(updater)
@@ -76,8 +78,11 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
     setShowProblems(false)
   }
 
+  // With lines already there, ask before replacing them.
+  const askToEstimate = () => (rows.length > 0 ? setConfirmingEstimate(true) : estimate())
+
   const estimate = () => {
-    if (rows.length > 0 && !window.confirm('Replace the lines below with a new AI estimate? Nothing is saved until you press Save.')) return
+    setConfirmingEstimate(false)
     setEstimating(true)
     setError(null)
     postJson(`/dishes/${dish.id}/estimate-recipe`, {})
@@ -130,7 +135,7 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
               <span className="chip chip-accent">AI draft</span>
             </Hint>
           )}
-          <button type="button" onClick={estimate} disabled={estimating || saving} className="btn btn-secondary btn-sm">
+          <button type="button" onClick={askToEstimate} disabled={estimating || saving} className="btn btn-secondary btn-sm">
             {estimating ? 'Estimating…' : '✦ Estimate with AI'}
           </button>
         </span>
@@ -257,6 +262,11 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
           {problems.map((p) => <li key={p}>{p}</li>)}
         </ul>
       )}
+
+      <ConfirmDialog open={confirmingEstimate} title="Replace with an AI estimate?" confirmLabel="Replace"
+                     onConfirm={estimate} onCancel={() => setConfirmingEstimate(false)}>
+        The lines below are replaced by Claude's draft. Nothing is saved until you press Save.
+      </ConfirmDialog>
 
       {dirty && (
         <div className="flex justify-end gap-2 border-t border-line bg-bg px-5 py-3.5">
