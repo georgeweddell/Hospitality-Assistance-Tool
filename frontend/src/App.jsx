@@ -10,6 +10,7 @@ import MenuPage from './components/MenuPage'
 import DishPage from './components/DishPage'
 import IngredientsPage from './components/IngredientsPage'
 import SalesPage from './components/SalesPage'
+import ImportsPage from './components/ImportsPage'
 import SettingsPage from './components/SettingsPage'
 import SetupChecklist from './components/SetupChecklist'
 import { setupComplete } from './setup'
@@ -22,6 +23,7 @@ const TITLES = {
   menu: 'Menu',
   ingredients: 'Ingredients',
   sales: 'Sales',
+  imports: 'Imports',
   analysis: 'Insights',
   settings: 'Settings',
 }
@@ -137,6 +139,8 @@ function App() {
     )
   } else if (page === 'ingredients') {
     content = <IngredientsPage onChanged={refresh} />
+  } else if (page === 'imports') {
+    content = <ImportsPage onChanged={refresh} />
   } else if (page === 'settings') {
     content = <SettingsPage onReset={afterReset} onChanged={refresh} />
   } else if (!data) {

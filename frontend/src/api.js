@@ -29,3 +29,15 @@ export const getJson = (path) => request('GET', path)
 export const postJson = (path, body) => request('POST', path, body)
 export const putJson = (path, body) => request('PUT', path, body)
 export const deleteJson = (path) => request('DELETE', path)
+
+// Uploads one file as a form (the backend reads it as `file`).
+export function postFile(path, file) {
+  const body = new FormData()
+  body.append('file', file)
+  return fetch(`${BASE_URL}${path}`, { method: 'POST', body }).then((response) => {
+    if (!response.ok) {
+      return errorFromResponse(response, `Upload failed (${response.status})`)
+    }
+    return response.json()
+  })
+}
