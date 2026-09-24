@@ -95,8 +95,7 @@ These were hard-won. Don't undo them.
 
 ## Known open items
 
-1. There is no `try`/`except` around the Anthropic SDK call in `estimate_recipe`. A connection failure currently returns a bare 500 error. It should return a clear, friendly error that the frontend displays.
-2. GitHub branch naming (`master` vs `main`) is unresolved.
+None at the moment.
 
 ## Roadmap (in order)
 
@@ -115,6 +114,7 @@ These were hard-won. Don't undo them.
 - **Make small, focused changes.** Suggest a commit after each logical step, with a clear one-line message (e.g. "Add error handling to recipe estimation").
 - **Explain changes after making them.** Briefly say what changed, why, and how to check it works.
 - **Run the tests after changes to backend logic,** once tests exist.
+- **The main branch is `main`** (renamed from `master` in September 2026).
 - **Never commit secrets.** The Anthropic API key stays in an environment variable / `.env` file that is git-ignored.
 - **If something George asks for would break a design decision above, say so** before doing it.
 - **If you're unsure what George intended, ask.** Don't guess.

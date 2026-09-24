@@ -13,6 +13,7 @@ from models import Dish, DishIngredient, Ingredient, SalesRecord
 from recipe_ai import estimate_recipe
 from matching import match_recipe_ingredients
 from datetime import date
+import anthropic
 
 
 Base.metadata.create_all(bind=engine)
@@ -74,7 +75,14 @@ def estimate_recipe_route(dish_id: int, db: Session = Depends(get_db)):
     if not dish:
         raise HTTPException(status_code=404, detail="Dish not found")
 
-    recipe = estimate_recipe(db, dish.name, dish.category)
+    try:
+        recipe = estimate_recipe(db, dish.name, dish.category)
+    except anthropic.APIConnectionError:
+        # Never reached Anthropic: no internet, DNS failure, or timeout.
+        raise HTTPException(status_code=503, detail="Couldn't reach the AI recipe service. Check your internet connection and try again.")
+    except anthropic.APIStatusError as e:
+        # Reached Anthropic, but it returned an error (bad API key, rate limit, overloaded).
+        raise HTTPException(status_code=502, detail=f"The AI recipe service returned an error ({e.status_code}). Try again in a moment.")
     matched = match_recipe_ingredients(db, recipe)
     return matched
 
