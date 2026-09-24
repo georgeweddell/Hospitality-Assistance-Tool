@@ -25,3 +25,13 @@ export function priceForDisplay(pricePerUnit, unit) {
   if (unit === 'ml') return `£${(pricePerUnit * 1000).toFixed(2)}/l`
   return `£${pricePerUnit.toFixed(2)} each`
 }
+
+// invoice -> Invoice, supplier_list -> Supplier list
+export function sourceLabel(source) {
+  return { invoice: 'Invoice', supplier_list: 'Supplier list', manual: 'Manual', benchmark: 'Benchmark' }[source] ?? source
+}
+
+// 2026-09-12 -> 12 Sep 2026
+export function shortDate(isoDate) {
+  return new Date(isoDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}

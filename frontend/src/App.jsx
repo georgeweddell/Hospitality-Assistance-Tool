@@ -7,11 +7,13 @@ import ActionList from './components/ActionList'
 import QuadrantChart from './components/QuadrantChart'
 import MenuPage from './components/MenuPage'
 import DishPage from './components/DishPage'
+import IngredientsPage from './components/IngredientsPage'
 import { QuadrantLegend } from './components/QuadrantBadge'
 
 const TITLES = {
   overview: 'Overview',
   menu: 'Menu',
+  ingredients: 'Ingredients',
   analysis: 'Insights',
 }
 
@@ -76,6 +78,8 @@ function App() {
     content = (
       <MenuPage allDishes={data.allDishes} analysed={data.dishes} incomplete={data.incomplete} onChanged={refresh} />
     )
+  } else if (page === 'ingredients') {
+    content = <IngredientsPage onChanged={refresh} />
   } else if (page === 'analysis') {
     const categories = [...new Set(data.dishes.map((d) => d.category))].filter(Boolean)
     content = (

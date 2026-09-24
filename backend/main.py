@@ -14,6 +14,8 @@ from recipe_ai import estimate_recipe
 from matching import match_recipe_ingredients
 from datetime import date
 import anthropic
+from sqlalchemy import func
+from units import price_per_base_unit
 
 
 Base.metadata.create_all(bind=engine)
@@ -31,7 +33,7 @@ app.add_middleware(
 def read_root():
     return {"message":"Hello World"}
 
-def ingredient_out(db, ingredient):
+def ingredient_out(db, ingredient, used_in=0):
     """An ingredient with the price costing currently uses for it."""
     price = best_price(db, ingredient.id)
     return IngredientOut(
@@ -41,24 +43,47 @@ def ingredient_out(db, ingredient):
         price_per_unit=price.price_per_unit if price else None,
         price_source=price.source if price else None,
         price_date=price.effective_date if price else None,
+        used_in=used_in,
     )
+
+def base_unit_price(price_input, ingredient_unit):
+    """The price per gram / ml / each, however it was entered (see units.py)."""
+    if price_input.price_per_unit is not None:
+        return price_input.price_per_unit
+    try:
+        return price_per_base_unit(price_input.pack_price, price_input.pack_quantity,
+                                   price_input.pack_unit, ingredient_unit)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
 
 @app.get("/ingredients",  response_model=list[IngredientOut])
 def list_ingredients(db: Session = Depends(get_db)):
-    return [ingredient_out(db, i) for i in db.query(Ingredient).all()]
+    # How many dishes use each ingredient, in one query rather than one per ingredient.
+    used_in = dict(
+        db.query(DishIngredient.ingredient_id, func.count(func.distinct(DishIngredient.dish_id)))
+        .group_by(DishIngredient.ingredient_id)
+        .all()
+    )
+    return [ingredient_out(db, i, used_in.get(i.id, 0)) for i in db.query(Ingredient).all()]
 
 @app.post("/ingredients", response_model=IngredientOut)
 def create_ingredient(ingredient: IngredientCreate, db: Session = Depends(get_db)):
+    # Names must be unique (ignoring case): matching looks ingredients up by name.
+    name = ingredient.name.strip()
+    if db.query(Ingredient).filter(func.lower(Ingredient.name) == name.lower()).first():
+        raise HTTPException(status_code=422, detail=f"There's already an ingredient called '{name}'")
+    price_per_unit = base_unit_price(ingredient, ingredient.unit)
+
     # Every ingredient starts with a price, so costing never meets one without.
     new_ingredient = Ingredient(
-        name = ingredient.name,
+        name = name,
         unit = ingredient.unit)
     db.add(new_ingredient)
     db.flush()  # assigns new_ingredient.id without committing yet
 
     db.add(IngredientPrice(
         ingredient_id = new_ingredient.id,
-        price_per_unit = ingredient.price_per_unit,
+        price_per_unit = price_per_unit,
         source = ingredient.source,
         supplier = ingredient.supplier,
         effective_date = date.today()))
@@ -83,7 +108,13 @@ def add_ingredient_price(ingredient_id: int, price: IngredientPriceCreate, db: S
     if not ingredient:
         raise HTTPException(status_code=404, detail="Ingredient not found")
 
-    new_price = IngredientPrice(ingredient_id=ingredient_id, **price.model_dump())
+    new_price = IngredientPrice(
+        ingredient_id=ingredient_id,
+        price_per_unit=base_unit_price(price, ingredient.unit),
+        source=price.source,
+        supplier=price.supplier,
+        effective_date=price.effective_date,
+    )
     db.add(new_price)
     db.commit()
     db.refresh(new_price)

@@ -1,14 +1,36 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from models import UnitType, DishType, QuadrantType, PriceSource
-from typing import Optional
+from typing import Literal, Optional
 from datetime import date
 
-class IngredientCreate(BaseModel):
-    name: str
-    unit: UnitType
-    price_per_unit: float = Field(ge=0)   # starting price, per gram / ml / each
+class PriceInput(BaseModel):
+    """
+    A price, given either way:
+      - as it appears on an invoice: pack_price for pack_quantity pack_unit
+        (e.g. 93.60 for 12 kg), converted to a base-unit price by units.py, or
+      - directly as price_per_unit (per gram / ml / each).
+    Exactly one of the two must be given.
+    """
+    price_per_unit: Optional[float] = Field(default=None, ge=0)
+    pack_price: Optional[float] = Field(default=None, ge=0)
+    pack_quantity: Optional[float] = Field(default=None, gt=0)
+    pack_unit: Optional[Literal["kg", "g", "l", "ml", "each"]] = None
     source: PriceSource = PriceSource.MANUAL
     supplier: Optional[str] = None
+
+    @model_validator(mode="after")
+    def one_way_of_giving_the_price(self):
+        pack_fields = [self.pack_price, self.pack_quantity, self.pack_unit]
+        has_pack = all(f is not None for f in pack_fields)
+        if any(f is not None for f in pack_fields) and not has_pack:
+            raise ValueError("A pack price needs pack_price, pack_quantity and pack_unit")
+        if has_pack == (self.price_per_unit is not None):
+            raise ValueError("Give either price_per_unit or a pack price, not both or neither")
+        return self
+
+class IngredientCreate(PriceInput):
+    name: str = Field(min_length=1)
+    unit: UnitType   # the base unit the ingredient is measured in
 
 class IngredientOut(BaseModel):
     id: int
@@ -18,11 +40,9 @@ class IngredientOut(BaseModel):
     price_per_unit: Optional[float] = None
     price_source: Optional[PriceSource] = None
     price_date: Optional[date] = None
+    used_in: int = 0   # number of dishes whose recipe uses it
 
-class IngredientPriceCreate(BaseModel):
-    price_per_unit: float = Field(ge=0)   # per gram / ml / each, like the ingredient's unit
-    source: PriceSource = PriceSource.MANUAL
-    supplier: Optional[str] = None
+class IngredientPriceCreate(PriceInput):
     effective_date: date = Field(default_factory=date.today)
 
 class IngredientPriceOut(BaseModel):

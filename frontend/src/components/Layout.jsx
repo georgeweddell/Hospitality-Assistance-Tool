@@ -3,6 +3,7 @@
 const NAV = [
   { page: 'overview', label: 'Overview', icon: 'M4 5h6v6H4zM14 5h6v6h-6zM4 15h6v4H4zM14 15h6v4h-6z' },
   { page: 'menu', label: 'Menu', icon: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01' },
+  { page: 'ingredients', label: 'Ingredients', icon: 'M5 11h14l-1.5 8h-11zM8 11V8a4 4 0 0 1 8 0v3' },
   { page: 'analysis', label: 'Insights', icon: 'M4 4v16h16M8 14l3-3 3 2 5-6' },
 ]
 

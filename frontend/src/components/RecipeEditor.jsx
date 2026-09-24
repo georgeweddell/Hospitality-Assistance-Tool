@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Card from './Card'
 import { postJson } from '../api'
-import { percent, pounds, priceForDisplay, unitLabel } from '../format'
+import { percent, pounds, priceForDisplay, sourceLabel, unitLabel } from '../format'
 
 const INPUT = 'w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-ink focus:border-accent focus:outline-none'
 
@@ -217,7 +217,7 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
                       {ing?.price_per_unit != null && (
                         <>
                           {priceForDisplay(ing.price_per_unit, ing.unit)}
-                          <div>{ing.price_source === 'benchmark' ? 'benchmark' : ing.price_source?.replace('_', ' ')}</div>
+                          <div>{sourceLabel(ing.price_source)}</div>
                         </>
                       )}
                     </td>
