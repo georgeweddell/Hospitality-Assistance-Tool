@@ -1,21 +1,22 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from menu_engineering import classify_all_dishes, build_action_list, list_incomplete_dishes, get_dish_units_sold
+from menu_engineering import classify_all_dishes, build_action_list, list_incomplete_dishes, get_dish_units_sold, on_menu_during
 from costing import cost_dish, best_price
 from database import Base, engine
 import models
 import schemas
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from database import get_db
-from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut
+from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut
 from models import Dish, DishIngredient, Ingredient, IngredientPrice, SalesRecord
 from recipe_ai import estimate_recipe
 from matching import match_recipe_ingredients
-from datetime import date
+from datetime import date, timedelta
 import anthropic
 from sqlalchemy import func
 from units import price_per_base_unit
+from periods import resolve_range
 
 
 Base.metadata.create_all(bind=engine)
@@ -143,6 +144,8 @@ def update_dish(dish_id: int, changes: DishUpdate, db: Session = Depends(get_db)
     dish.name = changes.name
     dish.menu_price = changes.menu_price
     dish.category = changes.category
+    dish.on_menu_from = changes.on_menu_from
+    dish.on_menu_until = changes.on_menu_until
     db.commit()
     db.refresh(dish)
 
@@ -161,7 +164,8 @@ def delete_dish(dish_id: int, db: Session = Depends(get_db)):
     db.commit()
 
 @app.get("/dishes/{dish_id}/detail", response_model=DishDetailOut)
-def get_dish_detail(dish_id: int, db: Session = Depends(get_db)):
+def get_dish_detail(dish_id: int, start: date | None = Query(None, alias="from"), end: date | None = Query(None, alias="to"),
+                    db: Session = Depends(get_db)):
     dish = db.query(Dish).filter(Dish.id == dish_id).first()
     if not dish:
         raise HTTPException(status_code=404, detail="Dish not found")
@@ -186,10 +190,12 @@ def get_dish_detail(dish_id: int, db: Session = Depends(get_db)):
         name=dish.name,
         menu_price=dish.menu_price,
         category=dish.category,
+        on_menu_from=dish.on_menu_from,
+        on_menu_until=dish.on_menu_until,
         skipped_ingredients=dish.skipped_ingredients,
         lines=lines,
         cost=DishCostOut(plate_cost=plate_cost, margin_pounds=margin_pounds, margin_percent=margin_percent),
-        units_sold=get_dish_units_sold(db, dish_id),
+        units_sold=get_dish_units_sold(db, dish_id, *resolve_range(db, start, end)),
     )
 
 @app.get("/dishes/{dish_id}/cost", response_model=DishCostOut)
@@ -263,6 +269,10 @@ def save_sales_record(sales: SalesRecordCreate, dish_id: int, db: Session = Depe
     dish = db.query(Dish).filter(Dish.id == dish_id).first()
     if not dish:
         raise HTTPException(status_code=404, detail="Dish not found")
+    if sales.period_start > sales.period_end:
+        raise HTTPException(status_code=422, detail="The start date is after the end date")
+    if overlapping_records(db, dish_id, sales.period_start, sales.period_end):
+        raise HTTPException(status_code=422, detail=f"{dish.name} already has sales recorded that overlap this period. Adding more would count them twice.")
 
     new_sales_record = SalesRecord(
         dish_id = dish_id,
@@ -285,14 +295,101 @@ def get_sales_record(dish_id: int, db: Session = Depends(get_db)):
     sales_record = db.query(SalesRecord).filter(SalesRecord.dish_id == dish_id).all()
     return sales_record
 
+# Every analysis route takes ?from=YYYY-MM-DD&to=YYYY-MM-DD. Without them it
+# uses the latest month with sales (periods.default_range).
+
 @app.get("/dishes/classifications", response_model=list[DishClassificationOut])
-def get_dish_classifications(db: Session = Depends(get_db)):
-    return classify_all_dishes(db)
+def get_dish_classifications(start: date | None = Query(None, alias="from"), end: date | None = Query(None, alias="to"),
+                             db: Session = Depends(get_db)):
+    return classify_all_dishes(db, *resolve_range(db, start, end))
 
 @app.get("/dishes/action-list", response_model=list[ActionItemOut])
-def get_action_list(db: Session = Depends(get_db)):
-    return build_action_list(db)
+def get_action_list(start: date | None = Query(None, alias="from"), end: date | None = Query(None, alias="to"),
+                    db: Session = Depends(get_db)):
+    return build_action_list(db, *resolve_range(db, start, end))
 
 @app.get("/dishes/incomplete", response_model=list[IncompleteDishOut])
-def get_incomplete_dishes(db: Session = Depends(get_db)):
-    return list_incomplete_dishes(db)
+def get_incomplete_dishes(start: date | None = Query(None, alias="from"), end: date | None = Query(None, alias="to"),
+                          db: Session = Depends(get_db)):
+    return list_incomplete_dishes(db, *resolve_range(db, start, end))
+
+
+# --- Sales for a period ------------------------------------------------------------
+
+def overlapping_records(db, dish_id, start, end, except_exact=False):
+    """A dish's sales records that overlap start..end (optionally ignoring one covering exactly that period)."""
+    records = db.query(SalesRecord).filter(
+        SalesRecord.dish_id == dish_id,
+        SalesRecord.period_start <= end,
+        SalesRecord.period_end >= start,
+    ).all()
+    if except_exact:
+        records = [r for r in records if not (r.period_start == start and r.period_end == end)]
+    return records
+
+@app.get("/sales/coverage", response_model=SalesCoverageOut)
+def get_sales_coverage(start: date | None = Query(None, alias="from"), end: date | None = Query(None, alias="to"),
+                       db: Session = Depends(get_db)):
+    start, end = resolve_range(db, start, end)
+    first_date = db.query(func.min(SalesRecord.period_start)).scalar()
+    last_date = db.query(func.max(SalesRecord.period_end)).scalar()
+
+    overlapping = db.query(SalesRecord).filter(SalesRecord.period_start <= end, SalesRecord.period_end >= start).all()
+    inside = [r for r in overlapping if r.period_start >= start and r.period_end <= end]
+
+    days = set()
+    for r in inside:
+        day = r.period_start
+        while day <= r.period_end:
+            days.add(day)
+            day += timedelta(days=1)
+
+    return SalesCoverageOut(first_date=first_date, last_date=last_date, start=start, end=end,
+                            days_with_sales=sorted(days), partial_records=len(overlapping) - len(inside))
+
+@app.get("/sales/entries", response_model=list[SalesEntryOut])
+def get_sales_entries(start: date = Query(alias="from"), end: date = Query(alias="to"), db: Session = Depends(get_db)):
+    """Every dish on the menu during the period, with any total entered for exactly that period."""
+    start, end = resolve_range(db, start, end)
+    entries = []
+    for dish in db.query(Dish).order_by(Dish.name).all():
+        if not on_menu_during(dish, start, end):
+            continue
+        records = overlapping_records(db, dish.id, start, end)
+        exact = [r for r in records if r.period_start == start and r.period_end == end]
+        entries.append(SalesEntryOut(
+            dish_id=dish.id, dish_name=dish.name, category=dish.category,
+            units_sold=exact[0].units_sold if exact else None,
+            other_records=len(records) - len(exact),
+        ))
+    return entries
+
+@app.put("/sales/entries", response_model=list[SalesEntryOut])
+def save_sales_entries(entries: list[SalesEntryIn], start: date = Query(alias="from"), end: date = Query(alias="to"),
+                       db: Session = Depends(get_db)):
+    """
+    Save a total per dish for exactly this period, replacing any total already
+    entered for it. units_sold None removes that dish's total.
+    Every line is checked before anything is saved.
+    """
+    start, end = resolve_range(db, start, end)
+    dish_ids = [e.dish_id for e in entries]
+    if len(dish_ids) != len(set(dish_ids)):
+        raise HTTPException(status_code=422, detail="The same dish appears twice")
+    for e in entries:
+        dish = db.query(Dish).filter(Dish.id == e.dish_id).first()
+        if dish is None:
+            raise HTTPException(status_code=422, detail=f"Dish {e.dish_id} doesn't exist")
+        if e.units_sold is not None and overlapping_records(db, e.dish_id, start, end, except_exact=True):
+            raise HTTPException(status_code=422, detail=(
+                f"{dish.name} already has sales recorded inside this period (e.g. daily till data). "
+                "Entering a total as well would count them twice."))
+
+    for e in entries:
+        db.query(SalesRecord).filter(SalesRecord.dish_id == e.dish_id, SalesRecord.period_start == start,
+                                     SalesRecord.period_end == end).delete()
+        if e.units_sold is not None:
+            db.add(SalesRecord(dish_id=e.dish_id, units_sold=e.units_sold, period_start=start, period_end=end))
+    db.commit()
+
+    return get_sales_entries(start, end, db)

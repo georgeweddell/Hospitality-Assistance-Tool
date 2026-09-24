@@ -1,13 +1,31 @@
+from datetime import date
 from models import SalesRecord, Dish, DishIngredient, DishType, QuadrantType
 from costing import cost_dish
 from schemas import DishClassificationOut, ActionItemOut, IncompleteDishOut
 
-def get_dish_units_sold(db, dish_id: int) -> int:
+# Every analysis runs over a date range, start to end inclusive.
+#
+# Which sales count: records that lie wholly inside the range. A record that
+# only partly overlaps it (e.g. a monthly total when the range is 10-20 June)
+# is left out rather than shared across days, so no numbers are invented.
+# The Sales coverage route reports how many were left out.
+#
+# Which dishes count: those on the menu for the WHOLE range. Menu engineering
+# compares dishes over the same period, so a special launched mid-month is left
+# out (with a reason) rather than looking unpopular. Dishes not on the menu at
+# all during the range are simply not part of it.
+
+def get_dish_units_sold(db, dish_id: int, start: date, end: date) -> int:
     """
-    Sums units_sold across all SalesRecord rows for a given dish.
-    Returns 0 if the dish has no sales records.
+    Sums units_sold across the dish's SalesRecord rows that lie wholly inside
+    start..end. Returns 0 if there are none: for a dish on the menu for the
+    whole range, that's a real zero, not missing data.
     """
-    records = db.query(SalesRecord).filter(SalesRecord.dish_id ==dish_id ).all()
+    records = db.query(SalesRecord).filter(
+        SalesRecord.dish_id == dish_id,
+        SalesRecord.period_start >= start,
+        SalesRecord.period_end <= end,
+    ).all()
 
     total = 0
     for record in records:
@@ -15,9 +33,22 @@ def get_dish_units_sold(db, dish_id: int) -> int:
 
     return total
 
-def get_incomplete_reasons(db, dish) -> list[str]:
+def range_has_sales(db, start: date, end: date) -> bool:
+    """True if any sales are recorded inside the range. Without any, there's nothing to analyse."""
+    return db.query(SalesRecord).filter(
+        SalesRecord.period_start >= start,
+        SalesRecord.period_end <= end,
+    ).first() is not None
+
+
+def on_menu_during(dish, start: date, end: date) -> bool:
+    """On the menu for at least part of the range."""
+    return dish.on_menu_from <= end and (dish.on_menu_until is None or dish.on_menu_until >= start)
+
+
+def get_incomplete_reasons(db, dish, start: date, end: date) -> list[str]:
     """
-    Reasons a dish can't be meaningfully classified.
+    Reasons a dish on the menu during the range can't be meaningfully classified.
     An empty list means the dish is complete and safe to analyse.
     """
     reasons = []
@@ -31,31 +62,35 @@ def get_incomplete_reasons(db, dish) -> list[str]:
     if not has_recipe:
         reasons.append("No recipe saved")
 
-    if get_dish_units_sold(db, dish.id) == 0:
-        reasons.append("No sales data")
+    on_whole_range = dish.on_menu_from <= start and (dish.on_menu_until is None or dish.on_menu_until >= end)
+    if not on_whole_range:
+        reasons.append("Only on the menu for part of this period")
 
     return reasons
 
 
-def get_eligible_dishes(db, category: DishType) -> list[Dish]:
+def get_eligible_dishes(db, category: DishType, start: date, end: date) -> list[Dish]:
     """
-    Dishes in a category that are complete enough to classify.
+    Dishes in a category that are complete enough to classify for the range.
     This set defines the analysis population — it drives both the
     classifications returned and the denominators the thresholds use.
     """
     dishes = db.query(Dish).filter(Dish.category == category).all()
-    return [d for d in dishes if not get_incomplete_reasons(db, d)]
+    return [d for d in dishes
+            if on_menu_during(d, start, end) and not get_incomplete_reasons(db, d, start, end)]
 
 
-def list_incomplete_dishes(db) -> list[IncompleteDishOut]:
+def list_incomplete_dishes(db, start: date, end: date) -> list[IncompleteDishOut]:
     """
-    Every dish excluded from analysis, with the reasons why.
-    Outstanding work, not findings.
+    Every dish on the menu during the range but excluded from analysis,
+    with the reasons why. Outstanding work, not findings.
     """
     results = []
 
     for dish in db.query(Dish).all():
-        reasons = get_incomplete_reasons(db, dish)
+        if not on_menu_during(dish, start, end):
+            continue
+        reasons = get_incomplete_reasons(db, dish, start, end)
         if reasons:
             results.append(IncompleteDishOut(
                 dish_id=dish.id,
@@ -66,7 +101,7 @@ def list_incomplete_dishes(db) -> list[IncompleteDishOut]:
 
     return results
 
-def get_category_stats(db, dishes: list[Dish]) -> dict:
+def get_category_stats(db, dishes: list[Dish], start: date, end: date) -> dict:
     """
     Costs and units sold for every dish in a set, worked out ONCE.
 
@@ -82,7 +117,7 @@ def get_category_stats(db, dishes: list[Dish]) -> dict:
     costs = {}
     margins = {}
     for dish in dishes:
-        units[dish.id] = get_dish_units_sold(db, dish.id)
+        units[dish.id] = get_dish_units_sold(db, dish.id, start, end)
         costs[dish.id] = cost_dish(db, dish.id)
         plate_cost, margin_pounds, margin_percent = costs[dish.id]
         margins[dish.id] = margin_pounds
@@ -182,37 +217,42 @@ def classify_dish(db, dish_id: int, category: DishType,
     )
 
 
-def classify_all_dishes(db) -> list[DishClassificationOut]:
+def classify_all_dishes(db, start: date, end: date) -> list[DishClassificationOut]:
     """
-    Classifies every eligible dish, category by category.
+    Classifies every eligible dish for the range, category by category.
     Incomplete dishes are excluded — see list_incomplete_dishes.
+    No sales recorded in the range at all -> nothing to classify.
     """
     results = []
+    if not range_has_sales(db, start, end):
+        return results
 
     for category in DishType:
-        eligible = get_eligible_dishes(db, category)
-        stats = get_category_stats(db, eligible)
+        eligible = get_eligible_dishes(db, category, start, end)
+        stats = get_category_stats(db, eligible, start, end)
 
         for dish in eligible:
             results.append(classify_dish(db, dish.id, category, eligible, stats))
 
     return results
 
-def build_action_list(db) -> list[ActionItemOut]:
+def build_action_list(db, start: date, end: date) -> list[ActionItemOut]:
     """
-    Turns quadrant classifications into a ranked action list with £ impact.
+    Turns quadrant classifications for the range into a ranked action list with £ impact.
 
     Cutting a Dog assumes its covers transfer to a category-average dish
     rather than being lost entirely.
     """
     actions = []
+    if not range_has_sales(db, start, end):
+        return actions
 
     for category in DishType:
-        eligible = get_eligible_dishes(db, category)
+        eligible = get_eligible_dishes(db, category, start, end)
         if not eligible:
             continue
 
-        stats = get_category_stats(db, eligible)
+        stats = get_category_stats(db, eligible, start, end)
         category_units = get_category_units_sold(stats)
 
         for dish in eligible:

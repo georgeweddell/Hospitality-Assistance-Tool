@@ -68,9 +68,13 @@ def add_dish(db):
 
     recipe is a list of (Ingredient, quantity in base units).
     units_sold=0 means no sales record is created at all.
+    Sales are recorded for 1-7 Sep 2026 (inside SEPTEMBER below). Dishes are on
+    the menu from 1 Jan 2026 unless on_menu_from / on_menu_until say otherwise.
     """
-    def _add(name, menu_price, category, recipe=(), units_sold=0):
-        dish = Dish(name=name, menu_price=menu_price, category=category)
+    def _add(name, menu_price, category, recipe=(), units_sold=0,
+             on_menu_from=date(2026, 1, 1), on_menu_until=None):
+        dish = Dish(name=name, menu_price=menu_price, category=category,
+                    on_menu_from=on_menu_from, on_menu_until=on_menu_until)
         db.add(dish)
         db.commit()
         for ingredient, quantity in recipe:
@@ -90,3 +94,7 @@ def cost_item(add_ingredient):
     exactly £2.00, which makes menu-engineering margins easy to set by hand.
     """
     return add_ingredient("Test cost unit", UnitType.EACH, 1.00)
+
+
+# The analysis period the tests use: all of September 2026.
+SEPTEMBER = (date(2026, 9, 1), date(2026, 9, 30))

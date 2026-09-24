@@ -26,6 +26,7 @@ import pytest
 
 from menu_engineering import build_action_list, classify_all_dishes, list_incomplete_dishes
 from models import DishType, QuadrantType
+from conftest import SEPTEMBER
 
 
 @pytest.fixture
@@ -40,7 +41,7 @@ def four_mains(add_dish, cost_item):
 
 
 def results_by_name(db):
-    return {c.dish_name: c for c in classify_all_dishes(db)}
+    return {c.dish_name: c for c in classify_all_dishes(db, *SEPTEMBER)}
 
 
 # --- Classification ---------------------------------------------------------
@@ -97,10 +98,12 @@ def test_categories_are_classified_separately(db, four_mains, add_dish, cost_ite
 def test_incomplete_dish_lists_every_reason(db, add_dish):
     add_dish("Half-entered", 8.00, category=None)
 
-    incomplete = list_incomplete_dishes(db)
+    incomplete = list_incomplete_dishes(db, *SEPTEMBER)
 
     assert len(incomplete) == 1
-    assert incomplete[0].reasons == ["No category set", "No recipe saved", "No sales data"]
+    # No sales is not a reason any more: a dish on the menu that sold nothing
+    # has genuinely sold 0 (see test_periods.py).
+    assert incomplete[0].reasons == ["No category set", "No recipe saved"]
 
 
 # --- Action list ------------------------------------------------------------
@@ -113,7 +116,7 @@ def test_incomplete_dish_lists_every_reason(db, add_dish):
 #   Star:      no action
 
 def test_action_list_impacts_and_ranking(db, four_mains):
-    actions = build_action_list(db)
+    actions = build_action_list(db, *SEPTEMBER)
 
     assert [(a.dish_name, a.impact_pounds) for a in actions] == [
         ("Plowhorse", 104.00),
@@ -123,11 +126,11 @@ def test_action_list_impacts_and_ranking(db, four_mains):
 
 
 def test_stars_get_no_action(db, four_mains):
-    actions = build_action_list(db)
+    actions = build_action_list(db, *SEPTEMBER)
 
     assert all(a.quadrant != QuadrantType.STAR for a in actions)
 
 
 def test_empty_menu_gives_empty_results(db):
-    assert classify_all_dishes(db) == []
-    assert build_action_list(db) == []
+    assert classify_all_dishes(db, *SEPTEMBER) == []
+    assert build_action_list(db, *SEPTEMBER) == []

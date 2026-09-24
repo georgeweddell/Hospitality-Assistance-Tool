@@ -1,11 +1,16 @@
 """
-Rebuilds menu.db with realistic demo data: one month (June 2026) at a small
-independent Neapolitan-style pizzeria in the UK, roughly 50 covers a day.
+Rebuilds menu.db with realistic demo data: three months (June-August 2026) of
+daily sales at a small independent Neapolitan-style pizzeria in the UK,
+roughly 50 covers a day.
 
 - Recipes are hand-written with real portion sizes, so costs are checkable.
 - Quadrants come out of the numbers; nothing is forced.
-- Two dishes show the warning features: a new special with no sales yet,
-  and a Tiramisu whose Marsala isn't in the stock list (so isn't costed).
+- Sales are stored per dish per day, busier at weekends. June's daily figures
+  add up exactly to the June totals in DISHES.
+- July and August show the owner acting on the analysis: Marinara (a Dog) comes
+  off the menu at the end of July; Nduja & Hot Honey and Burrata (Puzzles) are
+  promoted in August; a Mortadella special launches on 15 July.
+- Tiramisu's Marsala isn't in the stock list, so it's flagged as not costed.
 - Every ingredient has a benchmark price. A few also have invoice prices,
   which costing prefers (see costing.best_price), including a mozzarella
   price rise in September.
@@ -19,7 +24,7 @@ Run from backend/:
 
 import os
 import shutil
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from database import Base, SessionLocal, engine
 from models import (Dish, DishIngredient, DishType, Ingredient, IngredientPrice, PriceSource,
@@ -140,7 +145,7 @@ MARGHERITA = dough(250) + TOMATO_BASE + [
 ]
 
 # (name, category, menu price, units sold in June, recipe, skipped ingredients)
-# units_sold=None -> no sales record yet.
+# units_sold=None -> not on the menu in June (see MENU_DATES and MONTH_TOTALS).
 DISHES = [
     # --- Starters ---
     ("Garlic Pizza Bread", DishType.STARTER, 6.50, 380, dough(150) + [
@@ -202,7 +207,7 @@ DISHES = [
         ("mozzarella (fior di latte)", 60), ("gorgonzola", 40),
         ("parmesan", 15), ("ricotta", 30),
     ], []),
-    # New special launched 1 July: recipe saved, no sales yet -> excluded.
+    # New special, launched 15 July (see MENU_DATES).
     ("Mortadella & Pistachio", DishType.MAIN, 15.00, None, dough(250) + [
         ("mozzarella (fior di latte)", 100), ("mortadella", 60),
         ("pistachios", 10), ("ricotta", 30),
@@ -229,8 +234,64 @@ DISHES = [
     ], []),
 ]
 
-PERIOD_START = date(2026, 6, 1)
-PERIOD_END = date(2026, 6, 30)
+# --- Sales -------------------------------------------------------------------
+
+OPENED = date(2025, 3, 1)   # every dish is on the menu from here unless MENU_DATES says otherwise
+
+# name -> (on the menu from, until). until None = still on the menu.
+MENU_DATES = {
+    "Mortadella & Pistachio": (date(2026, 7, 15), None),   # summer special
+    "Marinara": (OPENED, date(2026, 7, 31)),                # a Dog, cut after July
+}
+
+MONTHS = [(2026, 6), (2026, 7), (2026, 8)]
+
+# Monthly totals are June's figure (from DISHES) times these, unless
+# MONTH_TOTALS gives the number directly.
+MONTH_FACTORS = {7: 1.06, 8: 1.12}           # gentle summer lift
+DISH_FACTORS = {
+    "Nduja & Hot Honey": {8: 1.80},          # a Puzzle, promoted in August
+    "Burrata": {8: 1.50},                     # a Puzzle, promoted in August
+    "Marinara": {7: 0.90},
+    "Affogato": {7: 0.80, 8: 0.70},
+}
+MONTH_TOTALS = {
+    "Mortadella & Pistachio": {7: 70, 8: 160},
+}
+
+# Relative trade by weekday, Monday first. Friday and Saturday are busiest.
+WEEKDAY_WEIGHTS = [0.75, 0.80, 0.90, 1.00, 1.40, 1.55, 1.10]
+
+
+def month_days(year, month):
+    day = date(year, month, 1)
+    while day.month == month:
+        yield day
+        day += timedelta(days=1)
+
+
+def spread_over_days(total, days):
+    """
+    Split a monthly total across days by weekday weight, as whole numbers that
+    add up to exactly `total` (the remainder goes to the days with the largest
+    fractions, so it's the same every run).
+    """
+    weights = [WEEKDAY_WEIGHTS[d.weekday()] for d in days]
+    exact = [total * w / sum(weights) for w in weights]
+    counts = [int(x) for x in exact]
+    by_fraction = sorted(range(len(days)), key=lambda i: (-(exact[i] - counts[i]), i))
+    for i in by_fraction[: total - sum(counts)]:
+        counts[i] += 1
+    return list(zip(days, counts))
+
+
+def month_total(name, june_units, month):
+    if name in MONTH_TOTALS:
+        return MONTH_TOTALS[name].get(month, 0)
+    if month == 6:
+        return june_units or 0
+    factor = DISH_FACTORS.get(name, {}).get(month, MONTH_FACTORS[month])
+    return round(june_units * factor)
 
 
 def backup_database():
@@ -263,7 +324,9 @@ def seed():
     db.commit()
 
     for name, category, price, units_sold, recipe, skipped in DISHES:
-        dish = Dish(name=name, category=category, menu_price=price, skipped_ingredients=skipped)
+        on_from, on_until = MENU_DATES.get(name, (OPENED, None))
+        dish = Dish(name=name, category=category, menu_price=price, skipped_ingredients=skipped,
+                    on_menu_from=on_from, on_menu_until=on_until)
         db.add(dish)
         db.commit()
 
@@ -276,14 +339,20 @@ def seed():
             db.add(DishIngredient(dish_id=dish.id, ingredient_id=ingredients[ingredient_name].id,
                                   quantity=round(quantity, 2)))
 
-        if units_sold:
-            db.add(SalesRecord(dish_id=dish.id, units_sold=units_sold,
-                               period_start=PERIOD_START, period_end=PERIOD_END))
+        monthly = []
+        for year, month in MONTHS:
+            on_menu = [d for d in month_days(year, month)
+                       if on_from <= d and (on_until is None or d <= on_until)]
+            total = month_total(name, units_sold, month) if on_menu else 0
+            monthly.append(total)
+            for day, units in spread_over_days(total, on_menu):
+                if units:   # days with no sales leave no record, as a till export wouldn't list them
+                    db.add(SalesRecord(dish_id=dish.id, units_sold=units, period_start=day, period_end=day))
         db.commit()
 
         plate_cost, margin, margin_percent = cost_dish(db, dish.id)
-        sales = f"{units_sold:>4} sold" if units_sold else "  no sales"
-        print(f"  {name:<26} £{price:>5.2f}  cost £{plate_cost:>4.2f}  GP {margin_percent:>5.1f}%  {sales}")
+        sales = "  ".join(f"{m:>4}" for m in monthly)
+        print(f"  {name:<26} £{price:>5.2f}  cost £{plate_cost:>4.2f}  GP {margin_percent:>5.1f}%  Jun/Jul/Aug {sales}")
 
     db.close()
     print(f"\nSeeded {len(INGREDIENTS)} ingredients and {len(DISHES)} dishes.")

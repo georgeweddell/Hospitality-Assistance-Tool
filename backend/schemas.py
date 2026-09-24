@@ -60,6 +60,14 @@ class DishCreate(BaseModel):
     name: str = Field(min_length=1)
     menu_price: float = Field(gt=0)
     category: Optional[DishType] = None
+    on_menu_from: date = Field(default_factory=date.today)
+    on_menu_until: Optional[date] = None   # None = still on the menu
+
+    @model_validator(mode="after")
+    def until_not_before_from(self):
+        if self.on_menu_until is not None and self.on_menu_until < self.on_menu_from:
+            raise ValueError("A dish can't come off the menu before it goes on")
+        return self
 
 class DishUpdate(DishCreate):
     pass
@@ -69,6 +77,8 @@ class DishOut(BaseModel):
     name: str
     menu_price: float
     category: Optional[DishType] = None
+    on_menu_from: date
+    on_menu_until: Optional[date] = None
 
     class Config:
         from_attributes = True
@@ -128,11 +138,13 @@ class RecipeLineOut(BaseModel):
     line_cost: float
 
 class DishDetailOut(BaseModel):
-    """Everything the dish page needs, in one call."""
+    """Everything the dish page needs, in one call. units_sold is for the requested range."""
     id: int
     name: str
     menu_price: float
     category: Optional[DishType] = None
+    on_menu_from: date
+    on_menu_until: Optional[date] = None
     skipped_ingredients: list[str] = []
     lines: list[RecipeLineOut]
     cost: DishCostOut
@@ -180,3 +192,22 @@ class IncompleteDishOut(BaseModel):
     dish_name: str
     category: Optional[DishType] = None
     reasons: list[str]
+class SalesCoverageOut(BaseModel):
+    """What sales data exists, overall and inside a range."""
+    first_date: Optional[date] = None      # earliest sale on record (any range)
+    last_date: Optional[date] = None       # latest sale on record (any range)
+    start: date                            # the range this describes
+    end: date
+    days_with_sales: list[date]            # days in the range covered by at least one record
+    partial_records: int                   # records only partly inside the range, so not counted
+
+class SalesEntryIn(BaseModel):
+    dish_id: int
+    units_sold: Optional[int] = Field(default=None, ge=0)   # None = remove this dish's total for the period
+
+class SalesEntryOut(BaseModel):
+    dish_id: int
+    dish_name: str
+    category: Optional[DishType] = None
+    units_sold: Optional[int] = None       # the total entered for exactly this period, if any
+    other_records: int                     # other records inside the period (e.g. daily till data)

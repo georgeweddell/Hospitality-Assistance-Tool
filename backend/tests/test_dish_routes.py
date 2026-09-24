@@ -14,6 +14,7 @@ from pydantic import ValidationError
 from main import delete_dish, get_dish_detail, save_recipe, update_dish
 from models import Dish, DishIngredient, DishType, SalesRecord, UnitType
 from schemas import ConfirmedIngredient, DishUpdate, RecipeConfirm
+from conftest import SEPTEMBER
 
 
 @pytest.fixture
@@ -37,7 +38,7 @@ def recipe(*lines, skipped=()):
 # --- Detail ------------------------------------------------------------------
 
 def test_detail_lists_each_line_with_its_cost(db, pizza):
-    detail = get_dish_detail(pizza["dish"].id, db)
+    detail = get_dish_detail(pizza["dish"].id, *SEPTEMBER, db=db)
 
     assert [(l.name, l.quantity, l.line_cost) for l in detail.lines] == [
         ("00 flour", 200, 0.40),
@@ -92,7 +93,7 @@ def test_save_rejects_unknown_ingredient_and_keeps_old_recipe(db, pizza):
 
     assert error.value.status_code == 422
     # The check runs before anything is deleted, so the old recipe survives.
-    assert get_dish_detail(pizza["dish"].id, db).cost.plate_cost == 1.40
+    assert get_dish_detail(pizza["dish"].id, *SEPTEMBER, db=db).cost.plate_cost == 1.40
 
 
 def test_save_rejects_the_same_ingredient_twice(db, pizza):

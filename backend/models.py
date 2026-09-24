@@ -53,6 +53,10 @@ class Dish(Base):
     menu_price = Column(Float, nullable=False)
     category = Column(Enum(DishType))
     skipped_ingredients = Column(JSON, nullable=False, default=list)
+    # When the dish is on the menu. A dish on the menu with no sales recorded
+    # has genuinely sold 0; outside these dates it simply isn't analysed.
+    on_menu_from = Column(Date, nullable=False, default=date.today)
+    on_menu_until = Column(Date, nullable=True)   # None = still on the menu
 
 class DishIngredient(Base):
     __tablename__ = "dish_ingredients"
