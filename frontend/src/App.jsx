@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
+import { getJson } from './api'
 import ActionList from './components/ActionList'
 import DishCard from './components/DishCard'
 import QuadrantChart from './components/QuadrantChart'
 import AddDishForm from './components/AddDishForm'
 import IncompleteDishes from './components/IncompleteDishes'
-import { getJson } from './api'
+import RecipeReview from './components/RecipeReview'
 
 function App() {
   const [dishes, setDishes] = useState(null)
@@ -46,6 +47,7 @@ function App() {
         <DishCard key={dish.dish_id} dish={dish} />
       ))}
       <IncompleteDishes refreshCount={refreshCount} />
+      <RecipeReview />
     </div>
   )
 }
