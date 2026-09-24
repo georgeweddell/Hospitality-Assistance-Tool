@@ -2,6 +2,7 @@
 
 const NAV = [
   { page: 'overview', label: 'Overview', icon: 'M4 5h6v6H4zM14 5h6v6h-6zM4 15h6v4H4zM14 15h6v4h-6z' },
+  { page: 'actions', label: 'Actions', icon: 'M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2' },
   { page: 'menu', label: 'Menu', icon: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01' },
   { page: 'ingredients', label: 'Ingredients', icon: 'M5 11h14l-1.5 8h-11zM8 11V8a4 4 0 0 1 8 0v3' },
   { page: 'sales', label: 'Sales', icon: 'M4 20h16M7 16v-5M12 16V6M17 16v-8' },
@@ -33,15 +34,15 @@ function NavLink({ item, active, badge, compact }) {
   )
 }
 
-// The Mise mark: a bowl seen from above, everything prepped and in its place.
+// The Docket mark: an order ticket, the slip that runs every kitchen.
 function Brand() {
   return (
-    <a href="#/overview" className="flex items-center gap-3 px-1.5 text-ink" aria-label="Mise home">
+    <a href="#/overview" className="flex items-center gap-3 px-1.5 text-ink" aria-label="Docket home">
       <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
-        <circle cx="15" cy="15" r="13" fill="none" stroke="var(--accent)" strokeWidth="2.5" />
-        <circle cx="15" cy="15" r="5.5" fill="var(--accent)" />
+        <path d="M7 3h16v24l-4-3-4 3-4-3-4 3z" fill="var(--accent)" />
+        <path d="M11 10h8M11 15h8" stroke="var(--surface)" strokeWidth="2" strokeLinecap="round" />
       </svg>
-      <span className="font-display text-[26px] font-bold tracking-tight">Mise</span>
+      <span className="font-display text-[26px] font-bold tracking-tight">Docket</span>
     </a>
   )
 }

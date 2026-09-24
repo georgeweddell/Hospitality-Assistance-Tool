@@ -57,3 +57,22 @@ export function presets(lastSale) {
 }
 
 export const rangeQuery = ({ from, to }) => `from=${from}&to=${to}`
+
+export function isFullMonth({ from, to }) {
+  const m = monthBounds(from)
+  return m.from === from && m.to === to
+}
+
+// The period just before this one, to compare against: the previous calendar
+// month for a month, otherwise the same number of days immediately before.
+export function previousRange(range) {
+  if (isFullMonth(range)) return monthBounds(addDays(range.from, -1))
+  const days = daysBetween(range.from, range.to)
+  return { from: addDays(range.from, -days), to: addDays(range.from, -1) }
+}
+
+// "July" for a month, otherwise "the previous 30 days".
+export function previousLabel(range) {
+  if (!isFullMonth(range)) return `the previous ${daysBetween(range.from, range.to)} days`
+  return toDate(previousRange(range).from).toLocaleDateString('en-GB', { month: 'long', timeZone: 'UTC' })
+}

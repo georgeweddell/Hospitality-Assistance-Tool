@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { getJson } from './api'
 import useHashRoute from './useHashRoute'
-import { presets, rangeQuery } from './dateRange'
+import { presets, previousRange, rangeQuery } from './dateRange'
 import Layout from './components/Layout'
-import MenuSummary from './components/MenuSummary'
+import OverviewPage from './components/OverviewPage'
 import ActionList from './components/ActionList'
 import QuadrantChart from './components/QuadrantChart'
 import MenuPage from './components/MenuPage'
@@ -15,6 +15,7 @@ import { QuadrantLegend } from './components/QuadrantBadge'
 
 const TITLES = {
   overview: 'Overview',
+  actions: 'Actions',
   menu: 'Menu',
   ingredients: 'Ingredients',
   sales: 'Sales',
@@ -22,7 +23,7 @@ const TITLES = {
 }
 
 // Pages whose figures depend on the chosen period.
-const RANGED_PAGES = ['overview', 'menu', 'sales', 'analysis']
+const RANGED_PAGES = ['overview', 'actions', 'menu', 'sales', 'analysis']
 
 // The chosen period survives a page reload in this tab. Storage can be
 // unavailable, so failures just mean starting from the default.
@@ -46,9 +47,7 @@ function NoSales() {
   return (
     <div className="empty">
       <p className="section-title text-ink">No sales in this period</p>
-      <p className="mt-2">
-        Choose another period, or <a href="#/sales" className="link">enter sales</a>.
-      </p>
+      <a href="#/sales" className="btn btn-secondary mt-4">Enter sales</a>
     </div>
   )
 }
@@ -86,10 +85,11 @@ function App() {
       getJson(`/dishes/incomplete?${q}`),
       getJson('/dishes'),
       getJson(`/sales/coverage?${q}`),
+      getJson(`/dishes/classifications?${rangeQuery(previousRange(range))}`),   // for "since last period"
     ])
-      .then(([dishes, actions, incomplete, allDishes, coverage]) => {
+      .then(([dishes, actions, incomplete, allDishes, coverage, prevDishes]) => {
         if (ignore) return
-        setData({ dishes, actions, incomplete, allDishes, coverage, range })
+        setData({ dishes, actions, incomplete, allDishes, coverage, prevDishes, range })
         setError(null)
       })
       .catch((err) => {
@@ -143,6 +143,8 @@ function App() {
     content = <SalesPage range={data.range} coverage={data.coverage} onSaved={refresh} />
   } else if (!hasSales) {
     content = <NoSales />
+  } else if (page === 'actions') {
+    content = <ActionList actions={data.actions} dishes={data.dishes} />
   } else if (page === 'analysis') {
     const categories = [...new Set(data.dishes.map((d) => d.category))].filter(Boolean)
     content = (
@@ -157,10 +159,8 @@ function App() {
     )
   } else {
     content = (
-      <div className="space-y-5">
-        <MenuSummary dishes={data.dishes} actions={data.actions} />
-        <ActionList actions={data.actions} dishes={data.dishes} />
-      </div>
+      <OverviewPage dishes={data.dishes} prevDishes={data.prevDishes} actions={data.actions}
+                    allDishes={data.allDishes} range={data.range} />
     )
   }
 

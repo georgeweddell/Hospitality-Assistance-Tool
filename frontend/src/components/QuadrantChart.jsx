@@ -4,6 +4,7 @@ import {
   Tooltip, ReferenceLine, ReferenceArea, ResponsiveContainer, LabelList, Cell
 } from 'recharts'
 import Card from './Card'
+import Hint from './Hint'
 import QuadrantBadge from './QuadrantBadge'
 import { quadrantColor, quadrantTextColor } from '../quadrants'
 import { percent, pounds } from '../format'
@@ -74,7 +75,16 @@ function QuadrantChart({ dishes, category }) {
   }
 
   return (
-    <Card title={category} aside={<span className="num">{inCategory.length} dishes</span>}>
+    <Card
+      title={category}
+      aside={
+        <span className="inline-flex items-center gap-2">
+          <span className="num">{inCategory.length} dishes</span>
+          <Hint align="right" label="Where the lines are"
+                content={`The dashed lines. Popular: at least ${percent(popLine)} of ${category.toLowerCase()} sales (70% of an equal share). Profitable: at least ${pounds(profLine)} margin (the sales-weighted average).`} />
+        </span>
+      }
+    >
       <div className="chart">
         <ResponsiveContainer width="100%" height={HEIGHT} onResize={(w) => setWidth(w)}>
           <ScatterChart margin={MARGIN}>
@@ -116,9 +126,6 @@ function QuadrantChart({ dishes, category }) {
           </ScatterChart>
         </ResponsiveContainer>
       </div>
-      <p className="num mt-1 text-sm text-muted">
-        Popular from {percent(popLine)} of sales · profitable from {pounds(profLine)} margin
-      </p>
     </Card>
   )
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Hint from './Hint'
 import { daysBetween, presets, rangeLabel } from '../dateRange'
 
 // Choose the period the analysis covers: a preset, or any custom range.
@@ -57,10 +58,9 @@ function RangePicker({ range, lastSale, coverage, onChange }) {
         </p>
       )}
       {coverage?.partial_records > 0 && (
-        <p className="text-sm text-warn">
-          {coverage.partial_records} sales record{coverage.partial_records === 1 ? '' : 's'} only partly
-          overlap this period and aren't counted.
-        </p>
+        <Hint align="right" content="These sales records cover dates both inside and outside this period, so they aren't counted rather than being split across days.">
+          <span className="chip chip-warn num">{coverage.partial_records} record{coverage.partial_records === 1 ? '' : 's'} not counted</span>
+        </Hint>
       )}
     </div>
   )

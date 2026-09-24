@@ -3,10 +3,10 @@
 // for small text on a tinted background (it keeps 4.5:1 contrast).
 // `action` is the short label for the Overview's opportunity cards.
 export const QUADRANTS = {
-  Star: { color: '#2f8a55', text: '#236b41', action: 'Keep and feature' },
-  Plowhorse: { color: '#d99612', text: '#855900', action: 'Reprice or re-engineer' },
-  Puzzle: { color: '#2f66c8', text: '#2656a8', action: 'Promote' },
-  Dog: { color: '#7b3f73', text: '#6e3767', action: 'Review for removal' },
+  Star: { color: '#2f8a55', text: '#236b41', action: 'Keep and feature', meaning: 'Popular and profitable' },
+  Plowhorse: { color: '#d99612', text: '#855900', action: 'Reprice or re-engineer', meaning: 'Popular, low margin' },
+  Puzzle: { color: '#2f66c8', text: '#2656a8', action: 'Promote', meaning: 'Profitable, rarely ordered' },
+  Dog: { color: '#7b3f73', text: '#6e3767', action: 'Review for removal', meaning: 'Low margin, few sales' },
 }
 
 export const QUADRANT_ORDER = ['Star', 'Plowhorse', 'Puzzle', 'Dog']

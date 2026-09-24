@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* =====================================================================
-   Mise design system
+   Docket design system
    Every colour, font and shared component style lives here. Components
    use these tokens and classes instead of their own one-off styles, so
    the whole app stays consistent. Change a look here, not in a page.
@@ -342,6 +342,60 @@ body {
     background: var(--surface);
     color: var(--ink);
     font-weight: 600;
+  }
+
+  /* --- Hints: explanations on hover or click (Hint.jsx) ------------------ */
+  .hint-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.125rem;
+    height: 1.125rem;
+    padding: 0;
+    border: 1.5px solid var(--line-strong);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--font-display);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    font-style: italic;
+    line-height: 1;
+    cursor: help;
+  }
+  .hint-icon:hover,
+  .hint-icon[aria-expanded='true'] {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .hint-trigger {
+    display: inline-flex;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    color: inherit;
+    cursor: help;
+  }
+  .hint-pop {
+    position: absolute;
+    top: calc(100% + 8px);
+    z-index: 50;
+    width: max-content;
+    max-width: 18rem;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: 0 8px 24px rgb(34 28 23 / 0.12);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 400;
+    font-style: normal;
+    line-height: 1.45;
+    text-align: left;
+    white-space: normal;
   }
 
   /* --- Messages ------------------------------------------------------------ */

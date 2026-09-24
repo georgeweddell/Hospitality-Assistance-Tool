@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Card from './Card'
+import Hint from './Hint'
 import { getJson, putJson } from '../api'
 import { daysBetween, eachDay, rangeLabel, rangeQuery } from '../dateRange'
 import { CATEGORIES } from '../categories'
@@ -124,7 +125,8 @@ function ManualEntry({ range, onSaved }) {
         </table>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-bg px-5 py-3.5">
-        <p className="text-sm text-muted">A blank counts as 0 sold for a dish on the menu.</p>
+        <Hint content="Every dish on the menu in this period is analysed, so a blank counts as 0 sold. If a dish wasn't on the menu, change its menu dates on its dish page."
+              label="How blanks are counted" />
         <div className="flex items-center gap-3">
           {saved && <span className="text-sm font-semibold text-muted">Saved</span>}
           {error && <span className="text-sm text-danger">{error}</span>}

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Card from './Card'
+import Hint from './Hint'
 import { postJson } from '../api'
 import { percent, pounds, priceForDisplay, sourceLabel, unitLabel } from '../format'
 
@@ -123,21 +124,23 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
     <Card
       title="Recipe"
       aside={
-        <button type="button" onClick={estimate} disabled={estimating || saving} className="btn btn-secondary btn-sm">
-          {estimating ? 'Estimating…' : '✦ Estimate with AI'}
-        </button>
+        <span className="inline-flex items-center gap-2">
+          {isDraft && (
+            <Hint align="right" content="Claude's estimate. Check each line against how you make it; nothing is saved until you press Save.">
+              <span className="chip chip-accent">AI draft</span>
+            </Hint>
+          )}
+          <button type="button" onClick={estimate} disabled={estimating || saving} className="btn btn-secondary btn-sm">
+            {estimating ? 'Estimating…' : '✦ Estimate with AI'}
+          </button>
+        </span>
       }
       flush
     >
-      {isDraft && (
-        <p className="alert-info mx-5 mb-4">
-          <span className="font-semibold">AI draft.</span> Check each line, then save.
-        </p>
-      )}
       {error && <p className="alert-error mx-5 mb-4">{error}</p>}
 
       {rows.length === 0 ? (
-        <div className="empty mx-5 mb-5">No recipe yet. Add ingredients, or let AI draft one for you to check.</div>
+        <div className="empty mx-5 mb-5">No recipe yet</div>
       ) : (
         <div className="overflow-x-auto">
           <table className="table min-w-[640px]">
@@ -170,7 +173,9 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
 
                       {row.draft && row.ingredientId === '' && (
                         <div className="mt-2 flex flex-wrap items-center gap-1.5 text-sm">
-                          <span className="chip chip-warn">“{row.draft.name}” not in your list</span>
+                          <Hint content={`Claude suggested “${row.draft.name}”, which isn't in your ingredient list. Pick a close match, or leave it out (it's then listed as not costed).`}>
+                            <span className="chip chip-warn">“{row.draft.name}”</span>
+                          </Hint>
                           {row.draft.suggestions.map((s) => (
                             <button key={s.id} type="button" onClick={() => updateRow(row.key, { ingredientId: s.id })}
                                     className="btn btn-secondary btn-sm">
@@ -181,9 +186,11 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
                         </div>
                       )}
                       {unitClash && (
-                        <p className="mt-2 text-sm text-warn">
-                          AI gave {unitLabel(row.draft.unit)}; {ing.name} is priced per {unitLabel(ing.unit)}. Check the quantity.
-                        </p>
+                        <div className="mt-2">
+                          <Hint content={`Claude gave this in ${unitLabel(row.draft.unit)}, but ${ing.name} is priced per ${unitLabel(ing.unit)}. Check the quantity is in ${unitLabel(ing.unit)}.`}>
+                            <span className="chip chip-warn">Check unit</span>
+                          </Hint>
+                        </div>
                       )}
                     </td>
                     <td>

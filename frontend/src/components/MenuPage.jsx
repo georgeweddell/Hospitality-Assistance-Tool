@@ -212,8 +212,8 @@ function MenuPage({ allDishes, analysed, incomplete, range, onChanged }) {
 
       {shown.length === 0 ? (
         <div className="empty">
-          {allDishes.length === 0 ? 'No dishes yet. Add your first dish to get started.'
-            : onAttentionTab && !term ? 'Nothing needs attention. Every dish is analysed.'
+          {allDishes.length === 0 ? 'No dishes yet'
+            : onAttentionTab && !term ? 'Nothing needs attention'
             : 'No dishes match.'}
           {((status !== 'all' && !onAttentionTab) || term) && allDishes.length > 0 && (
             <button type="button" onClick={() => { setSearch(''); choose({ status: 'all' }) }} className="link ml-2">
