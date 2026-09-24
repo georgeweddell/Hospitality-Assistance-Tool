@@ -37,9 +37,12 @@ class IngredientPriceOut(BaseModel):
         from_attributes = True  # lets this schema read straight off a SQLAlchemy object
 
 class DishCreate(BaseModel):
-    name: str
-    menu_price: float
+    name: str = Field(min_length=1)
+    menu_price: float = Field(gt=0)
     category: Optional[DishType] = None
+
+class DishUpdate(DishCreate):
+    pass
 
 class DishOut(BaseModel):
     id: int
@@ -78,7 +81,7 @@ class MatchedIngredientDraft(BaseModel):
 
 class ConfirmedIngredient(BaseModel):
     ingredient_id: int
-    quantity: float
+    quantity: float = Field(gt=0)   # in the ingredient's base unit (g / ml / each)
 
 class RecipeConfirm(BaseModel):
     ingredients: list[ConfirmedIngredient]
@@ -94,6 +97,26 @@ class DishIngredientOut(BaseModel):
 class RecipeSaveOut(BaseModel):
     ingredients: list[DishIngredientOut]
     cost: DishCostOut
+
+class RecipeLineOut(BaseModel):
+    ingredient_id: int
+    name: str
+    unit: UnitType
+    quantity: float
+    price_per_unit: float
+    price_source: PriceSource
+    line_cost: float
+
+class DishDetailOut(BaseModel):
+    """Everything the dish page needs, in one call."""
+    id: int
+    name: str
+    menu_price: float
+    category: Optional[DishType] = None
+    skipped_ingredients: list[str] = []
+    lines: list[RecipeLineOut]
+    cost: DishCostOut
+    units_sold: int
 
 class SalesRecordCreate(BaseModel):
     units_sold: int

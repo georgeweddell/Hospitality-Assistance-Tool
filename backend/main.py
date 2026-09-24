@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from menu_engineering import classify_all_dishes, build_action_list, list_incomplete_dishes
+from menu_engineering import classify_all_dishes, build_action_list, list_incomplete_dishes, get_dish_units_sold
 from costing import cost_dish, best_price
 from database import Base, engine
 import models
@@ -8,7 +8,7 @@ import schemas
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
-from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut
+from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut
 from models import Dish, DishIngredient, Ingredient, IngredientPrice, SalesRecord
 from recipe_ai import estimate_recipe
 from matching import match_recipe_ingredients
@@ -103,6 +103,64 @@ def create_dish(dish: DishCreate, db: Session = Depends(get_db)):
 
     return new_dish
 
+@app.put("/dishes/{dish_id}", response_model=DishOut)
+def update_dish(dish_id: int, changes: DishUpdate, db: Session = Depends(get_db)):
+    dish = db.query(Dish).filter(Dish.id == dish_id).first()
+    if not dish:
+        raise HTTPException(status_code=404, detail="Dish not found")
+
+    dish.name = changes.name
+    dish.menu_price = changes.menu_price
+    dish.category = changes.category
+    db.commit()
+    db.refresh(dish)
+
+    return dish
+
+@app.delete("/dishes/{dish_id}", status_code=204)
+def delete_dish(dish_id: int, db: Session = Depends(get_db)):
+    dish = db.query(Dish).filter(Dish.id == dish_id).first()
+    if not dish:
+        raise HTTPException(status_code=404, detail="Dish not found")
+
+    # No ORM cascades in this project, so remove the dish's rows explicitly.
+    db.query(DishIngredient).filter(DishIngredient.dish_id == dish_id).delete()
+    db.query(SalesRecord).filter(SalesRecord.dish_id == dish_id).delete()
+    db.delete(dish)
+    db.commit()
+
+@app.get("/dishes/{dish_id}/detail", response_model=DishDetailOut)
+def get_dish_detail(dish_id: int, db: Session = Depends(get_db)):
+    dish = db.query(Dish).filter(Dish.id == dish_id).first()
+    if not dish:
+        raise HTTPException(status_code=404, detail="Dish not found")
+
+    lines = []
+    for row in db.query(DishIngredient).filter(DishIngredient.dish_id == dish_id).all():
+        ingredient = db.query(Ingredient).filter(Ingredient.id == row.ingredient_id).first()
+        price = best_price(db, row.ingredient_id)
+        lines.append(RecipeLineOut(
+            ingredient_id=ingredient.id,
+            name=ingredient.name,
+            unit=ingredient.unit,
+            quantity=row.quantity,
+            price_per_unit=price.price_per_unit,
+            price_source=price.source,
+            line_cost=round(row.quantity * price.price_per_unit, 2),
+        ))
+
+    plate_cost, margin_pounds, margin_percent = cost_dish(db, dish_id)
+    return DishDetailOut(
+        id=dish.id,
+        name=dish.name,
+        menu_price=dish.menu_price,
+        category=dish.category,
+        skipped_ingredients=dish.skipped_ingredients,
+        lines=lines,
+        cost=DishCostOut(plate_cost=plate_cost, margin_pounds=margin_pounds, margin_percent=margin_percent),
+        units_sold=get_dish_units_sold(db, dish_id),
+    )
+
 @app.get("/dishes/{dish_id}/cost", response_model=DishCostOut)
 def get_dish_cost(dish_id: int, db: Session = Depends(get_db)):
     plate_cost, margin_pounds, margin_percent = cost_dish(db, dish_id)
@@ -134,6 +192,18 @@ def save_recipe(dish_id: int, confirmed: schemas.RecipeConfirm, db: Session = De
     dish = db.query(Dish).filter(Dish.id == dish_id).first()
     if not dish:
         raise HTTPException(status_code=404, detail="Dish not found")
+
+    # Check every line before touching the saved recipe.
+    # (Quantities > 0 are already enforced by the ConfirmedIngredient schema.)
+    ingredient_ids = [item.ingredient_id for item in confirmed.ingredients]
+    if len(ingredient_ids) != len(set(ingredient_ids)):
+        raise HTTPException(status_code=422, detail="The same ingredient appears twice. Combine it into one line.")
+    for ingredient_id in ingredient_ids:
+        if db.query(Ingredient).filter(Ingredient.id == ingredient_id).first() is None:
+            raise HTTPException(status_code=422, detail=f"Ingredient {ingredient_id} doesn't exist")
+        if best_price(db, ingredient_id) is None:
+            raise HTTPException(status_code=422, detail=f"Ingredient {ingredient_id} has no price yet")
+
     recipe = []
 
     dish.skipped_ingredients = confirmed.skipped_ingredients
