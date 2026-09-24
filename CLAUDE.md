@@ -4,17 +4,21 @@ This file gives Claude Code the context it needs to work on this project. Read i
 
 ## What this project is
 
-A web app for small independent UK restaurants. It turns a menu into a costed, ranked set of actions:
+A web app for small independent UK restaurants. A restaurant brings its data in whatever form it has: a menu PDF or photo, supplier invoices, till exports. The app keeps a **live model of the menu**: it estimates each dish's cost and margin, and keeps them up to date as prices and sales change. It then suggests changes, both to the menu and to the business as a whole.
 
-1. The user enters dishes (name, menu price, category).
-2. Claude (Anthropic API, Haiku model) estimates each dish's recipe as structured JSON.
-3. The user reviews and corrects that estimate on the Recipe Review screen ("AI proposes, human verifies").
-4. Each ingredient is costed against an ingredient price table. The app computes plate cost and gross margin per dish.
-5. The user enters a sales mix (units sold per dish).
-6. The app classifies each dish using Kasavana-Smith menu engineering (Star / Plowhorse / Puzzle / Dog). It then produces a ranked action list with a £ impact for each action.
-7. A dashboard shows a popularity-vs-margin scatter chart, per-dish cards and the action list.
+### The target journey (what we're building towards)
 
-**Purpose:** a portfolio piece for Forward Deployed Engineer / Solutions Engineer interviews. It is NOT being built as a commercial product. Clarity, correctness and explainability matter more than features.
+1. **Setup:** the user describes the business (type of restaurant, location, rough covers per day) and uploads a menu (PDF, photo or website link). Claude extracts dishes (name, price, category, description), and the user checks the list before it's saved.
+2. **Recipes:** Claude estimates each dish's recipe from its name and description, grounded in the ingredient list. The user checks each one on the Recipe Review screen ("AI proposes, human verifies").
+3. **Costs:** ingredients start on benchmark prices. The user uploads supplier invoices, Claude extracts the lines, and they're matched to ingredients and normalised to base units. **Every price records its source and date**, and costing uses the best available. Each dish shows how much of its cost comes from the restaurant's own data. Price changes raise alerts.
+4. **Sales:** the user uploads a till export (CSV/Excel). Claude identifies which column is which, then code reads the numbers and matches items to dishes. A direct connection to Square's test environment is a stretch goal.
+5. **Results:** Kasavana-Smith menu engineering (Star / Plowhorse / Puzzle / Dog), a ranked action list with £ impact, a menu summary, and rule-based business-wide suggestions.
+
+### Where it is now
+
+Steps 2 (estimate only, since the review screen is unfinished) and 5 (menu-level only) exist. Dishes are typed in one at a time, prices are a single fixed table, and sales can only be added through the API. The demo database comes from `seed_demo.py`.
+
+**Purpose:** a portfolio piece for Forward Deployed Engineer / Solutions Engineer interviews. It is NOT being built as a commercial product. Clarity, correctness and explainability matter more than features. The aim is **one complete journey that works end to end and can be demoed in five minutes**, not every possible integration.
 
 ## About the developer (George)
 
@@ -101,22 +105,35 @@ These were hard-won. Don't undo them.
 - **The API serves the dashboard efficiently.** The dashboard loads with a fixed number of calls, never one per dish: `/dishes/classifications`, `/dishes/action-list` and `/dishes/incomplete` (plus `/dishes` for the Recipe Review dropdown). Don't reintroduce per-dish calls.
 - **Validation happens before saving.** Routes check failure conditions first and save last.
 - **SQLAlchemy JSON columns must be reassigned, not mutated in place.** Otherwise changes aren't detected. This applies to e.g. `skipped_ingredients`.
-- **AI output is never trusted raw.** It is always validated with Pydantic, and always shown to the user as an editable draft.
+- **AI output is never trusted raw.** It is always validated with Pydantic, and always shown to the user as an editable draft. This applies to every import (menus, invoices, sales), not only recipes.
+- **AI for understanding messy input, code for arithmetic.** Claude reads documents and maps columns. Plain Python does every calculation.
+- **Every number records where it came from.** Prices carry a source (invoice / supplier list / benchmark) and a date. Keep history rather than overwriting, so "live" figures can be explained and traced.
+- **Structured tables, not loose storage.** The flexibility comes from history and sources, not from JSON blobs. Calculations must stay testable.
+- **No scraping third-party sites.** Data comes from the restaurant's own files, its own website, or a curated benchmark list.
 
 ## Known open items
 
-None at the moment.
+1. **Recipe Review screen is unfinished.** "Estimate recipe" returns a draft, but it isn't displayed, editable or saveable (`rows` in `RecipeReview.jsx` is unused).
+2. **VAT decision (George).** Menu prices include 20% VAT, but margin % is currently calculated on the VAT-inclusive price. Industry reports gross margin excluding VAT. This would change the costing engine.
+3. **The dashboard endpoints are slow** (several seconds): `menu_engineering.py` runs many small queries per dish. Worth fixing before deployment. That file is core logic, so propose the change first.
 
 ## Roadmap (in order)
 
-1. Fix the open items above.
-2. ~~Add automated tests (pytest) for the costing engine and menu-engineering logic.~~ Done (`backend/tests/`). New tests should keep to small hand-checkable examples, with the working in comments.
-3. Visual polish / styling pass on the frontend.
-4. Authentication: JWT-based login with per-user data isolation. **Use plan mode and get approval before starting.** This touches every query.
-5. Deployment, so the app is reachable by a public link.
-6. README write-up covering what the app does, how it works, which parts George wrote, and how Claude Code was used.
+Done: tests for costing and menu engineering (`backend/tests/`), and the frontend redesign (pages, summary, action list). New tests should keep to small hand-checkable examples, with the working in comments.
 
-**Out of scope for now:** review analysis, demand/rota forecasting, an AI narrative layer, menu-gap analysis. Don't start these.
+1. **Price history and sources:** database changes so each ingredient can have many dated prices with a source, and costing uses the best one. This changes the costing engine: plan first, George approves.
+2. **Finish Recipe Review:** show the draft, edit quantities, pick between suggested matches, flag unit mismatches, save.
+3. **Broaden the benchmark price list** beyond Italian, to a few cuisines done well.
+4. **Invoice upload:** Claude extracts lines, then matching, unit normalisation and review before saving.
+5. **Menu upload:** PDF/photo/URL, then Claude extracts dishes, then review.
+6. **Sales upload:** CSV/Excel, then column mapping, then dish matching, then review.
+7. **Guided setup flow** tying 5, 2, 4 and 6 together, plus a business profile.
+8. **Business-wide suggestions:** rule-based and hand-checkable (e.g. GP vs typical for the restaurant type). Claude may reword them but doesn't invent them.
+9. **Authentication:** JWT login with per-user data isolation. **Use plan mode and get approval before starting.** It touches every query, and it's required before deployment because the app spends API credit.
+10. **Deployment**, so the app is reachable by a public link.
+11. **README write-up:** what the app does, how it works, which parts George wrote, and how Claude Code was used.
+
+**Out of scope for now:** review analysis, demand/rota forecasting, a free-form AI narrative layer, menu-gap analysis, scraping supplier/supermarket sites, and live integrations beyond one Square sandbox. Don't start these.
 
 ## How to work
 
