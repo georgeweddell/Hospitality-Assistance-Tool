@@ -2,23 +2,25 @@ import { useEffect, useRef, useState } from 'react'
 import Card from './Card'
 import ConfirmDialog from './ConfirmDialog'
 import InvoiceReview from './InvoiceReview'
+import SalesReview from './SalesReview'
 import { getJson, postFile, postJson } from '../api'
 import { shortDate } from '../format'
 
 const KIND_LABELS = { invoice: 'Invoice', sales: 'Sales', menu: 'Menu' }
 
-// Upload an invoice, check what Claude read, apply it; and the history of
-// everything imported, with Undo.
+// Upload an invoice or a till export, check what Claude read, apply it; and
+// the history of everything imported, with Undo.
 function ImportsPage({ onChanged }) {
   const [imports, setImports] = useState(null)
   const [loads, setLoads] = useState(0)
-  const [review, setReview] = useState(null)        // { review, ingredients } while checking an invoice
-  const [reading, setReading] = useState(false)
+  const [review, setReview] = useState(null)        // { kind, review, options } while checking a file (options: ingredients or dishes)
+  const [reading, setReading] = useState(null)      // 'invoice' | 'sales' while a file is being read
   const [applied, setApplied] = useState(null)
   const [undoing, setUndoing] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
-  const fileInput = useRef(null)
+  const invoiceInput = useRef(null)
+  const salesInput = useRef(null)
 
   useEffect(() => {
     let ignore = false
@@ -28,24 +30,26 @@ function ImportsPage({ onChanged }) {
     return () => { ignore = true }
   }, [loads])
 
-  const upload = (e) => {
+  // kind: 'invoice' (checked against the ingredient list) or 'sales' (against the dishes).
+  const upload = (kind) => (e) => {
     const file = e.target.files[0]
     e.target.value = ''   // choosing the same file again still triggers a change
     if (!file) return
-    setReading(true)
+    setReading(kind)
     setError(null)
     setApplied(null)
-    Promise.all([postFile('/imports/invoice/read', file), getJson('/ingredients')])
-      .then(([r, ingredients]) => setReview({ review: r, ingredients }))
+    const [route, list] = kind === 'invoice' ? ['/imports/invoice/read', '/ingredients'] : ['/imports/sales/read', '/dishes']
+    Promise.all([postFile(route, file), getJson(list)])
+      .then(([r, options]) => setReview({ kind, review: r, options }))
       .catch((err) => setError(err.message))
-      .finally(() => setReading(false))
+      .finally(() => setReading(null))
   }
 
   const afterApply = (record) => {
     setReview(null)
     setApplied(record)
     setLoads((n) => n + 1)
-    onChanged()   // prices changed, so dish costs did too
+    onChanged()   // prices or sales changed, so the figures did too
   }
 
   const undo = () => {
@@ -65,19 +69,28 @@ function ImportsPage({ onChanged }) {
       .finally(() => setBusy(false))
   }
 
-  if (review) {
-    return <InvoiceReview review={review.review} ingredients={review.ingredients}
+  if (review?.kind === 'invoice') {
+    return <InvoiceReview review={review.review} ingredients={review.options}
                           onApplied={afterApply} onCancel={() => setReview(null)} />
   }
+  if (review?.kind === 'sales') {
+    return <SalesReview initial={review.review} dishes={review.options}
+                        onApplied={afterApply} onCancel={() => setReview(null)} />
+  }
 
-  const uploadButton = (
-    <>
-      <input ref={fileInput} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="sr-only"
-             onChange={upload} tabIndex={-1} aria-hidden="true" />
-      <button type="button" onClick={() => fileInput.current.click()} disabled={reading} className="btn btn-primary">
-        {reading ? 'Reading invoice…' : 'Upload invoice'}
+  const uploadButtons = (
+    <div className="flex flex-wrap gap-2">
+      <input ref={invoiceInput} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="sr-only"
+             onChange={upload('invoice')} tabIndex={-1} aria-hidden="true" />
+      <input ref={salesInput} type="file" accept=".csv" className="sr-only"
+             onChange={upload('sales')} tabIndex={-1} aria-hidden="true" />
+      <button type="button" onClick={() => invoiceInput.current.click()} disabled={reading !== null} className="btn btn-secondary">
+        {reading === 'invoice' ? 'Reading invoice…' : 'Upload invoice'}
       </button>
-    </>
+      <button type="button" onClick={() => salesInput.current.click()} disabled={reading !== null} className="btn btn-secondary">
+        {reading === 'sales' ? 'Reading sales…' : 'Upload sales'}
+      </button>
+    </div>
   )
 
   return (
@@ -85,9 +98,15 @@ function ImportsPage({ onChanged }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="flex items-center gap-3 text-muted">
           {reading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-line border-t-accent" aria-hidden="true" />}
-          {applied && <span className="chip chip-accent num">{applied.lines_applied} prices saved from {applied.supplier}</span>}
+          {applied && (
+            <span className="chip chip-accent num">
+              {applied.kind === 'sales'
+                ? `${applied.lines_applied} daily totals saved`
+                : `${applied.lines_applied} prices saved from ${applied.supplier}`}
+            </span>
+          )}
         </span>
-        {uploadButton}
+        {uploadButtons}
       </div>
       {error && <p className="alert-error">{error}</p>}
 
@@ -120,7 +139,9 @@ function ImportsPage({ onChanged }) {
                     <td>{KIND_LABELS[i.kind]}</td>
                     <td>{i.supplier ?? '–'}</td>
                     <td className="num">{i.reference ?? '–'}</td>
-                    <td className="num whitespace-nowrap">{shortDate(i.effective_date)}</td>
+                    <td className="num whitespace-nowrap">
+                      {shortDate(i.effective_date)}{i.period_end && i.period_end !== i.effective_date && ` – ${shortDate(i.period_end)}`}
+                    </td>
                     <td className="num text-right">
                       {i.lines_applied}
                       {i.lines_ignored > 0 && <span className="text-muted"> + {i.lines_ignored} ignored</span>}
@@ -131,7 +152,7 @@ function ImportsPage({ onChanged }) {
                       </span>
                     </td>
                     <td className="text-right">
-                      {i.status === 'applied' && i.kind === 'invoice' && (
+                      {i.status === 'applied' && i.kind !== 'menu' && (
                         <button type="button" onClick={() => setUndoing(i)} className="btn btn-secondary btn-sm">Undo</button>
                       )}
                     </td>
@@ -143,9 +164,12 @@ function ImportsPage({ onChanged }) {
         </Card>
       )}
 
-      <ConfirmDialog open={undoing !== null} title="Undo this invoice?" confirmLabel="Undo" busy={busy}
-                     onConfirm={undo} onCancel={() => setUndoing(null)}>
-        {undoing && `The ${undoing.lines_applied} prices from ${undoing.supplier} ${undoing.reference} are removed, and costs go back to the previous prices.`}
+      <ConfirmDialog open={undoing !== null} title={undoing?.kind === 'sales' ? 'Undo these sales?' : 'Undo this invoice?'}
+                     confirmLabel="Undo" busy={busy} onConfirm={undo} onCancel={() => setUndoing(null)}>
+        {undoing?.kind === 'sales' &&
+          `The ${undoing.lines_applied} daily totals from ${undoing.filename ?? 'this file'} are removed. Days it replaced from an earlier import don't come back; upload that file again to restore them.`}
+        {undoing?.kind === 'invoice' &&
+          `The ${undoing.lines_applied} prices from ${undoing.supplier} ${undoing.reference} are removed, and costs go back to the previous prices.`}
       </ConfirmDialog>
     </div>
   )

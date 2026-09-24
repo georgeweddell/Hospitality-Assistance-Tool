@@ -319,6 +319,7 @@ class ImportOut(BaseModel):
     supplier: Optional[str] = None
     reference: Optional[str] = None
     effective_date: date
+    period_end: Optional[date] = None
     status: ImportStatus
     lines_applied: int
     lines_ignored: int
