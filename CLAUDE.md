@@ -143,7 +143,7 @@ Done: tests for costing and menu engineering (`backend/tests/`), and the fronten
 4. ~~**Sales and date ranges.**~~ Done: dishes have on-the-menu dates; sales are daily (or period totals); analysis runs over any date range with presets (latest month by default); Sales page with a coverage strip and manual totals.
 5. ~~**Setup checklist, start fresh, empty states.**~~ Done: Settings → Start fresh / Load demo data (both back up first), a setup checklist on the Overview, short empty states.
 6. ~~**Broaden the benchmark price list.**~~ Done: `data/benchmark_prices.csv`, ~250 ingredients across Italian, British pub, Indian and staples, with an update button in Settings.
-7. **AI imports:** menu upload (PDF/photo/URL), invoice upload, sales file upload (CSV/Excel). Each ends in the matching editor from steps 2–4.
+7. **AI imports** (plan agreed with George, 24 Sep 2026; build in the order below, each its own approved step with tests). See "Step 7 plan" below.
 8. **Monthly routine:** "what changed since last period", price-rise alerts, and each dish's "% of cost from your own data".
 9. **Business-wide suggestions:** rule-based and hand-checkable (e.g. GP vs typical for the restaurant type). Claude may reword them but doesn't invent them.
 10. **Authentication:** JWT login with per-user data isolation. **Use plan mode and get approval before starting.** It touches every query, and it's required before deployment because the app spends API credit.
@@ -151,6 +151,36 @@ Done: tests for costing and menu engineering (`backend/tests/`), and the fronten
 12. **README write-up:** what the app does, how it works, which parts George wrote, and how Claude Code was used.
 
 **Out of scope for now:** review analysis, demand/rota forecasting, a free-form AI narrative layer, menu-gap analysis, scraping supplier/supermarket sites, and live integrations beyond one Square sandbox. Don't start these.
+
+## Step 7 plan: AI imports (agreed 24 Sep 2026)
+
+**Core principle: imports reconcile, they don't insert.** Owners re-upload menus, invoices and till exports repeatedly, so every import answers "what's different from what's stored?". Uploading the same thing twice must never double anything.
+
+**One pipeline for all three:** Upload → **Extract** (Claude reads the document into structured rows, validated with Pydantic) → **Match** (code: remembered aliases first, then the existing two-tier matching) → **Review** (a table of changes with proposed actions, all editable; nothing saved yet) → **Apply** (one transaction, validation before saving, recorded as an `Import`; every row it creates carries `import_id`).
+
+**Remembered aliases:** when the owner confirms a match ("MOZZ FDL 1KG" from a supplier → mozzarella (fior di latte); till item "MARG 12" → Margherita; a till's column mapping; lines to ignore such as cleaning or delivery), it's stored and pre-filled next time, shown as "remembered", still reviewable.
+
+**Shared:** an `Import` record (kind, filename, source/supplier, effective date, status, summary); the original file kept in a git-ignored `backend/uploads/` with a hash; an Imports page listing history; friendly errors when Claude is unreachable; file size/type limits. Tests cover the deterministic parts (diffing, pack parsing, invoice arithmetic, column mapping, aggregation, aliases, apply/undo) with Claude mocked, plus made-up sample files (menu PDF, invoice, Square CSV) for manual end-to-end runs. Document/photo extraction uses a vision-capable model stronger than Haiku (confirm the current model ID when building).
+
+**George's decisions:**
+1. **Menu price history (core logic, approved):** a dish's menu price gets dated history, like ingredient prices. For a period spanning a price change, analysis uses the price in effect on each day, weighted by that day's units. Formulas unchanged; only how the price is found.
+2. **Renames:** always ask the owner "same dish (renamed) or new dish?" when names are close. Never auto-merge.
+3. **Drinks and non-dish items** (add-ons, set menus): ignored by default and remembered. No Drinks category for now.
+4. **Size variants** (10" / 12"): each is its own dish.
+5. **Undo:** invoice and sales imports can be undone (delete the rows carrying that `import_id`). Menu imports can't in v1; their changes stay editable by hand.
+6. **Build order:** (a) menu price history → (b) invoice import → (c) till import → (d) menu import → (e) guided setup flow tying them together.
+
+**Menu import rules** (the owner picks "this menu starts on [date]"; everything is dated from it):
+- New dish → created, on the menu from the start date; shows as Needs recipe; Claude drafts its recipe using the menu description.
+- Same dish, new price → new dated menu price; old price kept.
+- Dish missing from the new menu → `on_menu_until` = day before the start date. Never deleted.
+- Close name match → owner chooses renamed-same-dish vs new dish.
+- Description changed → dish kept, recipe flagged "check recipe".
+- Menu sections mapped to Starter / Main / Side / Dessert by Claude; the owner corrects them.
+
+**Invoice import rules:** Claude extracts supplier, invoice number and date, and lines (description, pack as printed, quantity, unit price, line total). Code parses the pack ("12 x 1kg" → 12,000 g) through `units.py`, checks quantity × unit price ≈ line total (flag if not), matches lines (supplier alias → fuzzy → create ingredient → ignore), blocks a duplicate supplier + invoice number, and shows the change against the current price. Apply records `invoice` prices dated on the invoice date. Prices are ex-VAT.
+
+**Till import rules:** Claude sees only the header and about 5 sample rows (cost, and keeps customer data out) and proposes a column mapping (date, item, quantity, refunds/voids, date format). Code parses every row, aggregates to per-dish daily totals, nets refunds, ignores modifiers, and remembers the mapping per till. Items are matched like invoices (drinks ignored by default). Re-importing a period replaces that source's daily totals for those dates; overlaps with manual totals follow the existing no-double-count rule and are shown as conflicts.
 
 ## How to work
 
