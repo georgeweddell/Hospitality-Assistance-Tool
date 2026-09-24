@@ -47,7 +47,8 @@ A web app for small independent UK restaurants. It turns a menu into a costed, r
   - The Python virtual environment is at `backend/venv/`.
   - Use `backend/venv/Scripts/python.exe`, not the system Python.
 - `frontend/` holds the React app.
-  - `src/App.jsx` is the single page. Components live in `src/components/`.
+  - `src/App.jsx` loads all dashboard data once and picks the page. Pages (Overview, Analysis, Dishes, Menu setup) are switched by the URL hash (`#/dishes`) via `src/useHashRoute.js`, with no router library. `components/Layout.jsx` holds the sidebar navigation.
+  - Components live in `src/components/`. Quadrant colours live in `src/quadrants.js`, and number formatting lives in `src/format.js`.
   - All API calls go through `src/api.js`, using the `getJson` / `postJson` helpers. Don't call `fetch` directly from components.
   - The backend URL comes from `VITE_API_URL`, defaulting to `http://localhost:8000`.
 

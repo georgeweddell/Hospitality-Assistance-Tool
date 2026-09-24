@@ -1,54 +1,39 @@
-import { useState, useEffect } from 'react'
+import Card from './Card'
 
-function IncompleteDishes({ refreshCount }) {
-  const [items, setItems] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-
-  useEffect(() => {
-    fetch('http://localhost:8000/dishes/incomplete')
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`Backend returned ${response.status}`)
-        }
-        return response.json()
-      })
-      .then((data) => {
-        setItems(data)
-        setLoading(false)
-      })
-      .catch((err) => {
-        setError(err.message)
-        setLoading(false)
-      })
-  }, [refreshCount])
-
-  if (error) return <p>Needs attention error: {error}</p>
-  if (loading) return <p>Loading outstanding items...</p>
+function IncompleteDishes({ items }) {
   if (items.length === 0) return null
 
   return (
-    <div className="card wide">
-      <h2>Needs attention</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Dish</th>
-            <th>Category</th>
-            <th>Outstanding</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => (
-            <tr key={item.dish_id}>
-              <td>{item.dish_name}</td>
-              <td>{item.category || '—'}</td>
-              <td>{item.reasons.join(', ')}</td>
+    <Card title="Not yet analysed" aside={`${items.length} dishes`} flush>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
+              <th className="py-2 pl-5 pr-3 font-medium">Dish</th>
+              <th className="px-3 py-2 font-medium">Category</th>
+              <th className="py-2 pl-3 pr-5 font-medium">Missing</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={item.dish_id} className="border-b border-line last:border-0">
+                <td className="py-3 pl-5 pr-3 font-medium">{item.dish_name}</td>
+                <td className="px-3 py-3 text-muted">{item.category || '—'}</td>
+                <td className="py-3 pl-3 pr-5">
+                  <div className="flex flex-wrap gap-1.5">
+                    {item.reasons.map((r) => (
+                      <span key={r} className="rounded-full bg-warn-bg px-2 py-0.5 text-xs text-warn">
+                        {r.replace(/^No /, '').replace(/^\w/, (c) => c.toUpperCase())}
+                      </span>
+                    ))}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   )
 }
 

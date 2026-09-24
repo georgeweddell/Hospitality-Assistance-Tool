@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
-
 import {
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid,
-  Tooltip, ReferenceLine, ResponsiveContainer, LabelList
+  Tooltip, ReferenceLine, ResponsiveContainer, LabelList, Cell
 } from 'recharts'
+import Card from './Card'
+import QuadrantBadge from './QuadrantBadge'
+import { quadrantColor } from '../quadrants'
 
 function QuadrantChart({ dishes, category }) {
   const inCategory = dishes.filter((d) => d.category === category)
@@ -11,33 +12,38 @@ function QuadrantChart({ dishes, category }) {
   const profLine = inCategory[0].profitability_threshold
 
   return (
-    <div className="card wide">
-      <h2>{category}</h2>
-      <ResponsiveContainer width="100%" height={350}>
-        <ScatterChart margin={{ top: 20, right: 30, bottom: 40, left: 20 }}>
-          <CartesianGrid stroke="#333" />
-          <XAxis
-            type="number"
-            dataKey="menu_mix_percent"
-            name="Menu mix"
-            unit="%"
-            label={{ value: 'Popularity (menu mix %)', position: 'bottom' }}
-          />
-          <YAxis
-            type="number"
-            dataKey="margin_pounds"
-            name="Margin"
-            label={{ value: 'Margin (£)', angle: -90, position: 'left' }}
-          />
-          <Tooltip content={<DishTooltip />} cursor={false} />
-          <ReferenceLine x={popLine} stroke="#e06c75" />
-          <ReferenceLine y={profLine} stroke="#e06c75" />
-          <Scatter data={inCategory} fill="#61afef">
-            <LabelList dataKey="dish_name" position="top" fontSize={11}/>
-          </Scatter>
-        </ScatterChart>
-      </ResponsiveContainer>
-    </div>
+    <Card title={category} aside={`${popLine.toFixed(1)}% mix · £${profLine.toFixed(2)} margin`}>
+      <div className="chart">
+        <ResponsiveContainer width="100%" height={300}>
+          <ScatterChart margin={{ top: 30, right: 20, bottom: 30, left: 10 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis
+              type="number"
+              dataKey="menu_mix_percent"
+              name="Menu mix"
+              unit="%"
+              label={{ value: 'Popularity (menu mix %)', position: 'bottom', offset: 10 }}
+            />
+            <YAxis
+              type="number"
+              dataKey="margin_pounds"
+              name="Margin"
+              tickFormatter={(v) => `£${v}`}
+              label={{ value: 'Margin (£)', angle: -90, position: 'insideLeft', offset: 5 }}
+            />
+            <Tooltip content={<DishTooltip />} cursor={false} />
+            <ReferenceLine x={popLine} strokeDasharray="4 4" />
+            <ReferenceLine y={profLine} strokeDasharray="4 4" />
+            <Scatter data={inCategory}>
+              {inCategory.map((dish) => (
+                <Cell key={dish.dish_id} fill={quadrantColor(dish.quadrant)} />
+              ))}
+              <LabelList dataKey="dish_name" position="top" />
+            </Scatter>
+          </ScatterChart>
+        </ResponsiveContainer>
+      </div>
+    </Card>
   )
 }
 
@@ -47,11 +53,16 @@ function DishTooltip({ active, payload }) {
   const dish = payload[0].payload
 
   return (
-    <div className="tooltip">
-      <strong>{dish.dish_name}</strong> — {dish.quadrant}
-      <div>Margin: £{dish.margin_pounds.toFixed(2)}</div>
-      <div>Menu mix: {dish.menu_mix_percent.toFixed(2)}%</div>
-      <div>Units sold: {dish.units_sold}</div>
+    <div className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink shadow-md">
+      <div className="mb-1 flex items-center gap-2">
+        <strong>{dish.dish_name}</strong>
+        <QuadrantBadge quadrant={dish.quadrant} />
+      </div>
+      <div className="tabular-nums text-muted">
+        <div>Margin: £{dish.margin_pounds.toFixed(2)}</div>
+        <div>Menu mix: {dish.menu_mix_percent.toFixed(2)}%</div>
+        <div>Units sold: {dish.units_sold}</div>
+      </div>
     </div>
   )
 }

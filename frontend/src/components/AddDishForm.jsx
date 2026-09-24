@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { postJson } from '../api'
+import Card from './Card'
 
 function AddDishForm({ onDishAdded }) {
   const [name, setName] = useState("");
@@ -35,16 +36,14 @@ function AddDishForm({ onDishAdded }) {
   };
 
   return (
-    <div className="card">
-      <h2 className="text-xl font-semibold mb-3">Add a dish</h2>
-
-      <form onSubmit={handleSubmit} className="flex flex-col gap-2 max-w-xs">
+    <Card title="Add a dish">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Dish name"
-          className="border rounded px-2 py-1"
+          className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-ink focus:border-accent focus:outline-none"
         />
 
         <input
@@ -52,13 +51,13 @@ function AddDishForm({ onDishAdded }) {
           value={menuPrice}
           onChange={(e) => setMenuPrice(e.target.value)}
           placeholder="Menu price (£)"
-          className="border rounded px-2 py-1"
+          className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-ink focus:border-accent focus:outline-none"
         />
 
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="border rounded px-2 py-1"
+          className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-ink focus:border-accent focus:outline-none"
         >
           <option value="">Select a category…</option>
           <option value="Starter">Starter</option>
@@ -70,14 +69,14 @@ function AddDishForm({ onDishAdded }) {
         <button
           type="submit"
           disabled={submitting}
-          className="bg-slate-800 text-white rounded px-3 py-1 disabled:opacity-50"
+          className="rounded-lg bg-accent px-4 py-2 font-medium text-accent-ink hover:opacity-90 disabled:opacity-50"
         >
           {submitting ? "Saving…" : "Add dish"}
         </button>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-danger">{error}</p>}
       </form>
-    </div>
+    </Card>
   );
 }
 

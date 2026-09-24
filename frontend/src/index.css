@@ -1,147 +1,78 @@
 @import "tailwindcss";
 
+/* Colour tokens. Components use these through Tailwind classes such as
+   bg-surface, text-muted and border-line (mapped in @theme below). */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --bg: #f6f5f2;
+  --surface: #ffffff;
+  --ink: #1c1b19;
+  --muted: #6b6760;
+  --line: #e4e1da;
+  --accent: #b4532a;
+  --accent-ink: #ffffff;
+  --warn: #b45309;
+  --warn-bg: #fdf6e7;
+  --danger: #c03030;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
+  color-scheme: light;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  color: var(--ink);
   background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+    --bg: #151412;
+    --surface: #1f1e1b;
+    --ink: #f1efe9;
+    --muted: #a39f96;
+    --line: #33312c;
+    --accent: #e07a4f;
+    --accent-ink: #1c1b19;
+    --warn: #f0b429;
+    --warn-bg: #2a2418;
+    --danger: #f07070;
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
+    color-scheme: dark;
   }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-warn: var(--warn);
+  --color-warn-bg: var(--warn-bg);
+  --color-danger: var(--danger);
 }
 
 body {
   margin: 0;
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+/* Recharts draws SVG with fixed colours. These rules swap in the tokens
+   so the charts follow light/dark mode like the rest of the page. */
+.chart .recharts-cartesian-grid line {
+  stroke: var(--line);
 }
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+.chart .recharts-cartesian-axis-line,
+.chart .recharts-cartesian-axis-tick-line {
+  stroke: var(--line);
 }
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
+.chart .recharts-cartesian-axis-tick-value,
+.chart .recharts-label {
+  fill: var(--muted);
+  font-size: 12px;
 }
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
+.chart .recharts-reference-line line {
+  stroke: var(--muted);
 }
-p {
-  margin: 0;
+.chart .recharts-label-list text {
+  fill: var(--ink);
+  font-size: 11px;
 }
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
-}
-
-.card {
-  border: 1px solid #444;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  text-align: left;
-}
-
-.wide {
-  max-width: 900px;
-}
-
-.dish-card {
-  max-width: 400px;
-}
-
-.card td, .card th {
-  padding: 0.4rem 0.8rem; 
-  text-align: left;
-}
-
-.wide td {
-  white-space: nowrap;
-}
-
-.tooltip {
-  background: #1a1a1a;
-  border: 1px solid #555;
-  border-radius: 6px;
-  padding: 0.5rem 0.75rem;
-}
-
-.warning { color: #e06c75; }
