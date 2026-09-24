@@ -1,6 +1,6 @@
-// £12.50
+// £12.50, £1,089.01
 export function pounds(value) {
-  return `£${value.toFixed(2)}`
+  return `£${value.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 // £1,234 (whole pounds, for headline totals)

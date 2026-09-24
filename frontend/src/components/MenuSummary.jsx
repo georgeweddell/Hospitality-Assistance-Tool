@@ -1,19 +1,20 @@
 import { QUADRANT_ORDER, quadrantColor } from '../quadrants'
 import { percent, poundsRounded } from '../format'
 
-function Stat({ label, value, detail }) {
+function Stat({ label, value }) {
   return (
-    <div className="rounded-xl border border-line bg-surface p-4 shadow-sm">
-      <p className="text-sm text-muted">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
-      {detail && <p className="mt-0.5 text-xs text-muted">{detail}</p>}
+    <div className="card flex flex-col gap-2.5 px-5 py-[18px]">
+      <p className="label">{label}</p>
+      <p className="stat-value">{value}</p>
     </div>
   )
 }
 
 // Headline figures and the quadrant mix, worked out from data the API
 // already returns. Totals cover analysed dishes only.
-function MenuSummary({ dishes, actions, excludedCount }) {
+//   Contribution = sum of (margin x units sold)
+//   Gross margin = contribution / sales (sum of menu price x units sold)
+function MenuSummary({ dishes, actions }) {
   let contribution = 0
   let revenue = 0
   for (const d of dishes) {
@@ -27,36 +28,25 @@ function MenuSummary({ dishes, actions, excludedCount }) {
   for (const d of dishes) counts[d.quadrant] += 1
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat label="Contribution" value={poundsRounded(contribution)} detail="Margin × units sold" />
-        <Stat label="Gross margin" value={percent(grossMargin)} detail={`On ${poundsRounded(revenue)} sales`} />
-        <Stat label="Opportunity identified" value={poundsRounded(opportunity)} detail={`Across ${actions.length} actions`} />
-        <Stat
-          label="Dishes analysed"
-          value={dishes.length}
-          detail={excludedCount > 0 ? `${excludedCount} awaiting data` : 'All dishes complete'}
-        />
-      </div>
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <Stat label="Contribution" value={poundsRounded(contribution)} />
+      <Stat label="Gross margin" value={percent(grossMargin)} />
+      <Stat label="Opportunity" value={poundsRounded(opportunity)} />
 
-      <div className="rounded-xl border border-line bg-surface p-4 shadow-sm">
-        <div className="flex items-baseline justify-between">
-          <p className="text-sm font-medium">Menu health</p>
-          <p className="text-sm text-muted">{dishes.length} dishes</p>
-        </div>
-        <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-bg">
+      <div className="card flex flex-col gap-3 px-5 py-[18px]">
+        <p className="label">Menu health · {dishes.length} dishes</p>
+        <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-full" role="img"
+             aria-label={QUADRANT_ORDER.map((q) => `${counts[q]} ${q}s`).join(', ')}>
           {QUADRANT_ORDER.map((q) =>
-            counts[q] > 0 ? (
-              <div key={q} style={{ width: `${(counts[q] / dishes.length) * 100}%`, backgroundColor: quadrantColor(q) }} />
-            ) : null
+            counts[q] > 0 ? <div key={q} style={{ flexGrow: counts[q], backgroundColor: quadrantColor(q) }} /> : null
           )}
         </div>
-        <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+        <ul className="flex justify-between text-sm">
           {QUADRANT_ORDER.map((q) => (
-            <li key={q} className="flex items-center gap-2">
+            <li key={q} className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full" style={{ backgroundColor: quadrantColor(q) }} />
-              <span className="font-medium tabular-nums">{counts[q]}</span>
-              <span className="text-muted">{q}{counts[q] === 1 ? '' : 's'}</span>
+              <span className="num font-semibold">{counts[q]}</span>
+              <span className="sr-only">{q}s</span>
             </li>
           ))}
         </ul>

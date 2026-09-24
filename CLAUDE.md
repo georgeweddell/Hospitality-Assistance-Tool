@@ -1,10 +1,10 @@
-# CLAUDE.md — Menu & Margin Engine
+# CLAUDE.md — Mise (Menu & Margin Engine)
 
 This file gives Claude Code the context it needs to work on this project. Read it fully at the start of every session.
 
 ## What this project is
 
-A web app for small independent UK restaurants. A restaurant brings its data in whatever form it has: a menu PDF or photo, supplier invoices, till exports. The app keeps a **live model of the menu**: it estimates each dish's cost and margin, and keeps them up to date as prices and sales change. It then suggests changes, both to the menu and to the business as a whole.
+**Mise** (from *mise en place*) is a web app for small independent UK restaurants. A restaurant brings its data in whatever form it has: a menu PDF or photo, supplier invoices, till exports. The app keeps a **live model of the menu**: it estimates each dish's cost and margin, and keeps them up to date as prices and sales change. It then suggests changes, both to the menu and to the business as a whole.
 
 ### The target journey (what we're building towards)
 
@@ -59,6 +59,10 @@ Step 2 works (dish page with recipe editor and AI draft), and step 5 works at me
   - The dish page (`DishPage.jsx`) loads its own detail (`GET /dishes/{id}/detail` plus `/ingredients`). `RecipeEditor.jsx` edits the recipe there. "Estimate with AI" fills the editor as a draft, and nothing is saved until Save. The editor's plate cost is a live preview; the saved figures always come from the backend costing engine.
   - `IngredientsPage.jsx` loads `/ingredients` itself (current price, source, date and `used_in` count). Prices are entered as a pack price (`PriceFields.jsx`, helpers in `src/prices.js`). The £/kg shown while typing is only a preview; the backend does the real conversion.
   - The chosen period lives in `App.jsx` (kept in session storage) and is picked with `RangePicker.jsx`. Presets are relative to the latest sale, not today (`src/dateRange.js`), so an old dataset still opens on data.
+  - **Design system (Mise): `src/index.css`.** Every colour (tokens on `:root`), the fonts (Fraunces for headings and figures, Instrument Sans for everything else) and the shared component classes live there: `btn btn-primary|secondary|danger|sm`, `input`, `field` + `label`, `card` / `card-header` / `card-body`, `table` (+ `row-link`), `chip chip-warn|muted|accent`, `count`, `tabs` / `tab`, `segmented`, `alert-error`, `alert-info`, `empty`, `page-title`, `section-title`, `stat-value`, `num`, `link`. **Use these; don't write one-off button, input, table or card styles in a component.** Change a look in `index.css`, once.
+  - Light theme only (cream paper, tomato accent). Quadrant colours (basil, saffron, cobalt, aubergine) are in `src/quadrants.js`, with a darker `text` shade for badge text contrast.
+  - Keep visible subtext to a minimum: labels and figures, not explanatory sentences.
+  - Chart labels are positioned by `src/labelPlacement.js` so dish names don't overlap.
   - Components live in `src/components/`. Quadrant colours live in `src/quadrants.js`, menu categories in `src/categories.js`, and number and unit formatting in `src/format.js` (prices are shown as £/kg, £/l or each).
   - All API calls go through `src/api.js`, using the `getJson` / `postJson` / `putJson` / `deleteJson` helpers. Don't call `fetch` directly from components.
   - The backend URL comes from `VITE_API_URL`, defaulting to `http://localhost:8000`.

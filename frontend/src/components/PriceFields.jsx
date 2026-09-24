@@ -1,10 +1,8 @@
 import { priceForDisplay } from '../format'
 import { PACK_UNITS } from '../prices'
 
-const INPUT = 'w-full rounded-lg border border-line bg-surface px-3 py-2 text-ink focus:border-accent focus:outline-none'
-
 // "Paid £93.60 for 12 kg" plus where the price came from. Shows the price per
-// kg / l / each as a preview while typing.
+// kg / l / each as a preview while typing (the backend does the real conversion).
 function PriceFields({ unit, price, onChange }) {
   const set = (field) => (e) => onChange({ ...price, [field]: e.target.value })
   const options = PACK_UNITS[unit]
@@ -12,38 +10,40 @@ function PriceFields({ unit, price, onChange }) {
   const perBase = Number(price.packPrice) / (Number(price.packQuantity) * factor)
 
   return (
-    <div className="grid gap-3 sm:grid-cols-[1fr_1fr_1fr]">
-      <label className="text-sm">
-        <span className="mb-1 block text-muted">Paid (£)</span>
+    <div className="grid gap-4 sm:grid-cols-3">
+      <label className="field">
+        <span className="label">Paid (£)</span>
         <input type="number" min="0" step="0.01" value={price.packPrice} onChange={set('packPrice')}
-               className={INPUT} placeholder="93.60" />
+               className="input num" placeholder="93.60" />
       </label>
-      <label className="text-sm">
-        <span className="mb-1 block text-muted">For</span>
+      <label className="field">
+        <span className="label">For</span>
         <div className="flex gap-2">
           <input type="number" min="0" step="any" value={price.packQuantity} onChange={set('packQuantity')}
-                 className={`${INPUT} text-right`} />
-          <select value={price.packUnit} onChange={set('packUnit')} className={`${INPUT} w-24`}>
+                 className="input num text-right" aria-label="Quantity" />
+          <select value={price.packUnit} onChange={set('packUnit')} className="input w-24" aria-label="Unit">
             {options.map(([u]) => <option key={u} value={u}>{u}</option>)}
           </select>
         </div>
       </label>
-      <label className="text-sm">
-        <span className="mb-1 block text-muted">From</span>
-        <select value={price.source} onChange={set('source')} className={INPUT}>
+      <label className="field">
+        <span className="label">From</span>
+        <select value={price.source} onChange={set('source')} className="input">
           <option value="invoice">Invoice</option>
           <option value="supplier_list">Supplier price list</option>
           <option value="manual">Other / my estimate</option>
         </select>
       </label>
-      <label className="text-sm sm:col-span-2">
-        <span className="mb-1 block text-muted">Supplier (optional)</span>
-        <input type="text" value={price.supplier} onChange={set('supplier')} className={INPUT} />
+      <label className="field sm:col-span-2">
+        <span className="label">Supplier</span>
+        <input type="text" value={price.supplier} onChange={set('supplier')} className="input" placeholder="Optional" />
       </label>
-      <div className="self-end pb-2 text-sm text-muted">
-        {Number.isFinite(perBase) && perBase >= 0 && Number(price.packPrice) > 0 ? (
-          <>= <span className="font-semibold tabular-nums text-ink">{priceForDisplay(perBase, unit)}</span></>
-        ) : null}
+      <div className="flex items-end pb-2">
+        {Number.isFinite(perBase) && perBase >= 0 && Number(price.packPrice) > 0 && (
+          <p className="num text-muted">
+            = <span className="font-display text-lg font-semibold text-ink">{priceForDisplay(perBase, unit)}</span>
+          </p>
+        )}
       </div>
     </div>
   )

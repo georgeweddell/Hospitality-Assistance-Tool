@@ -3,8 +3,6 @@ import Card from './Card'
 import { postJson } from '../api'
 import { percent, pounds, priceForDisplay, sourceLabel, unitLabel } from '../format'
 
-const INPUT = 'w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-ink focus:border-accent focus:outline-none'
-
 let nextKey = 1
 const newKey = () => nextKey++
 
@@ -125,38 +123,31 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
     <Card
       title="Recipe"
       aside={
-        <button
-          type="button"
-          onClick={estimate}
-          disabled={estimating || saving}
-          className="rounded-lg border border-line px-3 py-1.5 text-sm font-medium text-ink hover:bg-bg disabled:opacity-50"
-        >
+        <button type="button" onClick={estimate} disabled={estimating || saving} className="btn btn-secondary btn-sm">
           {estimating ? 'Estimating…' : '✦ Estimate with AI'}
         </button>
       }
       flush
     >
       {isDraft && (
-        <p className="mx-5 mb-3 rounded-lg bg-accent/10 px-3 py-2 text-sm text-ink">
-          <span className="font-medium">AI draft.</span> Check each line against how you actually make it, then save. Nothing is saved yet.
+        <p className="alert-info mx-5 mb-4">
+          <span className="font-semibold">AI draft.</span> Check each line, then save.
         </p>
       )}
-      {error && <p className="mx-5 mb-3 rounded-lg border border-danger/40 px-3 py-2 text-sm text-danger">{error}</p>}
+      {error && <p className="alert-error mx-5 mb-4">{error}</p>}
 
       {rows.length === 0 ? (
-        <div className="mx-5 mb-4 rounded-lg border border-dashed border-line p-6 text-center text-sm text-muted">
-          No recipe yet. Add ingredients one by one, or let AI draft it for you to check.
-        </div>
+        <div className="empty mx-5 mb-5">No recipe yet. Add ingredients, or let AI draft one for you to check.</div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="table min-w-[640px]">
             <thead>
-              <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
-                <th className="py-2 pl-5 pr-2 font-medium">Ingredient</th>
-                <th className="w-36 px-2 py-2 font-medium">Quantity</th>
-                <th className="px-2 py-2 text-right font-medium">Price</th>
-                <th className="px-2 py-2 text-right font-medium">Cost</th>
-                <th className="w-10 py-2 pr-5" />
+              <tr>
+                <th>Ingredient</th>
+                <th className="w-40">Quantity</th>
+                <th className="w-32 text-right">Price</th>
+                <th className="w-24 text-right">Cost</th>
+                <th className="w-12"><span className="sr-only">Remove</span></th>
               </tr>
             </thead>
             <tbody>
@@ -165,12 +156,12 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
                 const unitClash = row.draft && ing && row.draft.unit !== ing.unit
                 const cost = lineCost(row)
                 return (
-                  <tr key={row.key} className="border-b border-line align-top last:border-0">
-                    <td className="py-2.5 pl-5 pr-2">
+                  <tr key={row.key} className="align-top">
+                    <td>
                       <select
                         value={row.ingredientId}
                         onChange={(e) => updateRow(row.key, { ingredientId: e.target.value === '' ? '' : Number(e.target.value) })}
-                        className={`${INPUT} ${row.ingredientId === '' && showProblems ? 'border-danger' : ''}`}
+                        className={`input py-1.5 ${row.ingredientId === '' && showProblems ? 'input-invalid' : ''}`}
                         aria-label="Ingredient"
                       >
                         <option value="">Choose an ingredient…</option>
@@ -178,57 +169,50 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
                       </select>
 
                       {row.draft && row.ingredientId === '' && (
-                        <div className="mt-1.5 text-xs">
-                          <p className="text-warn">AI suggested “{row.draft.name}”, which isn't in your ingredient list.</p>
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                            {row.draft.suggestions.map((s) => (
-                              <button key={s.id} type="button" onClick={() => updateRow(row.key, { ingredientId: s.id })}
-                                      className="rounded-full border border-line px-2 py-0.5 hover:border-accent hover:text-accent">
-                                {s.name}
-                              </button>
-                            ))}
-                            <button type="button" onClick={() => leaveOut(row)} className="px-1 text-muted underline hover:text-ink">
-                              Leave out (not costed)
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-sm">
+                          <span className="chip chip-warn">“{row.draft.name}” not in your list</span>
+                          {row.draft.suggestions.map((s) => (
+                            <button key={s.id} type="button" onClick={() => updateRow(row.key, { ingredientId: s.id })}
+                                    className="btn btn-secondary btn-sm">
+                              {s.name}
                             </button>
-                          </div>
+                          ))}
+                          <button type="button" onClick={() => leaveOut(row)} className="link text-sm">Leave out</button>
                         </div>
                       )}
                       {unitClash && (
-                        <p className="mt-1.5 text-xs text-warn">
-                          AI gave this in {unitLabel(row.draft.unit)}, but {ing.name} is priced per {unitLabel(ing.unit)}. Check the quantity.
+                        <p className="mt-2 text-sm text-warn">
+                          AI gave {unitLabel(row.draft.unit)}; {ing.name} is priced per {unitLabel(ing.unit)}. Check the quantity.
                         </p>
                       )}
                     </td>
-                    <td className="px-2 py-2.5">
-                      <div className="flex items-center gap-1.5">
+                    <td>
+                      <div className="flex items-center gap-2">
                         <input
                           type="number"
                           min="0"
                           step="any"
                           value={row.quantity}
                           onChange={(e) => updateRow(row.key, { quantity: e.target.value })}
-                          className={`${INPUT} text-right tabular-nums`}
+                          className="input num py-1.5 text-right"
                           aria-label="Quantity"
                         />
-                        <span className="w-8 text-xs text-muted">{ing ? unitLabel(ing.unit) : ''}</span>
+                        <span className="w-9 text-sm text-muted">{ing ? unitLabel(ing.unit) : ''}</span>
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-2 py-2.5 pt-4 text-right text-xs text-muted">
+                    <td className="num whitespace-nowrap pt-3.5 text-right text-sm">
                       {ing?.price_per_unit != null && (
                         <>
                           {priceForDisplay(ing.price_per_unit, ing.unit)}
-                          <div>{sourceLabel(ing.price_source)}</div>
+                          <div className="text-xs text-muted">{sourceLabel(ing.price_source)}</div>
                         </>
                       )}
                     </td>
-                    <td className="whitespace-nowrap px-2 py-2.5 pt-4 text-right tabular-nums">
+                    <td className="num whitespace-nowrap pt-3.5 text-right font-semibold">
                       {cost != null ? pounds(cost) : '—'}
                     </td>
-                    <td className="py-2.5 pr-5 pt-3.5 text-right">
-                      <button type="button" onClick={() => removeRow(row.key)} aria-label="Remove line"
-                              className="rounded px-1.5 text-lg leading-none text-muted hover:text-danger">
-                        ×
-                      </button>
+                    <td className="pt-3 text-right">
+                      <button type="button" onClick={() => removeRow(row.key)} aria-label="Remove line" className="btn-icon">×</button>
                     </td>
                   </tr>
                 )
@@ -238,45 +222,39 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-3">
-        <button type="button" onClick={addRow} className="text-sm font-medium text-accent hover:underline">
-          + Add ingredient
-        </button>
-        <p className="text-sm text-muted">
-          Plate cost <span className="font-semibold tabular-nums text-ink">{pounds(previewCost)}</span>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-3.5">
+        <button type="button" onClick={addRow} className="link">+ Add ingredient</button>
+        <p className="num text-muted">
+          Plate cost <span className="font-display text-base font-semibold text-ink">{pounds(previewCost)}</span>
           <span className="mx-2">·</span>
-          Margin <span className="font-semibold tabular-nums text-ink">{pounds(previewMargin)}</span>
+          Margin <span className="font-display text-base font-semibold text-ink">{pounds(previewMargin)}</span>
           {' '}({percent((previewMargin / dish.menu_price) * 100)})
         </p>
       </div>
 
       {skipped.length > 0 && (
-        <div className="border-t border-line px-5 py-3 text-sm">
-          <span className="text-warn">Not costed:</span>{' '}
+        <div className="flex flex-wrap items-center gap-1.5 border-t border-line px-5 py-3 text-sm">
+          <span className="label">Not costed</span>
           {skipped.map((name) => (
-            <span key={name} className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-warn-bg px-2 py-0.5 text-xs text-warn">
+            <span key={name} className="chip chip-warn">
               {name}
-              <button type="button" aria-label={`Remove ${name}`} onClick={() => { setSkipped((s) => s.filter((n) => n !== name)); setDirty(true) }}
-                      className="hover:text-ink">×</button>
+              <button type="button" aria-label={`Remove ${name}`} className="hover:text-ink"
+                      onClick={() => { setSkipped((s) => s.filter((n) => n !== name)); setDirty(true) }}>×</button>
             </span>
           ))}
         </div>
       )}
 
       {showProblems && problems.length > 0 && (
-        <ul className="mx-5 mb-3 list-disc space-y-0.5 rounded-lg border border-danger/40 py-2 pl-8 pr-3 text-sm text-danger">
+        <ul className="alert-error mx-5 mb-4 list-disc space-y-0.5 pl-8">
           {problems.map((p) => <li key={p}>{p}</li>)}
         </ul>
       )}
 
       {dirty && (
-        <div className="flex justify-end gap-2 border-t border-line bg-bg/60 px-5 py-3">
-          <button type="button" onClick={reset} disabled={saving}
-                  className="rounded-lg border border-line bg-surface px-4 py-2 text-sm hover:bg-bg">
-            Discard changes
-          </button>
-          <button type="button" onClick={save} disabled={saving}
-                  className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:opacity-90 disabled:opacity-50">
+        <div className="flex justify-end gap-2 border-t border-line bg-bg px-5 py-3.5">
+          <button type="button" onClick={reset} disabled={saving} className="btn btn-secondary">Discard changes</button>
+          <button type="button" onClick={save} disabled={saving} className="btn btn-primary">
             {saving ? 'Saving…' : 'Save recipe'}
           </button>
         </div>

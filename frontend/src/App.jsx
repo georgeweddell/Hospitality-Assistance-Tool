@@ -44,10 +44,10 @@ function saveRange(range) {
 
 function NoSales() {
   return (
-    <div className="rounded-xl border border-dashed border-line p-8 text-center">
-      <p className="font-medium">No sales recorded in this period</p>
-      <p className="mt-1 text-sm text-muted">
-        Choose another period above, or <a href="#/sales" className="font-medium text-accent hover:underline">enter sales</a>.
+    <div className="empty">
+      <p className="section-title text-ink">No sales in this period</p>
+      <p className="mt-2">
+        Choose another period, or <a href="#/sales" className="link">enter sales</a>.
       </p>
     </div>
   )
@@ -111,12 +111,9 @@ function App() {
   let content
   if (error) {
     content = (
-      <div className="rounded-xl border border-danger/40 bg-surface p-5">
-        <p className="font-medium text-danger">Couldn't load your menu data</p>
-        <p className="mt-1 text-sm text-muted">{error}</p>
-        <button type="button" onClick={refresh} className="mt-3 text-sm font-medium text-accent hover:underline">
-          Try again
-        </button>
+      <div className="alert-error flex flex-wrap items-center justify-between gap-3">
+        <span><span className="font-semibold">Couldn't load your menu data.</span> {error}</span>
+        <button type="button" onClick={refresh} className="btn btn-secondary btn-sm">Try again</button>
       </div>
     )
   } else if (page === 'ingredients') {
@@ -124,7 +121,7 @@ function App() {
   } else if (!data) {
     content = (
       <div className="flex items-center gap-3 text-muted">
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-line border-t-accent" />
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-line border-t-accent" aria-hidden="true" />
         Loading menu data…
       </div>
     )
@@ -160,8 +157,8 @@ function App() {
     )
   } else {
     content = (
-      <div className="space-y-8">
-        <MenuSummary dishes={data.dishes} actions={data.actions} excludedCount={data.incomplete.length} />
+      <div className="space-y-5">
+        <MenuSummary dishes={data.dishes} actions={data.actions} />
         <ActionList actions={data.actions} dishes={data.dishes} />
       </div>
     )

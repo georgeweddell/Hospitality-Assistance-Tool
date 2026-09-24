@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Card from './Card'
 import DishForm from './DishForm'
 import QuadrantBadge from './QuadrantBadge'
 import RecipeEditor from './RecipeEditor'
@@ -9,15 +10,15 @@ import { rangeLabel, rangeQuery } from '../dateRange'
 
 function menuDates(dish) {
   return dish.on_menu_until
-    ? `on the menu ${shortDate(dish.on_menu_from)} – ${shortDate(dish.on_menu_until)}`
-    : `on the menu since ${shortDate(dish.on_menu_from)}`
+    ? `On the menu ${shortDate(dish.on_menu_from)} – ${shortDate(dish.on_menu_until)}`
+    : `On the menu since ${shortDate(dish.on_menu_from)}`
 }
 
 function Stat({ label, value }) {
   return (
-    <div className="rounded-xl border border-line bg-surface p-4 shadow-sm">
-      <p className="text-sm text-muted">{label}</p>
-      <p className="mt-1 text-xl font-semibold tabular-nums">{value}</p>
+    <div className="card flex flex-col gap-2.5 px-5 py-[18px]">
+      <p className="label">{label}</p>
+      <p className="stat-value text-[1.625rem]">{value}</p>
     </div>
   )
 }
@@ -71,15 +72,13 @@ function DishPage({ dishId, range, analysed, onChanged }) {
       .catch((err) => setError(err.message))
   }
 
-  const back = (
-    <a href="#/menu" className="text-sm text-muted hover:text-ink">← Menu</a>
-  )
+  const back = <a href="#/menu" className="text-sm font-medium text-muted hover:text-ink">← Menu</a>
 
   if (error) {
     return (
       <div className="space-y-4">
         {back}
-        <p className="rounded-xl border border-danger/40 bg-surface p-5 text-danger">{error}</p>
+        <p className="alert-error">{error}</p>
       </div>
     )
   }
@@ -92,29 +91,23 @@ function DishPage({ dishId, range, analysed, onChanged }) {
       {back}
 
       {editing ? (
-        <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
+        <Card title="Edit details">
           <DishForm initial={dish} submitLabel="Save" onSubmit={saveDetails} onCancel={() => setEditing(false)} />
-        </div>
+        </Card>
       ) : (
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-semibold tracking-tight">{dish.name}</h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="page-title">{dish.name}</h1>
               {quadrant && <QuadrantBadge quadrant={quadrant} />}
             </div>
-            <p className="mt-1 text-muted">
+            <p className="num mt-2 text-muted">
               {dish.category ?? 'No category'} · {pounds(dish.menu_price)} · {menuDates(dish)}
             </p>
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={() => setEditing(true)}
-                    className="rounded-lg border border-line bg-surface px-4 py-2 text-sm hover:bg-bg">
-              Edit details
-            </button>
-            <button type="button" onClick={remove}
-                    className="rounded-lg border border-line bg-surface px-4 py-2 text-sm text-danger hover:border-danger">
-              Delete
-            </button>
+            <button type="button" onClick={() => setEditing(true)} className="btn btn-secondary">Edit details</button>
+            <button type="button" onClick={remove} className="btn btn-danger">Delete</button>
           </div>
         </div>
       )}
@@ -123,7 +116,7 @@ function DishPage({ dishId, range, analysed, onChanged }) {
         <Stat label="Plate cost" value={dish.lines.length ? pounds(dish.cost.plate_cost) : '—'} />
         <Stat label="Margin" value={dish.lines.length ? pounds(dish.cost.margin_pounds) : '—'} />
         <Stat label="Gross margin" value={dish.lines.length ? percent(dish.cost.margin_percent) : '—'} />
-        <Stat label={`Units sold · ${rangeLabel(range)}`} value={dish.units_sold} />
+        <Stat label={`Sold · ${rangeLabel(range)}`} value={dish.units_sold} />
       </div>
 
       <RecipeEditor key={loads} dish={dish} ingredients={ingredients} onSaved={reload} />

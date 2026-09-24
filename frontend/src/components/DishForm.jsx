@@ -1,9 +1,7 @@
 import { useState } from 'react'
 import { CATEGORIES } from '../categories'
 
-const INPUT = 'w-full rounded-lg border border-line bg-surface px-3 py-2 text-ink focus:border-accent focus:outline-none'
-
-// Name, price and category. Used to add a dish and to edit one.
+// Name, price, category and menu dates. Used to add a dish and to edit one.
 function DishForm({ initial = {}, submitLabel, onSubmit, onCancel }) {
   const [name, setName] = useState(initial.name ?? '')
   const [menuPrice, setMenuPrice] = useState(initial.menu_price != null ? String(initial.menu_price) : '')
@@ -41,44 +39,40 @@ function DishForm({ initial = {}, submitLabel, onSubmit, onCancel }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr_auto] sm:items-start">
-      <label className="text-sm">
-        <span className="mb-1 block text-muted">Dish name</span>
-        <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={INPUT} autoFocus />
+    <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-4">
+      <label className="field sm:col-span-2">
+        <span className="label">Dish name</span>
+        <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="input" autoFocus />
       </label>
-      <label className="text-sm">
-        <span className="mb-1 block text-muted">Menu price (£)</span>
+      <label className="field">
+        <span className="label">Menu price (£)</span>
         <input type="number" step="0.01" min="0" value={menuPrice}
-               onChange={(e) => setMenuPrice(e.target.value)} className={INPUT} />
+               onChange={(e) => setMenuPrice(e.target.value)} className="input num" />
       </label>
-      <label className="text-sm">
-        <span className="mb-1 block text-muted">Category</span>
-        <select value={category} onChange={(e) => setCategory(e.target.value)} className={INPUT}>
+      <label className="field">
+        <span className="label">Category</span>
+        <select value={category} onChange={(e) => setCategory(e.target.value)} className="input">
           <option value="">Choose…</option>
           {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </label>
-      <label className="text-sm">
-        <span className="mb-1 block text-muted">On the menu from</span>
-        <input type="date" value={onMenuFrom} onChange={(e) => setOnMenuFrom(e.target.value)} className={INPUT} />
+      <label className="field">
+        <span className="label">On the menu from</span>
+        <input type="date" value={onMenuFrom} onChange={(e) => setOnMenuFrom(e.target.value)} className="input" />
       </label>
-      <label className="text-sm">
-        <span className="mb-1 block text-muted">Until (blank if still on)</span>
-        <input type="date" value={onMenuUntil} min={onMenuFrom} onChange={(e) => setOnMenuUntil(e.target.value)} className={INPUT} />
+      <label className="field">
+        <span className="label">Until</span>
+        <input type="date" value={onMenuUntil} min={onMenuFrom} onChange={(e) => setOnMenuUntil(e.target.value)}
+               className="input" aria-describedby="until-hint" />
+        <span id="until-hint" className="sr-only">Leave blank if the dish is still on the menu</span>
       </label>
-      <div className="flex gap-2 sm:col-span-2 sm:pt-6">
-        <button type="submit" disabled={submitting}
-                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:opacity-90 disabled:opacity-50">
+      <div className="flex items-end justify-end gap-2 sm:col-span-2">
+        {onCancel && <button type="button" onClick={onCancel} className="btn btn-secondary">Cancel</button>}
+        <button type="submit" disabled={submitting} className="btn btn-primary">
           {submitting ? 'Saving…' : submitLabel}
         </button>
-        {onCancel && (
-          <button type="button" onClick={onCancel}
-                  className="rounded-lg border border-line px-4 py-2 text-sm hover:bg-bg">
-            Cancel
-          </button>
-        )}
       </div>
-      {error && <p className="text-sm text-danger sm:col-span-4">{error}</p>}
+      {error && <p className="alert-error sm:col-span-4">{error}</p>}
     </form>
   )
 }

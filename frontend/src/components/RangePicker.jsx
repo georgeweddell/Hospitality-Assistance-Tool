@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { daysBetween, presets, rangeLabel } from '../dateRange'
 
-const INPUT = 'rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none'
-
 // Choose the period the analysis covers: a preset, or any custom range.
 function RangePicker({ range, lastSale, coverage, onChange }) {
   const options = presets(lastSale)
@@ -36,7 +34,7 @@ function RangePicker({ range, lastSale, coverage, onChange }) {
         <select
           value={customOpen ? 'custom' : range.key}
           onChange={(e) => choosePreset(e.target.value)}
-          className={INPUT}
+          className="input w-auto font-semibold"
           aria-label="Period"
         >
           {options.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
@@ -44,22 +42,22 @@ function RangePicker({ range, lastSale, coverage, onChange }) {
         </select>
         {customOpen && (
           <form onSubmit={applyCustom} className="flex flex-wrap items-center gap-2">
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={INPUT} aria-label="From" />
+            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="input w-auto" aria-label="From" />
             <span className="text-sm text-muted">to</span>
-            <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} className={INPUT} aria-label="To" />
-            <button type="submit" disabled={!from || !to || from > to}
-                    className="rounded-lg bg-accent px-3 py-2 text-sm font-medium text-accent-ink hover:opacity-90 disabled:opacity-50">
-              Apply
-            </button>
+            <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} className="input w-auto" aria-label="To" />
+            <button type="submit" disabled={!from || !to || from > to} className="btn btn-primary">Apply</button>
           </form>
         )}
       </div>
-      <p className="text-xs text-muted">
-        {rangeLabel(range)}
-        {covered != null && <> · sales on {covered} of {days} days</>}
-      </p>
+      {(range.key === 'custom' || (covered != null && covered < days)) && (
+        <p className="num text-sm text-muted">
+          {range.key === 'custom' && rangeLabel(range)}
+          {range.key === 'custom' && covered != null && covered < days && ' · '}
+          {covered != null && covered < days && <>sales on {covered} of {days} days</>}
+        </p>
+      )}
       {coverage?.partial_records > 0 && (
-        <p className="text-xs text-warn">
+        <p className="text-sm text-warn">
           {coverage.partial_records} sales record{coverage.partial_records === 1 ? '' : 's'} only partly
           overlap this period and aren't counted.
         </p>

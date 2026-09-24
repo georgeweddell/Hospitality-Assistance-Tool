@@ -1,78 +1,392 @@
 @import "tailwindcss";
 
-/* Colour tokens. Components use these through Tailwind classes such as
-   bg-surface, text-muted and border-line (mapped in @theme below). */
+/* =====================================================================
+   Mise design system
+   Every colour, font and shared component style lives here. Components
+   use these tokens and classes instead of their own one-off styles, so
+   the whole app stays consistent. Change a look here, not in a page.
+   ===================================================================== */
+
 :root {
-  --bg: #f6f5f2;
-  --surface: #ffffff;
-  --ink: #1c1b19;
-  --muted: #6b6760;
-  --line: #e4e1da;
-  --accent: #b4532a;
+  /* Paper and ink */
+  --bg: #f6f1e7;           /* page: cream paper */
+  --surface: #fffdf8;      /* cards, inputs */
+  --ink: #221c17;          /* text */
+  --muted: #6e6358;        /* secondary text (4.9:1 on --bg) */
+  --line: #e6dccb;         /* borders, dividers */
+  --line-strong: #d3c5ae;  /* hover borders, dashed empty states */
+
+  /* Brand: tomato */
+  --accent: #cf3f2a;
+  --accent-hover: #b5341f;
+  --accent-soft: #fbe3dc;
   --accent-ink: #ffffff;
-  --warn: #b45309;
-  --warn-bg: #fdf6e7;
-  --danger: #c03030;
+
+  /* Feedback */
+  --warn: #8f5a00;
+  --warn-bg: #fbefd6;
+  --danger: #b42318;
+  --danger-bg: #fdecea;
 
   color-scheme: light;
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-sans);
+  font-size: 15px;
   color: var(--ink);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #151412;
-    --surface: #1f1e1b;
-    --ink: #f1efe9;
-    --muted: #a39f96;
-    --line: #33312c;
-    --accent: #e07a4f;
-    --accent-ink: #1c1b19;
-    --warn: #f0b429;
-    --warn-bg: #2a2418;
-    --danger: #f07070;
-
-    color-scheme: dark;
-  }
-}
-
 @theme inline {
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-sans: 'Instrument Sans', system-ui, sans-serif;
+
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
   --color-accent-ink: var(--accent-ink);
   --color-warn: var(--warn);
   --color-warn-bg: var(--warn-bg);
   --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
 }
 
 body {
   margin: 0;
 }
 
-/* Recharts draws SVG with fixed colours. These rules swap in the tokens
-   so the charts follow light/dark mode like the rest of the page. */
-.chart .recharts-cartesian-grid line {
-  stroke: var(--line);
+@layer components {
+  /* --- Type --------------------------------------------------------- */
+  .page-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 2.125rem;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+  }
+  .section-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.25rem;
+    line-height: 1.25;
+  }
+  .label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-value {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 2rem;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .link {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .link:hover {
+    color: var(--accent-hover);
+    text-decoration: underline;
+  }
+
+  /* --- Buttons ------------------------------------------------------ */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.25;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+  .btn-secondary {
+    background: var(--surface);
+    border-color: var(--line);
+    color: var(--ink);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    border-color: var(--line-strong);
+    background: var(--bg);
+  }
+  .btn-danger {
+    background: var(--surface);
+    border-color: var(--line);
+    color: var(--danger);
+  }
+  .btn-danger:hover:not(:disabled) {
+    border-color: var(--danger);
+  }
+  .btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    border-radius: 8px;
+  }
+  .btn-icon {
+    padding: 0.25rem 0.5rem;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 1.125rem;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 6px;
+  }
+  .btn-icon:hover {
+    color: var(--danger);
+    background: var(--danger-bg);
+  }
+
+  /* --- Form fields ---------------------------------------------------- */
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+  .input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.5625rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.9375rem;
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .input:disabled {
+    opacity: 0.5;
+  }
+  .input-invalid {
+    border-color: var(--danger);
+  }
+
+  /* --- Cards ------------------------------------------------------------ */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+  .card-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 1.125rem 1.25rem 0.875rem;
+  }
+  .card-body {
+    padding: 0 1.25rem 1.25rem;
+  }
+
+  /* --- Chips and counts ------------------------------------------------ */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.1875rem 0.5625rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .chip-warn {
+    background: var(--warn-bg);
+    color: var(--warn);
+  }
+  .chip-muted {
+    background: var(--line);
+    color: var(--muted);
+  }
+  .chip-accent {
+    background: var(--accent-soft);
+    color: var(--accent-hover);
+  }
+  .count {
+    display: inline-block;
+    min-width: 1.25rem;
+    padding: 0 0.375rem;
+    border-radius: 999px;
+    background: var(--line);
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .count-warn {
+    background: var(--warn-bg);
+    color: var(--warn);
+  }
+
+  /* --- Tables ------------------------------------------------------------ */
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+  }
+  .table th {
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--line);
+    vertical-align: middle;
+  }
+  .table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  .table th:first-child,
+  .table td:first-child {
+    padding-left: 1.25rem;
+  }
+  .table th:last-child,
+  .table td:last-child {
+    padding-right: 1.25rem;
+  }
+  .table .row-link {
+    cursor: pointer;
+  }
+  .table .row-link:hover td {
+    background: var(--bg);
+  }
+
+  /* --- Tabs and segmented controls --------------------------------------- */
+  .tabs {
+    display: flex;
+    gap: 0.25rem;
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+  }
+  .tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-bottom: -1px;
+    padding: 0.625rem 0.75rem;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .tab:hover {
+    color: var(--ink);
+  }
+  .tab[aria-current='page'] {
+    border-bottom-color: var(--accent);
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .segmented {
+    display: inline-flex;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border-radius: 12px;
+    background: var(--line);
+  }
+  .segmented button {
+    padding: 0.375rem 0.75rem;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+  .segmented button[aria-pressed='true'] {
+    background: var(--surface);
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  /* --- Messages ------------------------------------------------------------ */
+  .alert-error {
+    padding: 0.75rem 1rem;
+    border: 1px solid #f1c4be;
+    border-radius: 10px;
+    background: var(--danger-bg);
+    color: var(--danger);
+    font-size: 0.9375rem;
+  }
+  .alert-info {
+    padding: 0.625rem 0.875rem;
+    border-radius: 10px;
+    background: var(--accent-soft);
+    color: var(--ink);
+    font-size: 0.9375rem;
+  }
+  .empty {
+    padding: 2rem;
+    border: 1px dashed var(--line-strong);
+    border-radius: 14px;
+    text-align: center;
+    color: var(--muted);
+  }
 }
+
+/* Recharts draws SVG with its own colours; these rules swap in the tokens. */
+.chart .recharts-cartesian-grid line,
 .chart .recharts-cartesian-axis-line,
 .chart .recharts-cartesian-axis-tick-line {
   stroke: var(--line);
 }
+/* Axis text only: the quadrant zone labels set their own colours. */
 .chart .recharts-cartesian-axis-tick-value,
-.chart .recharts-label {
+.chart .recharts-cartesian-axis .recharts-label {
   fill: var(--muted);
   font-size: 12px;
 }
 .chart .recharts-reference-line line {
-  stroke: var(--muted);
+  stroke: var(--ink);
+  stroke-opacity: 0.5;
 }
 .chart .recharts-label-list text {
   fill: var(--ink);
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 500;
 }

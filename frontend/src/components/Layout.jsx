@@ -10,7 +10,7 @@ const NAV = [
 
 function NavIcon({ path }) {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor"
+    <svg viewBox="0 0 24 24" className="h-[18px] w-[18px] shrink-0" fill="none" stroke="currentColor"
          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d={path} />
     </svg>
@@ -19,30 +19,30 @@ function NavIcon({ path }) {
 
 function NavLink({ item, active, badge, compact }) {
   const base = compact
-    ? 'flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm'
-    : 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm'
+    ? 'flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2'
+    : 'flex items-center gap-3 rounded-[10px] px-3 py-2.5'
   const state = active
-    ? 'bg-accent/10 font-medium text-accent'
-    : 'text-muted hover:bg-bg hover:text-ink'
+    ? 'bg-accent-soft font-semibold text-accent-hover'
+    : 'font-medium text-muted hover:bg-surface hover:text-ink'
   return (
     <a href={`#/${item.page}`} className={`${base} ${state}`} aria-current={active ? 'page' : undefined}>
       <NavIcon path={item.icon} />
       {item.label}
-      {badge > 0 && (
-        <span className="ml-auto rounded-full bg-warn-bg px-1.5 text-xs font-medium text-warn">{badge}</span>
-      )}
+      {badge > 0 && <span className="count count-warn ml-auto">{badge}</span>}
     </a>
   )
 }
 
+// The Mise mark: a bowl seen from above, everything prepped and in its place.
 function Brand() {
   return (
-    <div className="flex items-center gap-2.5">
-      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-sm font-bold text-accent-ink">
-        M
-      </span>
-      <span className="font-semibold leading-tight text-ink">Menu &amp; Margin</span>
-    </div>
+    <a href="#/overview" className="flex items-center gap-3 px-1.5 text-ink" aria-label="Mise home">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
+        <circle cx="15" cy="15" r="13" fill="none" stroke="var(--accent)" strokeWidth="2.5" />
+        <circle cx="15" cy="15" r="5.5" fill="var(--accent)" />
+      </svg>
+      <span className="font-display text-[26px] font-bold tracking-tight">Mise</span>
+    </a>
   )
 }
 
@@ -50,10 +50,10 @@ function Layout({ page, title, toolbar, badges = {}, children }) {
   return (
     <div className="min-h-screen bg-bg text-ink lg:flex">
       {/* Desktop sidebar */}
-      <aside className="hidden w-60 shrink-0 border-r border-line bg-surface lg:block">
-        <div className="sticky top-0 flex h-screen flex-col px-4 py-5">
+      <aside className="hidden w-[232px] shrink-0 border-r border-line lg:block">
+        <div className="sticky top-0 flex h-screen flex-col gap-8 px-[18px] py-7">
           <Brand />
-          <nav className="mt-8 space-y-1">
+          <nav className="flex flex-col gap-1" aria-label="Main">
             {NAV.map((item) => (
               <NavLink key={item.page} item={item} active={page === item.page} badge={badges[item.page]} />
             ))}
@@ -62,11 +62,11 @@ function Layout({ page, title, toolbar, badges = {}, children }) {
       </aside>
 
       {/* Mobile top bar */}
-      <header className="border-b border-line bg-surface lg:hidden">
+      <header className="border-b border-line lg:hidden">
         <div className="px-4 pt-4">
           <Brand />
         </div>
-        <nav className="flex gap-1 overflow-x-auto px-3 py-3">
+        <nav className="flex gap-1 overflow-x-auto px-3 py-3" aria-label="Main">
           {NAV.map((item) => (
             <NavLink key={item.page} item={item} active={page === item.page} badge={badges[item.page]} compact />
           ))}
@@ -74,10 +74,10 @@ function Layout({ page, title, toolbar, badges = {}, children }) {
       </header>
 
       <main className="min-w-0 flex-1">
-        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 lg:py-8">
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-10 lg:py-8">
           {(title || toolbar) && (
-            <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-              {title ? <h1 className="text-2xl font-semibold tracking-tight">{title}</h1> : <span />}
+            <div className="mb-7 flex flex-wrap items-start justify-between gap-4">
+              {title ? <h1 className="page-title">{title}</h1> : <span />}
               {toolbar}
             </div>
           )}
