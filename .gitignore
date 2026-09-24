@@ -7,6 +7,9 @@ backend/venv/
 __pycache__/
 *.pyc
 
+# uploaded invoices, menus and till exports
+backend/uploads/
+
 # database
 backend/menu*.db
 

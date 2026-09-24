@@ -5,7 +5,7 @@ from costing import cost_dish, best_price, menu_price_on, menu_prices
 from database import Base, engine
 import models
 import schemas
-from fastapi import Depends, HTTPException, Query
+from fastapi import Depends, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 from database import get_db
 from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, MenuPriceOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn, BenchmarkSyncOut, InvoiceDraft, InvoiceReviewOut, InvoiceApplyIn, ImportOut
@@ -21,6 +21,9 @@ from onboarding import setup_status
 from seed_demo import backup_database, reset_database
 from benchmarks import sync_benchmarks
 from invoices import ImportProblem, apply_invoice, review_invoice, undo_import
+from invoice_ai import read_invoice
+import hashlib
+from pathlib import Path
 
 
 Base.metadata.create_all(bind=engine)
@@ -458,6 +461,50 @@ def update_benchmarks(db: Session = Depends(get_db)):
 @app.get("/imports", response_model=list[ImportOut])
 def list_imports(db: Session = Depends(get_db)):
     return db.query(Import).order_by(Import.created_at.desc(), Import.id.desc()).all()
+
+# Uploaded files are kept here (git-ignored), named by their SHA-256 hash, so
+# the same file uploaded twice is stored once and can be recognised.
+UPLOAD_DIR = Path(__file__).parent / "uploads"
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+# Extension -> (media type, how the file's first bytes must start)
+UPLOAD_TYPES = {
+    ".pdf": ("application/pdf", [b"%PDF"]),
+    ".jpg": ("image/jpeg", [b"\xff\xd8"]),
+    ".jpeg": ("image/jpeg", [b"\xff\xd8"]),
+    ".png": ("image/png", [b"\x89PNG"]),
+    ".webp": ("image/webp", [b"RIFF"]),
+}
+
+def read_upload(file):
+    """Checks an uploaded document and keeps a copy. Returns (content, media type, hash)."""
+    extension = Path(file.filename or "").suffix.lower()
+    if extension not in UPLOAD_TYPES:
+        raise HTTPException(status_code=422, detail="Upload a PDF or a photo (JPG, PNG or WebP)")
+    content = file.file.read(MAX_UPLOAD_BYTES + 1)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=422, detail="That file is over 10 MB")
+    media_type, signatures = UPLOAD_TYPES[extension]
+    if not any(content.startswith(s) for s in signatures):
+        raise HTTPException(status_code=422, detail=f"That file isn't a readable {extension[1:].upper()}")
+
+    file_hash = hashlib.sha256(content).hexdigest()
+    UPLOAD_DIR.mkdir(exist_ok=True)
+    saved = UPLOAD_DIR / f"{file_hash}{extension}"
+    if not saved.exists():
+        saved.write_bytes(content)
+    return content, media_type, file_hash
+
+@app.post("/imports/invoice/read", response_model=InvoiceReviewOut)
+def read_invoice_route(file: UploadFile, db: Session = Depends(get_db)):
+    """Claude reads an uploaded invoice; code then matches and checks it. Saves nothing but the file."""
+    content, media_type, file_hash = read_upload(file)
+    try:
+        draft = read_invoice(db, content, media_type)
+    except anthropic.APIConnectionError:
+        raise HTTPException(status_code=503, detail="Couldn't reach the AI service to read the invoice. Check your internet connection and try again.")
+    except anthropic.APIStatusError as e:
+        raise HTTPException(status_code=502, detail=f"The AI service returned an error ({e.status_code}) reading the invoice. Try again in a moment.")
+    return review_invoice(db, draft, filename=file.filename, file_hash=file_hash)
 
 @app.post("/imports/invoice/review", response_model=InvoiceReviewOut)
 def review_invoice_draft(draft: InvoiceDraft, db: Session = Depends(get_db)):
