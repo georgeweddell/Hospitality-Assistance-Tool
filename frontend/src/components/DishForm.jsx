@@ -8,6 +8,8 @@ function DishForm({ initial = {}, submitLabel, onSubmit, onCancel }) {
   const [name, setName] = useState(initial.name ?? '')
   const [menuPrice, setMenuPrice] = useState(initial.menu_price != null ? String(initial.menu_price) : '')
   const [category, setCategory] = useState(initial.category ?? '')
+  const [onMenuFrom, setOnMenuFrom] = useState(initial.on_menu_from ?? new Date().toISOString().slice(0, 10))
+  const [onMenuUntil, setOnMenuUntil] = useState(initial.on_menu_until ?? '')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
 
@@ -18,10 +20,20 @@ function DishForm({ initial = {}, submitLabel, onSubmit, onCancel }) {
       setError('Enter a name and a menu price above £0.')
       return
     }
+    if (!onMenuFrom || (onMenuUntil && onMenuUntil < onMenuFrom)) {
+      setError("Enter when the dish went on the menu, and an end date that isn't before it.")
+      return
+    }
 
     setSubmitting(true)
     setError(null)
-    onSubmit({ name: name.trim(), menu_price: Number(menuPrice), category: category || null })
+    onSubmit({
+      name: name.trim(),
+      menu_price: Number(menuPrice),
+      category: category || null,
+      on_menu_from: onMenuFrom,
+      on_menu_until: onMenuUntil || null,
+    })
       .catch((err) => {
         setError(err.message)
         setSubmitting(false)
@@ -46,7 +58,15 @@ function DishForm({ initial = {}, submitLabel, onSubmit, onCancel }) {
           {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </label>
-      <div className="flex gap-2 sm:pt-6">
+      <label className="text-sm">
+        <span className="mb-1 block text-muted">On the menu from</span>
+        <input type="date" value={onMenuFrom} onChange={(e) => setOnMenuFrom(e.target.value)} className={INPUT} />
+      </label>
+      <label className="text-sm">
+        <span className="mb-1 block text-muted">Until (blank if still on)</span>
+        <input type="date" value={onMenuUntil} min={onMenuFrom} onChange={(e) => setOnMenuUntil(e.target.value)} className={INPUT} />
+      </label>
+      <div className="flex gap-2 sm:col-span-2 sm:pt-6">
         <button type="submit" disabled={submitting}
                 className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:opacity-90 disabled:opacity-50">
           {submitting ? 'Saving…' : submitLabel}

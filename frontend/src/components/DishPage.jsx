@@ -4,7 +4,14 @@ import QuadrantBadge from './QuadrantBadge'
 import RecipeEditor from './RecipeEditor'
 import { deleteJson, getJson, putJson } from '../api'
 import { navigate } from '../useHashRoute'
-import { percent, pounds } from '../format'
+import { percent, pounds, shortDate } from '../format'
+import { rangeLabel, rangeQuery } from '../dateRange'
+
+function menuDates(dish) {
+  return dish.on_menu_until
+    ? `on the menu ${shortDate(dish.on_menu_from)} – ${shortDate(dish.on_menu_until)}`
+    : `on the menu since ${shortDate(dish.on_menu_from)}`
+}
 
 function Stat({ label, value }) {
   return (
@@ -15,7 +22,7 @@ function Stat({ label, value }) {
   )
 }
 
-function DishPage({ dishId, analysed, onChanged }) {
+function DishPage({ dishId, range, analysed, onChanged }) {
   const [dish, setDish] = useState(null)
   const [ingredients, setIngredients] = useState(null)
   const [error, setError] = useState(null)
@@ -27,7 +34,7 @@ function DishPage({ dishId, analysed, onChanged }) {
 
   useEffect(() => {
     let ignore = false
-    Promise.all([getJson(`/dishes/${dishId}/detail`), getJson('/ingredients')])
+    Promise.all([getJson(`/dishes/${dishId}/detail?${rangeQuery(range)}`), getJson('/ingredients')])
       .then(([d, ings]) => {
         if (ignore) return
         setDish(d)
@@ -41,7 +48,7 @@ function DishPage({ dishId, analysed, onChanged }) {
     return () => {
       ignore = true
     }
-  }, [dishId, version])
+  }, [dishId, range, version])
 
   const reload = () => {
     setVersion((v) => v + 1)
@@ -96,7 +103,7 @@ function DishPage({ dishId, analysed, onChanged }) {
               {quadrant && <QuadrantBadge quadrant={quadrant} />}
             </div>
             <p className="mt-1 text-muted">
-              {dish.category ?? 'No category'} · {pounds(dish.menu_price)}
+              {dish.category ?? 'No category'} · {pounds(dish.menu_price)} · {menuDates(dish)}
             </p>
           </div>
           <div className="flex gap-2">
@@ -116,7 +123,7 @@ function DishPage({ dishId, analysed, onChanged }) {
         <Stat label="Plate cost" value={dish.lines.length ? pounds(dish.cost.plate_cost) : '—'} />
         <Stat label="Margin" value={dish.lines.length ? pounds(dish.cost.margin_pounds) : '—'} />
         <Stat label="Gross margin" value={dish.lines.length ? percent(dish.cost.margin_percent) : '—'} />
-        <Stat label="Units sold" value={dish.units_sold || '—'} />
+        <Stat label={`Units sold · ${rangeLabel(range)}`} value={dish.units_sold} />
       </div>
 
       <RecipeEditor key={loads} dish={dish} ingredients={ingredients} onSaved={reload} />

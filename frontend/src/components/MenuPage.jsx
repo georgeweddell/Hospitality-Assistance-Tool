@@ -37,8 +37,19 @@ function saveView(view) {
   }
 }
 
-function Status({ analysed, reasons }) {
+const MUTED_CHIP = 'whitespace-nowrap rounded-full bg-line/60 px-2 py-0.5 text-xs text-muted'
+
+// On the menu for at least part of the range (ISO date strings compare correctly as text).
+function onMenuDuring(dish, range) {
+  return dish.on_menu_from <= range.to && (!dish.on_menu_until || dish.on_menu_until >= range.from)
+}
+
+function Status({ dish, range, analysed, reasons }) {
   if (analysed) return <QuadrantBadge quadrant={analysed.quadrant} />
+  if (reasons.length === 0) {
+    // Complete, but not analysed: either off the menu, or no sales recorded in the period at all.
+    return <span className={MUTED_CHIP}>{onMenuDuring(dish, range) ? 'No sales in this period' : 'Not on the menu'}</span>
+  }
   return (
     <div className="flex flex-wrap gap-1.5">
       {reasons.map((r) => (
@@ -50,7 +61,7 @@ function Status({ analysed, reasons }) {
   )
 }
 
-function DishTable({ dishes, analysedById, reasonsById }) {
+function DishTable({ dishes, range, analysedById, reasonsById }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[560px] table-fixed text-sm">
@@ -82,7 +93,7 @@ function DishTable({ dishes, analysedById, reasonsById }) {
                 <td className="px-3 py-3 text-right tabular-nums">{pounds(dish.menu_price)}</td>
                 <td className="px-3 py-3 text-right tabular-nums text-muted">{a ? pounds(a.plate_cost) : '—'}</td>
                 <td className="px-3 py-3 text-right tabular-nums">{a ? percent(a.margin_percent) : '—'}</td>
-                <td className="py-3 pl-3 pr-5"><Status analysed={a} reasons={reasonsById[dish.id] ?? []} /></td>
+                <td className="py-3 pl-3 pr-5"><Status dish={dish} range={range} analysed={a} reasons={reasonsById[dish.id] ?? []} /></td>
               </tr>
             )
           })}
@@ -92,7 +103,8 @@ function DishTable({ dishes, analysedById, reasonsById }) {
   )
 }
 
-function MenuPage({ allDishes, analysed, incomplete, onChanged }) {
+function MenuPage({ allDishes, analysed, incomplete, range, onChanged }) {
+  // Statuses are for the chosen period: a dish off the menu then shows "Not on the menu".
   const saved = loadView()
   const [category, setCategory] = useState(saved.category ?? CATEGORIES.find((c) => allDishes.some((d) => d.category === c)) ?? 'all')
   const [status, setStatus] = useState(saved.status && saved.status !== 'attention' ? saved.status : 'all')
@@ -237,12 +249,12 @@ function MenuPage({ allDishes, analysed, incomplete, onChanged }) {
       ) : grouped ? (
         grouped.map(({ c, dishes }) => (
           <Card key={c ?? 'none'} title={c ? PLURAL[c] : 'No category'} aside={`${dishes.length}`} flush>
-            <DishTable dishes={dishes} analysedById={analysedById} reasonsById={reasonsById} />
+            <DishTable dishes={dishes} range={range} analysedById={analysedById} reasonsById={reasonsById} />
           </Card>
         ))
       ) : (
         <Card flush>
-          <DishTable dishes={shown} analysedById={analysedById} reasonsById={reasonsById} />
+          <DishTable dishes={shown} range={range} analysedById={analysedById} reasonsById={reasonsById} />
         </Card>
       )}
     </div>

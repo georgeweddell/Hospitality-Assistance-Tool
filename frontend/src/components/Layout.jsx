@@ -4,6 +4,7 @@ const NAV = [
   { page: 'overview', label: 'Overview', icon: 'M4 5h6v6H4zM14 5h6v6h-6zM4 15h6v4H4zM14 15h6v4h-6z' },
   { page: 'menu', label: 'Menu', icon: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01' },
   { page: 'ingredients', label: 'Ingredients', icon: 'M5 11h14l-1.5 8h-11zM8 11V8a4 4 0 0 1 8 0v3' },
+  { page: 'sales', label: 'Sales', icon: 'M4 20h16M7 16v-5M12 16V6M17 16v-8' },
   { page: 'analysis', label: 'Insights', icon: 'M4 4v16h16M8 14l3-3 3 2 5-6' },
 ]
 
@@ -45,7 +46,7 @@ function Brand() {
   )
 }
 
-function Layout({ page, title, badges = {}, children }) {
+function Layout({ page, title, toolbar, badges = {}, children }) {
   return (
     <div className="min-h-screen bg-bg text-ink lg:flex">
       {/* Desktop sidebar */}
@@ -74,7 +75,12 @@ function Layout({ page, title, badges = {}, children }) {
 
       <main className="min-w-0 flex-1">
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 lg:py-8">
-          {title && <h1 className="mb-6 text-2xl font-semibold tracking-tight">{title}</h1>}
+          {(title || toolbar) && (
+            <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+              {title ? <h1 className="text-2xl font-semibold tracking-tight">{title}</h1> : <span />}
+              {toolbar}
+            </div>
+          )}
           {children}
         </div>
       </main>
