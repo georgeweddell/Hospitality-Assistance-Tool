@@ -15,3 +15,5 @@ backend/menu*.db
 
 # node
 frontend/node_modules/
+# personal files kept next to the project
+Claude outputs/
