@@ -1,6 +1,6 @@
 from datetime import date
 from models import SalesRecord, Dish, DishIngredient, DishType, QuadrantType
-from costing import cost_dish
+from costing import average_menu_price, cost_dish
 from schemas import DishClassificationOut, ActionItemOut, IncompleteDishOut
 
 # Every analysis runs over a date range, start to end inclusive.
@@ -109,20 +109,27 @@ def get_category_stats(db, dishes: list[Dish], start: date, end: date) -> dict:
     themselves. Before, every dish re-costed its whole category, so a category
     of n dishes was costed n x n times. Now it's n. The formulas are unchanged.
 
+    Margins use the menu price actually charged over the range, weighted by
+    each day's units (costing.average_menu_price), so a price change part-way
+    through is counted correctly.
+
     Returns {"units": {dish_id: units},
+             "prices": {dish_id: menu_price},
              "costs": {dish_id: (plate_cost, margin_pounds, margin_percent)},
              "margins": {dish_id: margin_pounds}}.
     """
     units = {}
+    prices = {}
     costs = {}
     margins = {}
     for dish in dishes:
         units[dish.id] = get_dish_units_sold(db, dish.id, start, end)
-        costs[dish.id] = cost_dish(db, dish.id)
+        prices[dish.id] = average_menu_price(db, dish.id, start, end)
+        costs[dish.id] = cost_dish(db, dish.id, prices[dish.id])
         plate_cost, margin_pounds, margin_percent = costs[dish.id]
         margins[dish.id] = margin_pounds
 
-    return {"units": units, "costs": costs, "margins": margins}
+    return {"units": units, "prices": prices, "costs": costs, "margins": margins}
 
 
 def get_category_units_sold(stats: dict) -> int:
@@ -204,7 +211,7 @@ def classify_dish(db, dish_id: int, category: DishType,
         dish_id=dish_id,
         dish_name=dish.name,
         category=category,
-        menu_price=dish.menu_price,
+        menu_price=stats["prices"][dish_id],
         plate_cost=plate_cost,
         margin_pounds=margin_pounds,
         margin_percent=margin_percent,

@@ -1,15 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from menu_engineering import classify_all_dishes, build_action_list, list_incomplete_dishes, get_dish_units_sold, on_menu_during
-from costing import cost_dish, best_price
+from costing import cost_dish, best_price, menu_price_on, menu_prices
 from database import Base, engine
 import models
 import schemas
 from fastapi import Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from database import get_db
-from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn, BenchmarkSyncOut
-from models import Dish, DishIngredient, Ingredient, IngredientPrice, SalesRecord
+from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, MenuPriceOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn, BenchmarkSyncOut
+from models import Dish, DishIngredient, Ingredient, IngredientPrice, MenuPrice, MenuPriceSource, SalesRecord
 from recipe_ai import estimate_recipe
 from matching import match_recipe_ingredients
 from datetime import date, timedelta
@@ -125,18 +125,27 @@ def add_ingredient_price(ingredient_id: int, price: IngredientPriceCreate, db: S
 
     return new_price
 
+def dish_out(db, dish):
+    """A dish with its menu price today."""
+    return DishOut(id=dish.id, name=dish.name, menu_price=menu_price_on(db, dish.id), category=dish.category,
+                   on_menu_from=dish.on_menu_from, on_menu_until=dish.on_menu_until)
+
 @app.get("/dishes", response_model=list[DishOut])
 def fetch_dish(db: Session = Depends(get_db)):
-    return db.query(Dish).all()
+    return [dish_out(db, d) for d in db.query(Dish).all()]
 
 @app.post("/dishes", response_model=DishOut)
 def create_dish(dish: DishCreate, db: Session = Depends(get_db)):
-    new_dish = Dish(**dish.model_dump())
+    new_dish = Dish(**dish.model_dump(exclude={"menu_price"}))
     db.add(new_dish)
-    db.commit()
-    db.refresh(new_dish)
+    db.flush()  # assigns new_dish.id without committing yet
 
-    return new_dish
+    # The first price runs from the day the dish went on the menu.
+    db.add(MenuPrice(dish_id=new_dish.id, price=dish.menu_price, source=MenuPriceSource.MANUAL,
+                     effective_date=dish.on_menu_from))
+    db.commit()
+
+    return dish_out(db, new_dish)
 
 @app.put("/dishes/{dish_id}", response_model=DishOut)
 def update_dish(dish_id: int, changes: DishUpdate, db: Session = Depends(get_db)):
@@ -144,15 +153,32 @@ def update_dish(dish_id: int, changes: DishUpdate, db: Session = Depends(get_db)
     if not dish:
         raise HTTPException(status_code=404, detail="Dish not found")
 
+    # A changed price is a new dated row, not an overwrite, so the days before
+    # it are still analysed at the price that was actually charged.
+    price_from = changes.price_from or date.today()
+    if menu_price_on(db, dish_id, price_from) != changes.menu_price:
+        db.add(MenuPrice(dish_id=dish_id, price=changes.menu_price, source=MenuPriceSource.MANUAL,
+                         effective_date=price_from))
+
     dish.name = changes.name
-    dish.menu_price = changes.menu_price
     dish.category = changes.category
     dish.on_menu_from = changes.on_menu_from
     dish.on_menu_until = changes.on_menu_until
     db.commit()
-    db.refresh(dish)
 
-    return dish
+    return dish_out(db, dish)
+
+@app.delete("/dishes/{dish_id}/prices/{price_id}", status_code=204)
+def delete_menu_price(dish_id: int, price_id: int, db: Session = Depends(get_db)):
+    """Removes a price entered by mistake. A dish always keeps at least one price."""
+    price = db.query(MenuPrice).filter(MenuPrice.id == price_id, MenuPrice.dish_id == dish_id).first()
+    if not price:
+        raise HTTPException(status_code=404, detail="Price not found")
+    if db.query(MenuPrice).filter(MenuPrice.dish_id == dish_id).count() == 1:
+        raise HTTPException(status_code=422, detail="A dish needs at least one price")
+
+    db.delete(price)
+    db.commit()
 
 @app.delete("/dishes/{dish_id}", status_code=204)
 def delete_dish(dish_id: int, db: Session = Depends(get_db)):
@@ -163,6 +189,7 @@ def delete_dish(dish_id: int, db: Session = Depends(get_db)):
     # No ORM cascades in this project, so remove the dish's rows explicitly.
     db.query(DishIngredient).filter(DishIngredient.dish_id == dish_id).delete()
     db.query(SalesRecord).filter(SalesRecord.dish_id == dish_id).delete()
+    db.query(MenuPrice).filter(MenuPrice.dish_id == dish_id).delete()
     db.delete(dish)
     db.commit()
 
@@ -191,11 +218,12 @@ def get_dish_detail(dish_id: int, start: date | None = Query(None, alias="from")
     return DishDetailOut(
         id=dish.id,
         name=dish.name,
-        menu_price=dish.menu_price,
+        menu_price=menu_price_on(db, dish_id),
         category=dish.category,
         on_menu_from=dish.on_menu_from,
         on_menu_until=dish.on_menu_until,
         skipped_ingredients=dish.skipped_ingredients,
+        prices=list(reversed(menu_prices(db, dish_id))),
         lines=lines,
         cost=DishCostOut(plate_cost=plate_cost, margin_pounds=margin_pounds, margin_percent=margin_percent),
         units_sold=get_dish_units_sold(db, dish_id, *resolve_range(db, start, end)),

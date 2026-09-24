@@ -13,7 +13,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from database import Base
-from models import Dish, DishIngredient, Ingredient, IngredientPrice, PriceSource, SalesRecord, UnitType
+from models import Dish, DishIngredient, Ingredient, IngredientPrice, MenuPrice, MenuPriceSource, PriceSource, SalesRecord, UnitType
 
 
 @pytest.fixture
@@ -74,14 +74,17 @@ def add_dish(db):
     recipe is a list of (Ingredient, quantity in base units).
     units_sold=0 means no sales record is created at all.
     Sales are recorded for 1-7 Sep 2026 (inside SEPTEMBER below). Dishes are on
-    the menu from 1 Jan 2026 unless on_menu_from / on_menu_until say otherwise.
+    the menu from 1 Jan 2026 unless on_menu_from / on_menu_until say otherwise,
+    and menu_price is their price from that date (see add_menu_price for changes).
     """
     def _add(name, menu_price, category, recipe=(), units_sold=0,
              on_menu_from=date(2026, 1, 1), on_menu_until=None):
-        dish = Dish(name=name, menu_price=menu_price, category=category,
+        dish = Dish(name=name, category=category,
                     on_menu_from=on_menu_from, on_menu_until=on_menu_until)
         db.add(dish)
         db.commit()
+        db.add(MenuPrice(dish_id=dish.id, price=menu_price, source=MenuPriceSource.MANUAL,
+                         effective_date=on_menu_from))
         for ingredient, quantity in recipe:
             db.add(DishIngredient(dish_id=dish.id, ingredient_id=ingredient.id, quantity=quantity))
         if units_sold:
@@ -89,6 +92,29 @@ def add_dish(db):
                                period_start=date(2026, 9, 1), period_end=date(2026, 9, 7)))
         db.commit()
         return dish
+    return _add
+
+
+@pytest.fixture
+def add_menu_price(db):
+    """add_menu_price(dish, 11.50, date(2026, 9, 15)) -> a price change from that day"""
+    def _add(dish, price, effective_date):
+        row = MenuPrice(dish_id=dish.id, price=price, source=MenuPriceSource.MANUAL, effective_date=effective_date)
+        db.add(row)
+        db.commit()
+        return row
+    return _add
+
+
+@pytest.fixture
+def add_sales(db):
+    """add_sales(dish, 30, date(2026, 9, 10)) -> sales for one day (or to period_end)"""
+    def _add(dish, units_sold, period_start, period_end=None):
+        record = SalesRecord(dish_id=dish.id, units_sold=units_sold,
+                             period_start=period_start, period_end=period_end or period_start)
+        db.add(record)
+        db.commit()
+        return record
     return _add
 
 

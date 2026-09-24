@@ -50,13 +50,28 @@ class Dish(Base):
     id = Column(Integer, primary_key=True)
     venue_id = Column(Integer, nullable=True)
     name = Column(String, nullable=False)
-    menu_price = Column(Float, nullable=False)
+    # Menu prices live in MenuPrice, one row per price, never overwritten.
     category = Column(Enum(DishType))
     skipped_ingredients = Column(JSON, nullable=False, default=list)
     # When the dish is on the menu. A dish on the menu with no sales recorded
     # has genuinely sold 0; outside these dates it simply isn't analysed.
     on_menu_from = Column(Date, nullable=False, default=date.today)
     on_menu_until = Column(Date, nullable=True)   # None = still on the menu
+
+class MenuPriceSource(enum.Enum):
+    MANUAL = "manual"   # typed in on the Menu or dish page
+    MENU = "menu"       # read from an uploaded menu (step 7d)
+
+class MenuPrice(Base):
+    # A dish's price from effective_date until the next MenuPrice for it.
+    # Kept as history so a period spanning a price change is analysed at the
+    # price actually charged on each day (costing.average_menu_price).
+    __tablename__ = "menu_prices"
+    id = Column(Integer, primary_key=True)
+    dish_id = Column(Integer, ForeignKey(Dish.id), nullable=False)
+    price = Column(Float, nullable=False)
+    source = Column(Enum(MenuPriceSource), nullable=False)
+    effective_date = Column(Date, nullable=False)
 
 class DishIngredient(Base):
     __tablename__ = "dish_ingredients"

@@ -9,7 +9,8 @@ roughly 50 covers a day.
   add up exactly to the June totals in DISHES.
 - July and August show the owner acting on the analysis: Marinara (a Dog) comes
   off the menu at the end of July; Nduja & Hot Honey and Burrata (Puzzles) are
-  promoted in August; a Mortadella special launches on 15 July.
+  promoted in August; a Mortadella special launches on 15 July; the Margherita
+  goes up from £11.00 to £11.50 on 15 August.
 - Tiramisu's Marsala isn't in the stock list, so it's flagged as not costed.
 - Every ingredient has a benchmark price (data/benchmark_prices.csv). A few also have invoice prices,
   which costing prefers (see costing.best_price), including a mozzarella
@@ -29,8 +30,8 @@ from datetime import date, datetime, timedelta
 from sqlalchemy.orm import sessionmaker
 
 from database import Base, engine
-from models import (Dish, DishIngredient, DishType, Ingredient, IngredientPrice, PriceSource,
-                    SalesRecord, User)
+from models import (Dish, DishIngredient, DishType, Ingredient, IngredientPrice, MenuPrice, MenuPriceSource,
+                    PriceSource, SalesRecord, User)
 from costing import cost_dish
 from benchmarks import sync_benchmarks
 
@@ -166,6 +167,11 @@ MENU_DATES = {
     "Marinara": (OPENED, date(2026, 7, 31)),                # a Dog, cut after July
 }
 
+# name -> [(new menu price, from)]. The price in DISHES runs until the first change.
+PRICE_CHANGES = {
+    "Margherita": [(11.50, date(2026, 8, 15))],
+}
+
 MONTHS = [(2026, 6), (2026, 7), (2026, 8)]
 
 # Monthly totals are June's figure (from DISHES) times these, unless
@@ -257,10 +263,13 @@ def reset_database(target_engine, with_demo, verbose=False):
 
     for name, category, price, units_sold, recipe, skipped in DISHES:
         on_from, on_until = MENU_DATES.get(name, (OPENED, None))
-        dish = Dish(name=name, category=category, menu_price=price, skipped_ingredients=skipped,
+        dish = Dish(name=name, category=category, skipped_ingredients=skipped,
                     on_menu_from=on_from, on_menu_until=on_until)
         db.add(dish)
         db.commit()
+        for menu_price, price_from in [(price, on_from)] + PRICE_CHANGES.get(name, []):
+            db.add(MenuPrice(dish_id=dish.id, price=menu_price, source=MenuPriceSource.MANUAL,
+                             effective_date=price_from))
 
         # Merge repeated ingredients (e.g. salt in both dough and sauce).
         quantities = {}

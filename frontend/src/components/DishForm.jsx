@@ -1,15 +1,21 @@
 import { useState } from 'react'
 import { CATEGORIES } from '../categories'
 
+const today = () => new Date().toISOString().slice(0, 10)
+
 // Name, price, category and menu dates. Used to add a dish and to edit one.
+// Editing the price asks when the new price starts; the old one is kept for
+// the days before, so past periods are analysed at what was charged.
 function DishForm({ initial = {}, submitLabel, onSubmit, onCancel }) {
   const [name, setName] = useState(initial.name ?? '')
   const [menuPrice, setMenuPrice] = useState(initial.menu_price != null ? String(initial.menu_price) : '')
   const [category, setCategory] = useState(initial.category ?? '')
-  const [onMenuFrom, setOnMenuFrom] = useState(initial.on_menu_from ?? new Date().toISOString().slice(0, 10))
+  const [onMenuFrom, setOnMenuFrom] = useState(initial.on_menu_from ?? today())
+  const [priceFrom, setPriceFrom] = useState(today())
   const [onMenuUntil, setOnMenuUntil] = useState(initial.on_menu_until ?? '')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  const priceChanged = initial.menu_price != null && Number(menuPrice) !== initial.menu_price
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -22,6 +28,10 @@ function DishForm({ initial = {}, submitLabel, onSubmit, onCancel }) {
       setError("Enter when the dish went on the menu, and an end date that isn't before it.")
       return
     }
+    if (priceChanged && !priceFrom) {
+      setError('Enter when the new price starts.')
+      return
+    }
 
     setSubmitting(true)
     setError(null)
@@ -31,6 +41,7 @@ function DishForm({ initial = {}, submitLabel, onSubmit, onCancel }) {
       category: category || null,
       on_menu_from: onMenuFrom,
       on_menu_until: onMenuUntil || null,
+      ...(priceChanged && { price_from: priceFrom }),
     })
       .catch((err) => {
         setError(err.message)
@@ -66,7 +77,13 @@ function DishForm({ initial = {}, submitLabel, onSubmit, onCancel }) {
                className="input" aria-describedby="until-hint" />
         <span id="until-hint" className="sr-only">Leave blank if the dish is still on the menu</span>
       </label>
-      <div className="flex items-end justify-end gap-2 sm:col-span-2">
+      {priceChanged && (
+        <label className="field">
+          <span className="label">New price from</span>
+          <input type="date" value={priceFrom} onChange={(e) => setPriceFrom(e.target.value)} className="input" />
+        </label>
+      )}
+      <div className={`flex items-end justify-end gap-2 ${priceChanged ? '' : 'sm:col-span-2'}`}>
         {onCancel && <button type="button" onClick={onCancel} className="btn btn-secondary">Cancel</button>}
         <button type="submit" disabled={submitting} className="btn btn-primary">
           {submitting ? 'Saving…' : submitLabel}

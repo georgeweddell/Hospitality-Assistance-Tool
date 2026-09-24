@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, model_validator
-from models import UnitType, DishType, QuadrantType, PriceSource
+from models import UnitType, DishType, QuadrantType, PriceSource, MenuPriceSource
 from typing import Literal, Optional
 from datetime import date
 
@@ -70,7 +70,18 @@ class DishCreate(BaseModel):
         return self
 
 class DishUpdate(DishCreate):
-    pass
+    # When a changed menu_price starts (default today). The old price is kept
+    # for the days before, so past periods are still analysed at what was charged.
+    price_from: Optional[date] = None
+
+class MenuPriceOut(BaseModel):
+    id: int
+    price: float
+    source: MenuPriceSource
+    effective_date: date
+
+    class Config:
+        from_attributes = True
 
 class DishOut(BaseModel):
     id: int
@@ -146,6 +157,7 @@ class DishDetailOut(BaseModel):
     on_menu_from: date
     on_menu_until: Optional[date] = None
     skipped_ingredients: list[str] = []
+    prices: list[MenuPriceOut]   # newest first
     lines: list[RecipeLineOut]
     cost: DishCostOut
     units_sold: int

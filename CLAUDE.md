@@ -16,7 +16,7 @@ This file gives Claude Code the context it needs to work on this project. Read i
 
 ### Where it is now
 
-Step 2 works (dish page with recipe editor and AI draft), and step 5 works at menu level. Dishes are added one at a time on the Menu page. Prices have history and sources, and the Ingredients page lets owners enter them from invoices by hand (no invoice upload yet). Sales are stored per dish per day (or as a total for a period), and every analysis runs over a chosen date range; the Sales page shows which days have data and takes manual totals (no till-file upload yet). The demo database comes from `seed_demo.py`.
+Step 2 works (dish page with recipe editor and AI draft), and step 5 works at menu level. Dishes are added one at a time on the Menu page. Menu prices have dated history (edit a dish's price and pick when it starts; the dish page lists the history). Ingredient prices have history and sources, and the Ingredients page lets owners enter them from invoices by hand (no invoice upload yet). Sales are stored per dish per day (or as a total for a period), and every analysis runs over a chosen date range; the Sales page shows which days have data and takes manual totals (no till-file upload yet). The demo database comes from `seed_demo.py`.
 
 **Purpose:** a portfolio piece for Forward Deployed Engineer / Solutions Engineer interviews. It is NOT being built as a commercial product. Clarity, correctness and explainability matter more than features. The aim is **one complete journey that works end to end and can be demoed in five minutes**, not every possible integration.
 
@@ -40,7 +40,7 @@ Step 2 works (dish page with recipe editor and AI draft), and step 5 works at me
   - `main.py`: every API route.
   - `models.py`: SQLAlchemy tables. `schemas.py`: Pydantic request/response models.
   - `database.py`: the engine, `get_db`, and a stub `get_current_user` (placeholder for auth).
-  - `costing.py`: costing engine (`cost_dish`), and `best_price`, which chooses which dated price to use.
+  - `costing.py`: costing engine (`cost_dish`), and `best_price`, which chooses which dated ingredient price to use. Menu prices are dated too (`MenuPrice`; `Dish` has no price column): `menu_price_on` gives the price on a day, and `average_menu_price` gives the price analysis uses for a range, the price charged each day weighted by that day's units (a multi-day total spanning a change is split evenly over its days; no sales → the price on the range's last day). `cost_dish(db, id, menu_price=None)` defaults to today's price; `get_category_stats` passes the range's average.
   - Changing `models.py` needs the database rebuilt (`seed_demo.py`), because there's no migration tool yet (Alembic is needed before deployment). Restart the backend afterwards, because `--reload` can leave it running a half-updated copy.
   - `menu_engineering.py`: classification, action list, incomplete-dish detection, all for a date range (`start`, `end`). The rules for which sales and dishes count are in the comment at the top of the file. `get_category_stats` costs each dish and counts its units **once per category**; the helpers and `classify_dish` read from it. Don't reintroduce per-dish recalculation of category totals, which made the dashboard about 6× slower.
   - `recipe_ai.py`: recipe-estimation prompt and the Anthropic call.
@@ -143,7 +143,7 @@ Done: tests for costing and menu engineering (`backend/tests/`), and the fronten
 4. ~~**Sales and date ranges.**~~ Done: dishes have on-the-menu dates; sales are daily (or period totals); analysis runs over any date range with presets (latest month by default); Sales page with a coverage strip and manual totals.
 5. ~~**Setup checklist, start fresh, empty states.**~~ Done: Settings → Start fresh / Load demo data (both back up first), a setup checklist on the Overview, short empty states.
 6. ~~**Broaden the benchmark price list.**~~ Done: `data/benchmark_prices.csv`, ~250 ingredients across Italian, British pub, Indian and staples, with an update button in Settings.
-7. **AI imports** (plan agreed with George, 24 Sep 2026; build in the order below, each its own approved step with tests). See "Step 7 plan" below.
+7. **AI imports** (plan agreed with George, 24 Sep 2026; build in the order below, each its own approved step with tests). See "Step 7 plan" below. (a) menu price history: done.
 8. **Monthly routine:** "what changed since last period", price-rise alerts, and each dish's "% of cost from your own data".
 9. **Business-wide suggestions:** rule-based and hand-checkable (e.g. GP vs typical for the restaurant type). Claude may reword them but doesn't invent them.
 10. **Authentication:** JWT login with per-user data isolation. **Use plan mode and get approval before starting.** It touches every query, and it's required before deployment because the app spends API credit.

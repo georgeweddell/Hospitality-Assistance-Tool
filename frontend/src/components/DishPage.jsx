@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Card from './Card'
 import ConfirmDialog from './ConfirmDialog'
 import DishForm from './DishForm'
+import MenuPrices from './MenuPrices'
 import QuadrantBadge from './QuadrantBadge'
 import RecipeEditor from './RecipeEditor'
 import { deleteJson, getJson, putJson } from '../api'
@@ -125,6 +126,8 @@ function DishPage({ dishId, range, analysed, onChanged }) {
       </div>
 
       <RecipeEditor key={loads} dish={dish} ingredients={ingredients} onSaved={reload} />
+
+      {dish.prices.length > 1 && <MenuPrices dishId={dish.id} prices={dish.prices} onChanged={reload} />}
 
       <ConfirmDialog open={confirmingDelete} title={`Delete ${dish.name}?`} confirmLabel="Delete"
                      onConfirm={remove} onCancel={() => setConfirmingDelete(false)}>

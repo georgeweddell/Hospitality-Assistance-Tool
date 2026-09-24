@@ -11,6 +11,7 @@ import pytest
 from fastapi import HTTPException
 from pydantic import ValidationError
 
+from costing import menu_price_on
 from main import delete_dish, get_dish_detail, save_recipe, update_dish
 from models import Dish, DishIngredient, DishType, SalesRecord, UnitType
 from schemas import ConfirmedIngredient, DishUpdate, RecipeConfirm
@@ -55,7 +56,7 @@ def test_update_changes_name_price_and_category(db, pizza):
                                              category=DishType.MAIN), db)
 
     dish = db.query(Dish).filter(Dish.id == pizza["dish"].id).first()
-    assert (dish.name, dish.menu_price) == ("Margherita DOP", 12.00)
+    assert (dish.name, menu_price_on(db, dish.id)) == ("Margherita DOP", 12.00)
 
 
 def test_price_must_be_positive_and_name_not_empty():
