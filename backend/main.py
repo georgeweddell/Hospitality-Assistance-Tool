@@ -8,7 +8,7 @@ import schemas
 from fastapi import Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from database import get_db
-from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn
+from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn, BenchmarkSyncOut
 from models import Dish, DishIngredient, Ingredient, IngredientPrice, SalesRecord
 from recipe_ai import estimate_recipe
 from matching import match_recipe_ingredients
@@ -19,6 +19,7 @@ from units import price_per_base_unit
 from periods import resolve_range
 from onboarding import setup_status
 from seed_demo import backup_database, reset_database
+from benchmarks import sync_benchmarks
 
 
 Base.metadata.create_all(bind=engine)
@@ -414,3 +415,11 @@ def reset(request: ResetIn):
     backup = backup_database()
     result = reset_database(engine, with_demo=request.mode == "demo")
     return {"mode": request.mode, "backup": backup, **result}
+
+@app.post("/setup/benchmarks", response_model=BenchmarkSyncOut)
+def update_benchmarks(db: Session = Depends(get_db)):
+    """
+    Adds new ingredients from the benchmark list and records changed benchmark
+    prices. Never removes anything or touches the restaurant's own prices.
+    """
+    return sync_benchmarks(db)

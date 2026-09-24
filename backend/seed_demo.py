@@ -11,7 +11,7 @@ roughly 50 covers a day.
   off the menu at the end of July; Nduja & Hot Honey and Burrata (Puzzles) are
   promoted in August; a Mortadella special launches on 15 July.
 - Tiramisu's Marsala isn't in the stock list, so it's flagged as not costed.
-- Every ingredient has a benchmark price. A few also have invoice prices,
+- Every ingredient has a benchmark price (data/benchmark_prices.csv). A few also have invoice prices,
   which costing prefers (see costing.best_price), including a mozzarella
   price rise in September.
 
@@ -30,91 +30,12 @@ from sqlalchemy.orm import sessionmaker
 
 from database import Base, engine
 from models import (Dish, DishIngredient, DishType, Ingredient, IngredientPrice, PriceSource,
-                    SalesRecord, UnitType, User)
+                    SalesRecord, User)
 from costing import cost_dish
+from benchmarks import sync_benchmarks
 
-G, ML, EACH = UnitType.GRAM, UnitType.ML, UnitType.EACH
-
-# (name, unit, price per base unit). Prices are 2026 UK wholesale estimates;
-# the comment gives the pack price they come from.
-INGREDIENTS = [
-    # --- dough ---
-    ("00 flour", G, 0.0013),                     # £1.30/kg
-    ("semolina", G, 0.0011),                     # £1.10/kg
-    ("salt", G, 0.0006),                         # £0.60/kg
-    ("fresh yeast", G, 0.003),                   # £3.00/kg
-    ("water", ML, 0.0),
-
-    # --- dairy / cheese ---
-    ("mozzarella (fior di latte)", G, 0.0075),   # £7.50/kg
-    ("buffalo mozzarella", G, 0.013),            # £13.00/kg
-    ("burrata", G, 0.016),                       # £16.00/kg
-    ("parmesan", G, 0.014),                      # £14.00/kg
-    ("gorgonzola", G, 0.009),                    # £9.00/kg
-    ("ricotta", G, 0.005),                       # £5.00/kg
-    ("mascarpone", G, 0.0055),                   # £5.50/kg
-    ("butter", G, 0.006),                        # £6.00/kg
-    ("double cream", ML, 0.0035),                # £3.50/l
-    ("whole milk", ML, 0.0011),                  # £1.10/l
-    ("vanilla gelato", ML, 0.008),               # £8.00/l, bought in
-
-    # --- tomato ---
-    ("san marzano tomatoes", G, 0.0035),         # £3.50/kg tinned
-    ("tomato passata", ML, 0.0018),              # £1.80/l
-
-    # --- meat ---
-    ("spicy salami", G, 0.013),                  # £13.00/kg
-    ("prosciutto crudo", G, 0.028),              # £28.00/kg
-    ("nduja", G, 0.018),                         # £18.00/kg
-    ("fennel sausage", G, 0.011),                # £11.00/kg
-    ("mortadella", G, 0.016),                    # £16.00/kg
-    ("cooked ham", G, 0.009),                    # £9.00/kg
-
-    # --- fresh produce ---
-    ("fresh basil", G, 0.025),                   # £25.00/kg
-    ("fresh parsley", G, 0.02),                  # £20.00/kg
-    ("fresh rosemary", G, 0.02),                 # £20.00/kg
-    ("garlic", G, 0.003),                        # £3.00/kg
-    ("red onion", G, 0.0012),                    # £1.20/kg
-    ("cherry tomatoes", G, 0.0025),              # £2.50/kg
-    ("rocket", G, 0.008),                        # £8.00/kg
-    ("chestnut mushrooms", G, 0.0035),           # £3.50/kg
-    ("friarielli", G, 0.012),                    # £12.00/kg jarred
-    ("fresh red chilli", G, 0.004),              # £4.00/kg
-    ("potatoes", G, 0.0012),                     # £1.20/kg
-    ("lemon", EACH, 0.35),
-    ("frozen mixed berries", G, 0.005),          # £5.00/kg
-
-    # --- pantry ---
-    ("olive oil", ML, 0.006),                    # £6.00/l
-    ("extra virgin olive oil", ML, 0.009),       # £9.00/l
-    ("vegetable oil", ML, 0.0022),               # £2.20/l, frying
-    ("balsamic vinegar", ML, 0.004),             # £4.00/l
-    ("dried oregano", G, 0.015),                 # £15.00/kg
-    ("chilli flakes", G, 0.01),                  # £10.00/kg
-    ("black pepper", G, 0.012),                  # £12.00/kg
-    ("honey", G, 0.008),                         # £8.00/kg
-    ("pistachios", G, 0.03),                     # £30.00/kg
-    ("arborio rice", G, 0.0025),                 # £2.50/kg
-    ("chicken stock", ML, 0.0015),               # £1.50/l
-    ("peas", G, 0.002),                          # £2.00/kg frozen
-    ("breadcrumbs", G, 0.0018),                  # £1.80/kg
-    ("ciabatta", G, 0.004),                      # £4.00/kg
-
-    # --- dessert ---
-    ("egg", EACH, 0.30),
-    ("sugar", G, 0.001),                         # £1.00/kg
-    ("icing sugar", G, 0.0011),                  # £1.10/kg
-    ("savoiardi biscuits", G, 0.005),            # £5.00/kg
-    ("espresso coffee", ML, 0.005),              # ~15p a 30 ml shot
-    ("cocoa powder", G, 0.008),                  # £8.00/kg
-    ("vanilla extract", ML, 0.03),               # £30.00/l
-    ("gelatine leaves", G, 0.02),                # £20.00/kg
-    ("hazelnut chocolate spread", G, 0.006),     # £6.00/kg
-    ("cannoli shells", EACH, 0.45),              # bought in
-    ("dark chocolate chips", G, 0.008),          # £8.00/kg
-    ("candied citrus peel", G, 0.012),           # £12.00/kg
-]
+# Ingredients and their benchmark prices come from data/benchmark_prices.csv
+# (see benchmarks.py). The demo adds its own invoice prices on top.
 
 
 # The restaurant's own invoice prices, which override the benchmarks above.
@@ -126,7 +47,6 @@ INVOICE_PRICES = [
     ("00 flour", 0.00125, date(2026, 6, 3)),                   # £1.25/kg
     ("san marzano tomatoes", 0.0038, date(2026, 7, 15)),       # £3.80/kg
 ]
-BENCHMARK_DATE = date(2026, 6, 1)
 
 
 def dough(grams):
@@ -322,20 +242,12 @@ def reset_database(target_engine, with_demo, verbose=False):
 
     db.add(User(email="dev@example.com"))
 
-    ingredients = {}
-    for name, unit, price in INGREDIENTS:
-        ingredients[name] = Ingredient(name=name, unit=unit)
-        db.add(ingredients[name])
-    db.commit()
-
-    for name, unit, price in INGREDIENTS:
-        db.add(IngredientPrice(ingredient_id=ingredients[name].id, price_per_unit=price,
-                               source=PriceSource.BENCHMARK, effective_date=BENCHMARK_DATE))
-    db.commit()
+    sync_benchmarks(db)
+    ingredients = {i.name: i for i in db.query(Ingredient).all()}
 
     if not with_demo:
         db.close()
-        return {"ingredients": len(INGREDIENTS), "dishes": 0}
+        return {"ingredients": len(ingredients), "dishes": 0}
 
     for name, price, invoice_date in INVOICE_PRICES:
         db.add(IngredientPrice(ingredient_id=ingredients[name].id, price_per_unit=price,
@@ -376,7 +288,7 @@ def reset_database(target_engine, with_demo, verbose=False):
             print(f"  {name:<26} £{price:>5.2f}  cost £{plate_cost:>4.2f}  GP {margin_percent:>5.1f}%  Jun/Jul/Aug {sales}")
 
     db.close()
-    return {"ingredients": len(INGREDIENTS), "dishes": len(DISHES)}
+    return {"ingredients": len(ingredients), "dishes": len(DISHES)}
 
 
 if __name__ == "__main__":

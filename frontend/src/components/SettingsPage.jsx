@@ -23,11 +23,27 @@ const OPTIONS = [
   },
 ]
 
-function SettingsPage({ onReset }) {
+function SettingsPage({ onReset, onChanged }) {
   const [asking, setAsking] = useState(null)   // the option waiting for confirmation
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [backup, setBackup] = useState(null)
+  const [syncing, setSyncing] = useState(false)
+  const [synced, setSynced] = useState(null)
+
+  // Adds new benchmark ingredients and records changed benchmark prices.
+  // Nothing is removed, so no confirmation is needed.
+  const updateBenchmarks = () => {
+    setSyncing(true)
+    setError(null)
+    postJson('/setup/benchmarks', {})
+      .then((result) => {
+        setSynced(result)
+        onChanged()
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setSyncing(false))
+  }
 
   const run = () => {
     setBusy(true)
@@ -47,6 +63,30 @@ function SettingsPage({ onReset }) {
 
   return (
     <div className="max-w-2xl space-y-5">
+      <Card title="Benchmark prices" flush>
+        <div className="flex flex-wrap items-center gap-4 border-t border-line px-5 py-4">
+          <span className="flex grow items-center gap-2 font-semibold">
+            Update from the benchmark list
+            <Hint label="About benchmark prices"
+                  content="Adds any ingredients from the built-in UK price list that you don't have, and records changed benchmark prices. Your own prices and recipes are never changed." />
+          </span>
+          {synced && (
+            <span className="flex flex-wrap gap-1.5">
+              <span className="chip chip-accent num">{synced.added} added</span>
+              <span className="chip chip-muted num">{synced.updated} updated</span>
+              {synced.conflicts.length > 0 && (
+                <Hint align="right" content={`Measured differently in your data, so left alone: ${synced.conflicts.join(', ')}.`}>
+                  <span className="chip chip-warn num">{synced.conflicts.length} skipped</span>
+                </Hint>
+              )}
+            </span>
+          )}
+          <button type="button" onClick={updateBenchmarks} disabled={syncing || busy} className="btn btn-secondary">
+            {syncing ? 'Updating…' : 'Update'}
+          </button>
+        </div>
+      </Card>
+
       <Card title="Data" flush>
         <ul>
           {OPTIONS.map((o) => (

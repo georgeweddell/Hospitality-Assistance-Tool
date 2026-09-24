@@ -138,7 +138,7 @@ function App() {
   } else if (page === 'ingredients') {
     content = <IngredientsPage onChanged={refresh} />
   } else if (page === 'settings') {
-    content = <SettingsPage onReset={afterReset} />
+    content = <SettingsPage onReset={afterReset} onChanged={refresh} />
   } else if (!data) {
     content = (
       <div className="flex items-center gap-3 text-muted">

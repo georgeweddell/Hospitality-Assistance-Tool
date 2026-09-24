@@ -224,3 +224,10 @@ class SetupStatusOut(BaseModel):
 class ResetIn(BaseModel):
     mode: Literal["fresh", "demo"]
     confirm: str   # must be "reset": guards against wiping the database by accident
+
+class BenchmarkSyncOut(BaseModel):
+    """What updating the benchmark list changed."""
+    added: int
+    updated: int
+    unchanged: int
+    conflicts: list[str]   # names whose unit disagrees with the list, left alone

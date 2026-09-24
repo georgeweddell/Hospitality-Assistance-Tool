@@ -16,7 +16,10 @@ from main import reset
 from models import Dish, DishType, Ingredient, IngredientPrice, PriceSource, SalesRecord, UnitType
 from onboarding import setup_status
 from schemas import ResetIn
-from seed_demo import DISHES, INGREDIENTS, reset_database
+from benchmarks import read_benchmarks
+from seed_demo import DISHES, reset_database
+
+BENCHMARK_COUNT = len(read_benchmarks())
 
 TODAY = date(2026, 9, 24)
 
@@ -32,9 +35,9 @@ def test_start_fresh_keeps_only_the_benchmark_ingredients(engine):
 
     assert db.query(Dish).count() == 0
     assert db.query(SalesRecord).count() == 0
-    assert db.query(Ingredient).count() == len(INGREDIENTS)
+    assert db.query(Ingredient).count() == BENCHMARK_COUNT
     # One benchmark price each, and nothing else.
-    assert db.query(IngredientPrice).count() == len(INGREDIENTS)
+    assert db.query(IngredientPrice).count() == BENCHMARK_COUNT
     assert {p.source for p in db.query(IngredientPrice).all()} == {PriceSource.BENCHMARK}
 
 

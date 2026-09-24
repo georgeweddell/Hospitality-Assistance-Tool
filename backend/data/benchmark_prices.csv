@@ -1,0 +1,269 @@
+# Benchmark ingredient prices: 2026 UK wholesale estimates, not supplier quotes.
+# Used until a restaurant enters its own prices. One ingredient per line:
+#   name, measured_by (gram | ml | each), price, per (kg | l | each)
+# e.g. "beef mince, gram, 8.50, kg" = £8.50 per kg, stored as £0.0085 per gram.
+# Lines starting with # are comments. Names must be unique (ignoring case).
+name,measured_by,price,per
+# --- Dough and flour ---
+00 flour,gram,1.30,kg
+semolina,gram,1.10,kg
+plain flour,gram,0.80,kg
+self-raising flour,gram,0.85,kg
+strong white bread flour,gram,1.00,kg
+chapati flour,gram,1.20,kg
+cornflour,gram,2.00,kg
+fresh yeast,gram,3.00,kg
+baking powder,gram,6.00,kg
+salt,gram,0.60,kg
+water,ml,0.00,l
+# --- Dairy and eggs ---
+mozzarella (fior di latte),gram,7.50,kg
+buffalo mozzarella,gram,13.00,kg
+burrata,gram,16.00,kg
+parmesan,gram,14.00,kg
+gorgonzola,gram,9.00,kg
+ricotta,gram,5.00,kg
+mascarpone,gram,5.50,kg
+mature cheddar,gram,8.50,kg
+stilton,gram,12.00,kg
+goat's cheese,gram,14.00,kg
+halloumi,gram,11.00,kg
+feta,gram,9.00,kg
+paneer,gram,9.50,kg
+butter,gram,6.00,kg
+unsalted butter,gram,6.50,kg
+ghee,gram,12.00,kg
+double cream,ml,3.50,l
+single cream,ml,2.80,l
+creme fraiche,gram,5.00,kg
+greek yoghurt,gram,3.50,kg
+natural yoghurt,gram,2.20,kg
+whole milk,ml,1.10,l
+vanilla gelato,ml,8.00,l
+vanilla ice cream,ml,5.00,l
+egg,each,0.30,each
+# --- Meat and poultry ---
+spicy salami,gram,13.00,kg
+prosciutto crudo,gram,28.00,kg
+nduja,gram,18.00,kg
+fennel sausage,gram,11.00,kg
+mortadella,gram,16.00,kg
+cooked ham,gram,9.00,kg
+chorizo,gram,12.00,kg
+beef mince,gram,8.50,kg
+braising steak,gram,12.00,kg
+sirloin steak,gram,26.00,kg
+ribeye steak,gram,30.00,kg
+beef short rib,gram,14.00,kg
+pork belly,gram,8.00,kg
+pork sausages,gram,7.50,kg
+streaky bacon,gram,9.50,kg
+back bacon,gram,9.00,kg
+gammon,gram,8.50,kg
+black pudding,gram,8.00,kg
+lamb shoulder,gram,12.50,kg
+lamb leg,gram,14.00,kg
+lamb mince,gram,10.50,kg
+chicken breast,gram,7.50,kg
+chicken thigh,gram,6.50,kg
+whole chicken,gram,3.80,kg
+chicken wings,gram,4.50,kg
+duck breast,gram,16.00,kg
+beef dripping,gram,5.00,kg
+# --- Fish and seafood ---
+cod loin,gram,19.00,kg
+haddock fillet,gram,17.00,kg
+smoked haddock,gram,18.00,kg
+salmon fillet,gram,16.00,kg
+smoked salmon,gram,24.00,kg
+sea bass fillet,gram,22.00,kg
+king prawns,gram,18.00,kg
+mussels,gram,5.00,kg
+squid,gram,11.00,kg
+scallops,gram,45.00,kg
+crab meat,gram,35.00,kg
+anchovy fillets,gram,18.00,kg
+tinned tuna,gram,9.00,kg
+# --- Vegetables ---
+potatoes,gram,1.20,kg
+new potatoes,gram,1.40,kg
+sweet potato,gram,1.60,kg
+frozen chips,gram,1.60,kg
+onion,gram,0.90,kg
+red onion,gram,1.20,kg
+shallots,gram,2.50,kg
+spring onions,gram,4.00,kg
+garlic,gram,3.00,kg
+fresh ginger,gram,4.50,kg
+carrots,gram,0.80,kg
+celery,gram,1.80,kg
+leeks,gram,2.50,kg
+parsnips,gram,1.60,kg
+swede,gram,1.20,kg
+beetroot,gram,2.50,kg
+butternut squash,gram,1.50,kg
+peas,gram,2.00,kg
+green beans,gram,4.50,kg
+broccoli,gram,2.20,kg
+tenderstem broccoli,gram,9.00,kg
+cauliflower,gram,1.80,kg
+savoy cabbage,gram,1.20,kg
+red cabbage,gram,1.00,kg
+spinach,gram,4.00,kg
+kale,gram,5.00,kg
+friarielli,gram,12.00,kg
+courgette,gram,1.80,kg
+aubergine,gram,2.00,kg
+red pepper,gram,3.00,kg
+green pepper,gram,2.60,kg
+cucumber,gram,1.50,kg
+cherry tomatoes,gram,2.50,kg
+salad tomatoes,gram,2.20,kg
+chestnut mushrooms,gram,3.50,kg
+button mushrooms,gram,3.00,kg
+rocket,gram,8.00,kg
+mixed salad leaves,gram,6.00,kg
+cos lettuce,gram,3.50,kg
+fresh red chilli,gram,4.00,kg
+green chilli,gram,5.00,kg
+avocado,each,0.75,each
+# --- Fresh herbs ---
+fresh basil,gram,25.00,kg
+fresh parsley,gram,20.00,kg
+fresh rosemary,gram,20.00,kg
+fresh coriander,gram,18.00,kg
+fresh mint,gram,20.00,kg
+fresh thyme,gram,24.00,kg
+fresh dill,gram,24.00,kg
+fresh chives,gram,24.00,kg
+fresh sage,gram,24.00,kg
+curry leaves,gram,30.00,kg
+# --- Fruit ---
+lemon,each,0.35,each
+lime,each,0.25,each
+oranges,gram,1.60,kg
+bramley apples,gram,2.00,kg
+bananas,gram,1.20,kg
+mango,gram,3.00,kg
+strawberries,gram,7.00,kg
+raspberries,gram,12.00,kg
+blueberries,gram,10.00,kg
+rhubarb,gram,4.00,kg
+frozen mixed berries,gram,5.00,kg
+lemon juice,ml,3.00,l
+# --- Rice, pasta, pulses and grains ---
+arborio rice,gram,2.50,kg
+basmati rice,gram,2.20,kg
+long grain rice,gram,1.40,kg
+dried spaghetti,gram,1.60,kg
+dried penne,gram,1.60,kg
+egg noodles,gram,2.50,kg
+red lentils,gram,1.80,kg
+chana dal,gram,2.00,kg
+tinned chickpeas,gram,1.60,kg
+tinned kidney beans,gram,1.50,kg
+porridge oats,gram,1.40,kg
+breadcrumbs,gram,1.80,kg
+panko breadcrumbs,gram,3.20,kg
+# --- Bakery and pastry ---
+ciabatta,gram,4.00,kg
+sourdough loaf,gram,4.50,kg
+white sliced bread,gram,1.80,kg
+brioche burger bun,each,0.40,each
+naan bread,each,0.35,each
+tortilla wrap,each,0.18,each
+puff pastry,gram,3.50,kg
+shortcrust pastry,gram,3.00,kg
+filo pastry,gram,5.00,kg
+savoiardi biscuits,gram,5.00,kg
+digestive biscuits,gram,2.80,kg
+cannoli shells,each,0.45,each
+# --- Sugar, baking and sweet ---
+sugar,gram,1.00,kg
+caster sugar,gram,1.20,kg
+icing sugar,gram,1.10,kg
+light brown sugar,gram,1.60,kg
+demerara sugar,gram,1.80,kg
+golden syrup,gram,2.50,kg
+honey,gram,8.00,kg
+cocoa powder,gram,8.00,kg
+dark chocolate,gram,9.00,kg
+dark chocolate chips,gram,8.00,kg
+hazelnut chocolate spread,gram,6.00,kg
+vanilla extract,ml,30.00,l
+gelatine leaves,gram,20.00,kg
+candied citrus peel,gram,12.00,kg
+desiccated coconut,gram,4.50,kg
+raisins,gram,4.00,kg
+espresso coffee,ml,5.00,l
+# --- Nuts and seeds ---
+pistachios,gram,30.00,kg
+almonds,gram,12.00,kg
+cashews,gram,14.00,kg
+walnuts,gram,13.00,kg
+pine nuts,gram,22.00,kg
+# --- Oils and fats ---
+olive oil,ml,6.00,l
+extra virgin olive oil,ml,9.00,l
+vegetable oil,ml,2.20,l
+rapeseed oil,ml,2.80,l
+sunflower oil,ml,2.20,l
+sesame oil,ml,9.00,l
+# --- Tins, sauces, stocks and condiments ---
+san marzano tomatoes,gram,3.50,kg
+chopped tomatoes,gram,1.40,kg
+tomato passata,ml,1.80,l
+tomato puree,gram,3.00,kg
+coconut milk,ml,2.80,l
+chicken stock,ml,1.50,l
+beef stock,ml,1.50,l
+vegetable stock,ml,1.20,l
+gravy granules,gram,8.00,kg
+worcestershire sauce,ml,6.00,l
+soy sauce,ml,4.00,l
+balsamic vinegar,ml,4.00,l
+white wine vinegar,ml,3.00,l
+malt vinegar,ml,1.20,l
+red wine,ml,8.00,l
+white wine,ml,7.00,l
+ale,ml,4.50,l
+english mustard,gram,8.00,kg
+dijon mustard,gram,7.00,kg
+wholegrain mustard,gram,7.00,kg
+mayonnaise,gram,4.00,kg
+tomato ketchup,gram,2.50,kg
+brown sauce,gram,3.00,kg
+mango chutney,gram,5.00,kg
+lime pickle,gram,6.00,kg
+tamarind paste,gram,8.00,kg
+capers,gram,8.00,kg
+black olives,gram,5.00,kg
+# --- Dried herbs and spices ---
+black pepper,gram,12.00,kg
+dried oregano,gram,15.00,kg
+chilli flakes,gram,10.00,kg
+bay leaves,gram,20.00,kg
+ground cumin,gram,12.00,kg
+cumin seeds,gram,11.00,kg
+ground coriander,gram,10.00,kg
+coriander seeds,gram,9.00,kg
+turmeric,gram,9.00,kg
+garam masala,gram,14.00,kg
+chilli powder,gram,10.00,kg
+kashmiri chilli powder,gram,16.00,kg
+paprika,gram,10.00,kg
+smoked paprika,gram,14.00,kg
+green cardamom pods,gram,45.00,kg
+black cardamom pods,gram,40.00,kg
+cloves,gram,30.00,kg
+cinnamon sticks,gram,20.00,kg
+ground cinnamon,gram,12.00,kg
+ground ginger,gram,12.00,kg
+ground nutmeg,gram,20.00,kg
+star anise,gram,25.00,kg
+fenugreek leaves,gram,25.00,kg
+mustard seeds,gram,8.00,kg
+fennel seeds,gram,12.00,kg
+nigella seeds,gram,14.00,kg
+asafoetida,gram,30.00,kg
+saffron,gram,6000.00,kg
