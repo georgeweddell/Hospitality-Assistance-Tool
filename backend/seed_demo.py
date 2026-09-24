@@ -6,6 +6,9 @@ independent Neapolitan-style pizzeria in the UK, roughly 50 covers a day.
 - Quadrants come out of the numbers; nothing is forced.
 - Two dishes show the warning features: a new special with no sales yet,
   and a Tiramisu whose Marsala isn't in the stock list (so isn't costed).
+- Every ingredient has a benchmark price. A few also have invoice prices,
+  which costing prefers (see costing.best_price), including a mozzarella
+  price rise in September.
 
 WARNING: this wipes the database. The current menu.db is copied to
 menu.backup-<timestamp>.db first.
@@ -19,7 +22,8 @@ import shutil
 from datetime import date, datetime
 
 from database import Base, SessionLocal, engine
-from models import Dish, DishIngredient, DishType, Ingredient, SalesRecord, UnitType, User
+from models import (Dish, DishIngredient, DishType, Ingredient, IngredientPrice, PriceSource,
+                    SalesRecord, UnitType, User)
 from costing import cost_dish
 
 G, ML, EACH = UnitType.GRAM, UnitType.ML, UnitType.EACH
@@ -104,6 +108,18 @@ INGREDIENTS = [
     ("dark chocolate chips", G, 0.008),          # £8.00/kg
     ("candied citrus peel", G, 0.012),           # £12.00/kg
 ]
+
+
+# The restaurant's own invoice prices, which override the benchmarks above.
+# (ingredient, price per base unit, invoice date). Supplier is made up.
+DEMO_SUPPLIER = "Napoli Foods (demo)"
+INVOICE_PRICES = [
+    ("mozzarella (fior di latte)", 0.0074, date(2026, 6, 3)),   # £7.40/kg
+    ("mozzarella (fior di latte)", 0.0082, date(2026, 9, 12)),  # £8.20/kg, price rise
+    ("00 flour", 0.00125, date(2026, 6, 3)),                   # £1.25/kg
+    ("san marzano tomatoes", 0.0038, date(2026, 7, 15)),       # £3.80/kg
+]
+BENCHMARK_DATE = date(2026, 6, 1)
 
 
 def dough(grams):
@@ -233,8 +249,17 @@ def seed():
 
     ingredients = {}
     for name, unit, price in INGREDIENTS:
-        ingredients[name] = Ingredient(name=name, unit=unit, price_per_unit=price)
+        ingredients[name] = Ingredient(name=name, unit=unit)
         db.add(ingredients[name])
+    db.commit()
+
+    for name, unit, price in INGREDIENTS:
+        db.add(IngredientPrice(ingredient_id=ingredients[name].id, price_per_unit=price,
+                               source=PriceSource.BENCHMARK, effective_date=BENCHMARK_DATE))
+    for name, price, invoice_date in INVOICE_PRICES:
+        db.add(IngredientPrice(ingredient_id=ingredients[name].id, price_per_unit=price,
+                               source=PriceSource.INVOICE, supplier=DEMO_SUPPLIER,
+                               effective_date=invoice_date))
     db.commit()
 
     for name, category, price, units_sold, recipe, skipped in DISHES:

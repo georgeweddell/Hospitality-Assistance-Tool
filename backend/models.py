@@ -19,7 +19,25 @@ class Ingredient(Base):
     id = Column(Integer, primary_key = True)
     name = Column(String, nullable=False)
     unit = Column(Enum(UnitType), nullable=False)
-    price_per_unit = Column(Float, nullable=False)
+    # Prices live in IngredientPrice, one row per price seen, never overwritten.
+
+class PriceSource(enum.Enum):
+    INVOICE = "invoice"              # from the restaurant's own invoice
+    SUPPLIER_LIST = "supplier_list"  # from a supplier's price list
+    MANUAL = "manual"                # typed in by the restaurant
+    BENCHMARK = "benchmark"          # built-in estimate, used until the restaurant has its own
+
+# The restaurant's own prices beat benchmarks (see costing.best_price).
+OWN_PRICE_SOURCES = [PriceSource.INVOICE, PriceSource.SUPPLIER_LIST, PriceSource.MANUAL]
+
+class IngredientPrice(Base):
+    __tablename__ = "ingredient_prices"
+    id = Column(Integer, primary_key=True)
+    ingredient_id = Column(Integer, ForeignKey(Ingredient.id), nullable=False)
+    price_per_unit = Column(Float, nullable=False)   # per gram / ml / each, like the ingredient's unit
+    source = Column(Enum(PriceSource), nullable=False)
+    supplier = Column(String, nullable=True)
+    effective_date = Column(Date, nullable=False)
 
 class DishType(enum.Enum):
     STARTER = "Starter"

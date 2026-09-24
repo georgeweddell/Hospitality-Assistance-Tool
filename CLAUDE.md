@@ -40,7 +40,8 @@ Steps 2 (estimate only, since the review screen is unfinished) and 5 (menu-level
   - `main.py`: every API route.
   - `models.py`: SQLAlchemy tables. `schemas.py`: Pydantic request/response models.
   - `database.py`: the engine, `get_db`, and a stub `get_current_user` (placeholder for auth).
-  - `costing.py`: costing engine (`cost_dish`).
+  - `costing.py`: costing engine (`cost_dish`), and `best_price`, which chooses which dated price to use.
+  - Changing `models.py` needs the database rebuilt (`seed_demo.py`), because there's no migration tool yet (Alembic is needed before deployment). Restart the backend afterwards, because `--reload` can leave it running a half-updated copy.
   - `menu_engineering.py`: classification, action list, incomplete-dish detection.
   - `recipe_ai.py`: recipe-estimation prompt and the Anthropic call.
   - `matching.py`: exact match first, then `difflib` fuzzy suggestions.
@@ -121,7 +122,7 @@ These were hard-won. Don't undo them.
 
 Done: tests for costing and menu engineering (`backend/tests/`), and the frontend redesign (pages, summary, action list). New tests should keep to small hand-checkable examples, with the working in comments.
 
-1. **Price history and sources:** database changes so each ingredient can have many dated prices with a source, and costing uses the best one. This changes the costing engine: plan first, George approves.
+1. ~~**Price history and sources.**~~ Done. `IngredientPrice` holds one row per price seen (source, supplier, date). `costing.best_price` picks the price: the restaurant's own most recent, else the most recent benchmark, ignoring future-dated prices. Routes: `GET/POST /ingredients/{id}/prices`. Next small follow-up: show each dish's "% of cost from your own data".
 2. **Finish Recipe Review:** show the draft, edit quantities, pick between suggested matches, flag unit mismatches, save.
 3. **Broaden the benchmark price list** beyond Italian, to a few cuisines done well.
 4. **Invoice upload:** Claude extracts lines, then matching, unit normalisation and review before saving.

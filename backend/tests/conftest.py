@@ -13,7 +13,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from database import Base
-from models import Dish, DishIngredient, Ingredient, SalesRecord, UnitType
+from models import Dish, DishIngredient, Ingredient, IngredientPrice, PriceSource, SalesRecord, UnitType
 
 
 @pytest.fixture
@@ -33,12 +33,28 @@ def db():
 
 
 @pytest.fixture
-def add_ingredient(db):
-    """add_ingredient("Flour", UnitType.GRAM, 0.002) -> saved Ingredient"""
+def add_price(db):
+    """add_price(flour, 0.002, PriceSource.INVOICE, date(2026, 3, 1)) -> saved IngredientPrice"""
+    def _add(ingredient, price_per_unit, source, effective_date):
+        price = IngredientPrice(ingredient_id=ingredient.id, price_per_unit=price_per_unit,
+                                source=source, effective_date=effective_date)
+        db.add(price)
+        db.commit()
+        return price
+    return _add
+
+
+@pytest.fixture
+def add_ingredient(db, add_price):
+    """
+    add_ingredient("Flour", UnitType.GRAM, 0.002) -> saved Ingredient
+    with one benchmark price, dated in the past so it's always in effect.
+    """
     def _add(name, unit, price_per_unit):
-        ingredient = Ingredient(name=name, unit=unit, price_per_unit=price_per_unit)
+        ingredient = Ingredient(name=name, unit=unit)
         db.add(ingredient)
         db.commit()
+        add_price(ingredient, price_per_unit, PriceSource.BENCHMARK, date(2026, 1, 1))
         return ingredient
     return _add
 

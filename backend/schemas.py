@@ -1,18 +1,37 @@
-from pydantic import BaseModel
-from models import UnitType, DishType, QuadrantType
+from pydantic import BaseModel, Field
+from models import UnitType, DishType, QuadrantType, PriceSource
 from typing import Optional
 from datetime import date
 
 class IngredientCreate(BaseModel):
     name: str
     unit: UnitType
-    price_per_unit: float
+    price_per_unit: float = Field(ge=0)   # starting price, per gram / ml / each
+    source: PriceSource = PriceSource.MANUAL
+    supplier: Optional[str] = None
 
 class IngredientOut(BaseModel):
     id: int
     name: str
     unit: UnitType
+    # The price costing currently uses (see costing.best_price). None if it has no price.
+    price_per_unit: Optional[float] = None
+    price_source: Optional[PriceSource] = None
+    price_date: Optional[date] = None
+
+class IngredientPriceCreate(BaseModel):
+    price_per_unit: float = Field(ge=0)   # per gram / ml / each, like the ingredient's unit
+    source: PriceSource = PriceSource.MANUAL
+    supplier: Optional[str] = None
+    effective_date: date = Field(default_factory=date.today)
+
+class IngredientPriceOut(BaseModel):
+    id: int
+    ingredient_id: int
     price_per_unit: float
+    source: PriceSource
+    supplier: Optional[str] = None
+    effective_date: date
 
     class Config:
         from_attributes = True  # lets this schema read straight off a SQLAlchemy object

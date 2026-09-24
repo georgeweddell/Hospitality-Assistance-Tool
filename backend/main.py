@@ -1,15 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from menu_engineering import classify_all_dishes, build_action_list, list_incomplete_dishes
-from costing import cost_dish
+from costing import cost_dish, best_price
 from database import Base, engine
 import models
 import schemas
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
-from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, DishType, DishCreate, DishOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut
-from models import Dish, DishIngredient, Ingredient, SalesRecord
+from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut
+from models import Dish, DishIngredient, Ingredient, IngredientPrice, SalesRecord
 from recipe_ai import estimate_recipe
 from matching import match_recipe_ingredients
 from datetime import date
@@ -31,21 +31,64 @@ app.add_middleware(
 def read_root():
     return {"message":"Hello World"}
 
+def ingredient_out(db, ingredient):
+    """An ingredient with the price costing currently uses for it."""
+    price = best_price(db, ingredient.id)
+    return IngredientOut(
+        id=ingredient.id,
+        name=ingredient.name,
+        unit=ingredient.unit,
+        price_per_unit=price.price_per_unit if price else None,
+        price_source=price.source if price else None,
+        price_date=price.effective_date if price else None,
+    )
+
 @app.get("/ingredients",  response_model=list[IngredientOut])
 def list_ingredients(db: Session = Depends(get_db)):
-    return db.query(Ingredient).all()
+    return [ingredient_out(db, i) for i in db.query(Ingredient).all()]
 
 @app.post("/ingredients", response_model=IngredientOut)
 def create_ingredient(ingredient: IngredientCreate, db: Session = Depends(get_db)):
+    # Every ingredient starts with a price, so costing never meets one without.
     new_ingredient = Ingredient(
         name = ingredient.name,
-        unit = ingredient.unit,
-        price_per_unit = ingredient.price_per_unit)
+        unit = ingredient.unit)
     db.add(new_ingredient)
-    db.commit()
-    db.refresh(new_ingredient)
+    db.flush()  # assigns new_ingredient.id without committing yet
 
-    return new_ingredient
+    db.add(IngredientPrice(
+        ingredient_id = new_ingredient.id,
+        price_per_unit = ingredient.price_per_unit,
+        source = ingredient.source,
+        supplier = ingredient.supplier,
+        effective_date = date.today()))
+    db.commit()
+
+    return ingredient_out(db, new_ingredient)
+
+@app.get("/ingredients/{ingredient_id}/prices", response_model=list[IngredientPriceOut])
+def list_ingredient_prices(ingredient_id: int, db: Session = Depends(get_db)):
+    ingredient = db.query(Ingredient).filter(Ingredient.id == ingredient_id).first()
+    if not ingredient:
+        raise HTTPException(status_code=404, detail="Ingredient not found")
+
+    return (db.query(IngredientPrice)
+            .filter(IngredientPrice.ingredient_id == ingredient_id)
+            .order_by(IngredientPrice.effective_date.desc(), IngredientPrice.id.desc())
+            .all())
+
+@app.post("/ingredients/{ingredient_id}/prices", response_model=IngredientPriceOut)
+def add_ingredient_price(ingredient_id: int, price: IngredientPriceCreate, db: Session = Depends(get_db)):
+    ingredient = db.query(Ingredient).filter(Ingredient.id == ingredient_id).first()
+    if not ingredient:
+        raise HTTPException(status_code=404, detail="Ingredient not found")
+
+    new_price = IngredientPrice(ingredient_id=ingredient_id, **price.model_dump())
+    db.add(new_price)
+    db.commit()
+    db.refresh(new_price)
+
+    return new_price
 
 @app.get("/dishes", response_model=list[DishOut])
 def fetch_dish(db: Session = Depends(get_db)):
