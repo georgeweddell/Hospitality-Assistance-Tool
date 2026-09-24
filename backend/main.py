@@ -81,9 +81,11 @@ def estimate_recipe_route(dish_id: int, db: Session = Depends(get_db)):
 @app.post("/dishes/{dish_id}/recipe", response_model=RecipeSaveOut)
 def save_recipe(dish_id: int, confirmed: schemas.RecipeConfirm, db: Session = Depends(get_db)):
     dish = db.query(Dish).filter(Dish.id == dish_id).first()
-    recipe = []
     if not dish:
         raise HTTPException(status_code=404, detail="Dish not found")
+    recipe = []
+
+    dish.skipped_ingredients = confirmed.skipped_ingredients
 
     db.query(models.DishIngredient).filter(models.DishIngredient.dish_id == dish_id).delete()
 

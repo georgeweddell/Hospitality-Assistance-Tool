@@ -63,6 +63,7 @@ class ConfirmedIngredient(BaseModel):
 
 class RecipeConfirm(BaseModel):
     ingredients: list[ConfirmedIngredient]
+    skipped_ingredients: list[str] = []
 
 class DishIngredientOut(BaseModel):
     ingredient_id: int
