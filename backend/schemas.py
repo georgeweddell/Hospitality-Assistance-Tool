@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, model_validator
-from models import UnitType, DishType, QuadrantType, PriceSource, MenuPriceSource
+from models import UnitType, DishType, QuadrantType, PriceSource, MenuPriceSource, ImportKind, ImportStatus
 from typing import Literal, Optional
+from datetime import datetime
 from datetime import date
 
 class PriceInput(BaseModel):
@@ -243,3 +244,85 @@ class BenchmarkSyncOut(BaseModel):
     updated: int
     unchanged: int
     conflicts: list[str]   # names whose unit disagrees with the list, left alone
+
+
+# --- Invoice import ------------------------------------------------------------------
+
+PackUnit = Literal["kg", "g", "l", "ml", "each"]
+LineKind = Literal["food", "non_food", "charge"]
+LineAction = Literal["update", "new", "ignore"]
+
+class InvoiceLineDraft(BaseModel):
+    """One invoice line as Claude read it. Numbers exactly as printed; code does the maths."""
+    description: str                           # as printed, e.g. "MOZZ FDL 1KG x12"
+    pack_count: Optional[float] = None         # "12 x 1kg" -> 12
+    pack_size: Optional[float] = None          # "12 x 1kg" -> 1
+    pack_unit: Optional[PackUnit] = None       # "12 x 1kg" -> "kg"
+    quantity: Optional[float] = None           # packs bought
+    unit_price: Optional[float] = None         # price per pack, ex VAT
+    line_total: Optional[float] = None         # ex VAT
+    kind: LineKind = "food"
+    likely_ingredient: Optional[str] = None    # Claude's guess, from the ingredient list where possible
+
+class InvoiceDraft(BaseModel):
+    supplier: Optional[str] = None
+    invoice_number: Optional[str] = None
+    invoice_date: Optional[date] = None
+    prices_include_vat: bool = False
+    lines: list[InvoiceLineDraft]
+
+class InvoiceReviewLine(InvoiceLineDraft):
+    """A line ready for the owner to check, with what code worked out."""
+    action: LineAction
+    ingredient_id: Optional[int] = None        # for "update"
+    remembered: bool = False                   # the match (or ignore) came from a previous invoice
+    suggestions: list["IngredientSuggestion"] = []
+    new_ingredient_name: Optional[str] = None  # for "new"
+    price_per_unit: Optional[float] = None     # per g / ml / each
+    current_price_per_unit: Optional[float] = None
+    change_percent: Optional[float] = None
+    flags: list[Literal["totals", "pack", "unit", "big_change"]] = []
+
+class InvoiceReviewOut(BaseModel):
+    supplier: Optional[str] = None
+    invoice_number: Optional[str] = None
+    invoice_date: Optional[date] = None
+    prices_include_vat: bool = False
+    already_imported: Optional[int] = None     # id of an applied import of the same invoice
+    filename: Optional[str] = None
+    file_hash: Optional[str] = None
+    lines: list[InvoiceReviewLine]
+
+class InvoiceApplyLine(BaseModel):
+    """A line as the owner confirmed it. The price is worked out again on the server."""
+    description: str
+    action: LineAction
+    ingredient_id: Optional[int] = None
+    new_ingredient_name: Optional[str] = None
+    pack_count: Optional[float] = None
+    pack_size: Optional[float] = None
+    pack_unit: Optional[PackUnit] = None
+    unit_price: Optional[float] = None
+
+class InvoiceApplyIn(BaseModel):
+    supplier: str = Field(min_length=1)
+    invoice_number: str = Field(min_length=1)
+    invoice_date: date
+    filename: Optional[str] = None
+    file_hash: Optional[str] = None
+    lines: list[InvoiceApplyLine]
+
+class ImportOut(BaseModel):
+    id: int
+    kind: ImportKind
+    filename: Optional[str] = None
+    supplier: Optional[str] = None
+    reference: Optional[str] = None
+    effective_date: date
+    status: ImportStatus
+    lines_applied: int
+    lines_ignored: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

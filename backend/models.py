@@ -1,7 +1,7 @@
 import enum
-from sqlalchemy import Column, ForeignKey, Integer, String, Float, Enum, Date, JSON
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Float, Enum, Date, DateTime, JSON
 from database import Base
-from datetime import date
+from datetime import date, datetime
 
 class User(Base):
     __tablename__ = "users"
@@ -14,11 +14,37 @@ class UnitType(enum.Enum):
     ML = "ml"       # base unit for anything by volume
     EACH = "each"   # base unit for countable things (1 egg, 1 lemon)
 
+class ImportKind(enum.Enum):
+    INVOICE = "invoice"
+    SALES = "sales"   # step 7c
+    MENU = "menu"     # step 7d
+
+class ImportStatus(enum.Enum):
+    APPLIED = "applied"
+    UNDONE = "undone"
+
+class Import(Base):
+    # One uploaded file that was reviewed and applied. Every row it created
+    # carries its id, so it can be traced and (for invoices and sales) undone.
+    __tablename__ = "imports"
+    id = Column(Integer, primary_key=True)
+    kind = Column(Enum(ImportKind), nullable=False)
+    filename = Column(String, nullable=True)
+    file_hash = Column(String, nullable=True)     # SHA-256 of the file; the copy is uploads/<hash>.<ext>
+    supplier = Column(String, nullable=True)
+    reference = Column(String, nullable=True)     # e.g. the invoice number
+    effective_date = Column(Date, nullable=False) # e.g. the invoice date
+    status = Column(Enum(ImportStatus), nullable=False, default=ImportStatus.APPLIED)
+    lines_applied = Column(Integer, nullable=False, default=0)
+    lines_ignored = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
+
 class Ingredient(Base):
     __tablename__ = "ingredients"
     id = Column(Integer, primary_key = True)
     name = Column(String, nullable=False)
     unit = Column(Enum(UnitType), nullable=False)
+    import_id = Column(Integer, ForeignKey(Import.id), nullable=True)   # set if an import created it
     # Prices live in IngredientPrice, one row per price seen, never overwritten.
 
 class PriceSource(enum.Enum):
@@ -38,6 +64,18 @@ class IngredientPrice(Base):
     source = Column(Enum(PriceSource), nullable=False)
     supplier = Column(String, nullable=True)
     effective_date = Column(Date, nullable=False)
+    import_id = Column(Integer, ForeignKey(Import.id), nullable=True)   # set if it came from an import
+
+class SupplierAlias(Base):
+    # A remembered match: this supplier's invoice line description means this
+    # ingredient (or: ignore it). Pre-filled on the next invoice, still reviewable.
+    # supplier and description are stored normalised (invoices.normalise).
+    __tablename__ = "supplier_aliases"
+    id = Column(Integer, primary_key=True)
+    supplier = Column(String, nullable=False)
+    description = Column(String, nullable=False)
+    ingredient_id = Column(Integer, ForeignKey(Ingredient.id), nullable=True)   # None when ignore is True
+    ignore = Column(Boolean, nullable=False, default=False)
 
 class DishType(enum.Enum):
     STARTER = "Starter"

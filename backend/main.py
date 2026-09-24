@@ -8,8 +8,8 @@ import schemas
 from fastapi import Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from database import get_db
-from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, MenuPriceOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn, BenchmarkSyncOut
-from models import Dish, DishIngredient, Ingredient, IngredientPrice, MenuPrice, MenuPriceSource, SalesRecord
+from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, MenuPriceOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn, BenchmarkSyncOut, InvoiceDraft, InvoiceReviewOut, InvoiceApplyIn, ImportOut
+from models import Dish, DishIngredient, Import, Ingredient, IngredientPrice, MenuPrice, MenuPriceSource, SalesRecord
 from recipe_ai import estimate_recipe
 from matching import match_recipe_ingredients
 from datetime import date, timedelta
@@ -20,6 +20,7 @@ from periods import resolve_range
 from onboarding import setup_status
 from seed_demo import backup_database, reset_database
 from benchmarks import sync_benchmarks
+from invoices import ImportProblem, apply_invoice, review_invoice, undo_import
 
 
 Base.metadata.create_all(bind=engine)
@@ -451,3 +452,30 @@ def update_benchmarks(db: Session = Depends(get_db)):
     prices. Never removes anything or touches the restaurant's own prices.
     """
     return sync_benchmarks(db)
+
+# --- Imports ------------------------------------------------------------------------
+
+@app.get("/imports", response_model=list[ImportOut])
+def list_imports(db: Session = Depends(get_db)):
+    return db.query(Import).order_by(Import.created_at.desc(), Import.id.desc()).all()
+
+@app.post("/imports/invoice/review", response_model=InvoiceReviewOut)
+def review_invoice_draft(draft: InvoiceDraft, db: Session = Depends(get_db)):
+    """Matches and checks an invoice already read into lines. Saves nothing."""
+    return review_invoice(db, draft)
+
+@app.post("/imports/invoice/apply", response_model=ImportOut)
+def apply_invoice_route(data: InvoiceApplyIn, db: Session = Depends(get_db)):
+    try:
+        return apply_invoice(db, data)
+    except ImportProblem as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+@app.post("/imports/{import_id}/undo", response_model=ImportOut)
+def undo_import_route(import_id: int, db: Session = Depends(get_db)):
+    try:
+        return undo_import(db, import_id)
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Import not found")
+    except ImportProblem as e:
+        raise HTTPException(status_code=422, detail=str(e))
