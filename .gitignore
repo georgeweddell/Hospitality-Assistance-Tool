@@ -8,7 +8,7 @@ __pycache__/
 *.pyc
 
 # database
-backend/menu.db
+backend/menu*.db
 
 # node
 frontend/node_modules/

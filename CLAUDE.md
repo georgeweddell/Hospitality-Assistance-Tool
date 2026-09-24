@@ -40,7 +40,8 @@ A web app for small independent UK restaurants. It turns a menu into a costed, r
   - `menu_engineering.py`: classification, action list, incomplete-dish detection.
   - `recipe_ai.py`: recipe-estimation prompt and the Anthropic call.
   - `matching.py`: exact match first, then `difflib` fuzzy suggestions.
-  - `seed.py`, `seed_Phase4.py`, `seed_dish.py`, `seed_recipes.py`: seed scripts. `seed_recipes.py` calls the real API and auto-accepts matches (test data only).
+  - `seed_demo.py`: wipes and rebuilds `menu.db` with realistic demo data (a month at a small UK pizzeria, hand-written recipes). It backs up the old database to `menu.backup-<timestamp>.db` first. This is the way to reset the demo.
+  - `seed_recipes.py`: re-estimates every dish's recipe with the real API and auto-accepts matches. It overwrites the hand-written demo recipes, so it's for AI testing only.
   - `ai_test_v1.py`, `ai_test_v2.py`, `dish_check.py`, `match_check.py`, `costing_check.py`, `ingredient_list.py`: one-off scripts written during development. They are **not** pytest tests. Don't name scripts `test_*.py`, or pytest will run them.
   - `tests/`: pytest tests. `conftest.py` gives every test a fresh in-memory database, never `menu.db`. `pytest.ini` sets the test path.
   - The SQLite database is `backend/menu.db` (git-ignored). The API key lives in `backend/.env` (git-ignored).

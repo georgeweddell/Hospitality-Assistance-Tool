@@ -52,9 +52,7 @@ python -m venv venv
 venv\Scripts\activate        # Windows
 pip install -r requirements.txt
 # create a .env file with ANTHROPIC_API_KEY=your_key_here
-python seed.py               # seed ingredients
-python seed_phase4.py        # seed sample dishes + sales
-python seed_recipes.py       # generate AI-estimated recipes for seeded dishes
+python seed_demo.py          # build a realistic demo database (backs up any existing one)
 uvicorn main:app --reload    # runs on http://localhost:8000
 ```
 
