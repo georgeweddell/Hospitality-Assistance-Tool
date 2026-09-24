@@ -66,24 +66,48 @@ def list_incomplete_dishes(db) -> list[IncompleteDishOut]:
 
     return results
 
-def get_category_units_sold(db, dishes: list[Dish]) -> int:
+def get_category_stats(db, dishes: list[Dish]) -> dict:
+    """
+    Costs and units sold for every dish in a set, worked out ONCE.
+
+    The helpers below all read from this instead of querying the database
+    themselves. Before, every dish re-costed its whole category, so a category
+    of n dishes was costed n x n times. Now it's n. The formulas are unchanged.
+
+    Returns {"units": {dish_id: units},
+             "costs": {dish_id: (plate_cost, margin_pounds, margin_percent)},
+             "margins": {dish_id: margin_pounds}}.
+    """
+    units = {}
+    costs = {}
+    margins = {}
+    for dish in dishes:
+        units[dish.id] = get_dish_units_sold(db, dish.id)
+        costs[dish.id] = cost_dish(db, dish.id)
+        plate_cost, margin_pounds, margin_percent = costs[dish.id]
+        margins[dish.id] = margin_pounds
+
+    return {"units": units, "costs": costs, "margins": margins}
+
+
+def get_category_units_sold(stats: dict) -> int:
     """
     Sums units sold across a given set of dishes.
     """
     total = 0
-    for dish in dishes:
-        total += get_dish_units_sold(db, dish.id)
+    for dish_units in stats["units"].values():
+        total += dish_units
 
     return total
 
 
-def get_dish_menu_mix_percent(db, dish_id: int, dishes: list[Dish]) -> float:
+def get_dish_menu_mix_percent(dish_id: int, stats: dict) -> float:
     """
     A dish's share of units sold within its category, as a percentage.
     Returns 0 if the category has no recorded sales at all.
     """
-    dish_units = get_dish_units_sold(db, dish_id)
-    category_units = get_category_units_sold(db, dishes)
+    dish_units = stats["units"][dish_id]
+    category_units = get_category_units_sold(stats)
 
     if category_units == 0:
         return 0
@@ -91,19 +115,18 @@ def get_dish_menu_mix_percent(db, dish_id: int, dishes: list[Dish]) -> float:
     return (dish_units / category_units) * 100
 
 
-def get_category_weighted_avg_margin(db, dishes: list[Dish]) -> float:
+def get_category_weighted_avg_margin(stats: dict) -> float:
     """
     Weighted average contribution margin (£) across a set of dishes,
     weighted by each dish's units sold.
     Returns 0 if the set has no recorded sales at all.
     """
     weighted_margin_total = 0
-    for dish in dishes:
-        plate_cost, margin_pounds, margin_percent = cost_dish(db, dish.id)
-        dish_units = get_dish_units_sold(db, dish.id)
+    for dish_id, margin_pounds in stats["margins"].items():
+        dish_units = stats["units"][dish_id]
         weighted_margin_total += margin_pounds * dish_units
 
-    category_units = get_category_units_sold(db, dishes)
+    category_units = get_category_units_sold(stats)
 
     if category_units == 0:
         return 0
@@ -111,23 +134,24 @@ def get_category_weighted_avg_margin(db, dishes: list[Dish]) -> float:
     return weighted_margin_total / category_units
 
 def classify_dish(db, dish_id: int, category: DishType,
-                  eligible_dishes: list[Dish]) -> DishClassificationOut:
+                  eligible_dishes: list[Dish], stats: dict) -> DishClassificationOut:
     """
     Classifies a single dish into one of four menu-engineering quadrants:
     Star, Plowhorse, Puzzle, or Dog.
 
     eligible_dishes is the analysis population for the category — passed in
-    rather than queried, so the caller decides once who's in.
+    rather than queried, so the caller decides once who's in. stats is
+    get_category_stats for that same population, worked out once by the caller.
     """
     n = len(eligible_dishes)
     popularity_threshold = 0.7 * (100 / n)
 
-    dish_menu_mix = get_dish_menu_mix_percent(db, dish_id, eligible_dishes)
-    weighted_avg_margin = get_category_weighted_avg_margin(db, eligible_dishes)
+    dish_menu_mix = get_dish_menu_mix_percent(dish_id, stats)
+    weighted_avg_margin = get_category_weighted_avg_margin(stats)
 
     dish = db.query(Dish).filter(Dish.id == dish_id).first()
 
-    plate_cost, margin_pounds, margin_percent = cost_dish(db, dish_id)
+    plate_cost, margin_pounds, margin_percent = stats["costs"][dish_id]
 
     is_popular = dish_menu_mix >= popularity_threshold
     is_profitable = margin_pounds >= weighted_avg_margin
@@ -149,7 +173,7 @@ def classify_dish(db, dish_id: int, category: DishType,
         plate_cost=plate_cost,
         margin_pounds=margin_pounds,
         margin_percent=margin_percent,
-        units_sold=get_dish_units_sold(db, dish_id),
+        units_sold=stats["units"][dish_id],
         menu_mix_percent=dish_menu_mix,
         popularity_threshold=popularity_threshold,
         profitability_threshold=weighted_avg_margin,
@@ -167,9 +191,10 @@ def classify_all_dishes(db) -> list[DishClassificationOut]:
 
     for category in DishType:
         eligible = get_eligible_dishes(db, category)
+        stats = get_category_stats(db, eligible)
 
         for dish in eligible:
-            results.append(classify_dish(db, dish.id, category, eligible))
+            results.append(classify_dish(db, dish.id, category, eligible, stats))
 
     return results
 
@@ -187,11 +212,12 @@ def build_action_list(db) -> list[ActionItemOut]:
         if not eligible:
             continue
 
-        category_units = get_category_units_sold(db, eligible)
+        stats = get_category_stats(db, eligible)
+        category_units = get_category_units_sold(stats)
 
         for dish in eligible:
-            c = classify_dish(db, dish.id, category, eligible)
-            dish_units = get_dish_units_sold(db, dish.id)
+            c = classify_dish(db, dish.id, category, eligible, stats)
+            dish_units = stats["units"][dish.id]
 
             if c.quadrant == QuadrantType.STAR:
                 continue  # no action needed

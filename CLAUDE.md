@@ -42,7 +42,7 @@ Step 2 works (dish page with recipe editor and AI draft), and step 5 works at me
   - `database.py`: the engine, `get_db`, and a stub `get_current_user` (placeholder for auth).
   - `costing.py`: costing engine (`cost_dish`), and `best_price`, which chooses which dated price to use.
   - Changing `models.py` needs the database rebuilt (`seed_demo.py`), because there's no migration tool yet (Alembic is needed before deployment). Restart the backend afterwards, because `--reload` can leave it running a half-updated copy.
-  - `menu_engineering.py`: classification, action list, incomplete-dish detection.
+  - `menu_engineering.py`: classification, action list, incomplete-dish detection. `get_category_stats` costs each dish and counts its units **once per category**; the helpers and `classify_dish` read from it. Don't reintroduce per-dish recalculation of category totals, which made the dashboard about 6× slower.
   - `recipe_ai.py`: recipe-estimation prompt and the Anthropic call.
   - `matching.py`: exact match first, then `difflib` fuzzy suggestions.
   - `seed_demo.py`: wipes and rebuilds `menu.db` with realistic demo data (a month at a small UK pizzeria, hand-written recipes). It backs up the old database to `menu.backup-<timestamp>.db` first. This is the way to reset the demo.
@@ -116,7 +116,6 @@ These were hard-won. Don't undo them.
 ## Known open items
 
 1. **VAT decision (George).** Menu prices include 20% VAT, but margin % is currently calculated on the VAT-inclusive price. Industry reports gross margin excluding VAT. This would change the costing engine.
-2. **The dashboard endpoints are slow** (several seconds): `menu_engineering.py` runs many small queries per dish. Worth fixing before deployment. That file is core logic, so propose the change first.
 
 ## Roadmap (in order)
 
