@@ -8,8 +8,8 @@ import schemas
 from fastapi import Depends, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 from database import get_db
-from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, MenuPriceOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn, BenchmarkSyncOut, InvoiceDraft, InvoiceReviewOut, InvoiceApplyIn, ImportOut
-from models import Dish, DishIngredient, Import, Ingredient, IngredientPrice, MenuPrice, MenuPriceSource, SalesRecord
+from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, MenuPriceOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn, BenchmarkSyncOut, InvoiceDraft, InvoiceReviewOut, InvoiceApplyIn, ImportOut, SalesReviewIn, SalesReviewOut, SalesApplyIn
+from models import Dish, DishIngredient, Import, ImportKind, Ingredient, IngredientPrice, MenuPrice, MenuPriceSource, SalesRecord, TillItemAlias
 from recipe_ai import estimate_recipe
 from matching import match_recipe_ingredients
 from datetime import date, timedelta
@@ -22,6 +22,8 @@ from seed_demo import backup_database, reset_database
 from benchmarks import sync_benchmarks
 from invoices import ImportProblem, apply_invoice, review_invoice, undo_import
 from invoice_ai import read_invoice
+from tills import apply_sales, decode, review_sales, undo_sales_import
+import re
 import hashlib
 from pathlib import Path
 
@@ -194,6 +196,7 @@ def delete_dish(dish_id: int, db: Session = Depends(get_db)):
     db.query(DishIngredient).filter(DishIngredient.dish_id == dish_id).delete()
     db.query(SalesRecord).filter(SalesRecord.dish_id == dish_id).delete()
     db.query(MenuPrice).filter(MenuPrice.dish_id == dish_id).delete()
+    db.query(TillItemAlias).filter(TillItemAlias.dish_id == dish_id).delete()
     db.delete(dish)
     db.commit()
 
@@ -518,11 +521,42 @@ def apply_invoice_route(data: InvoiceApplyIn, db: Session = Depends(get_db)):
     except ImportProblem as e:
         raise HTTPException(status_code=422, detail=str(e))
 
+def load_upload(file_hash, extension):
+    """The text of a file uploaded earlier, found by its hash."""
+    # The hash comes from the browser and becomes part of a file path, so it
+    # must be exactly a SHA-256 hex string (no "../" tricks).
+    if not re.fullmatch(r"[0-9a-f]{64}", file_hash or ""):
+        raise HTTPException(status_code=422, detail="Unknown file")
+    path = UPLOAD_DIR / f"{file_hash}{extension}"
+    if not path.exists():
+        raise HTTPException(status_code=422, detail="That upload has gone. Upload the file again.")
+    return decode(path.read_bytes())
+
+@app.post("/imports/sales/review", response_model=SalesReviewOut)
+def review_sales_route(data: SalesReviewIn, db: Session = Depends(get_db)):
+    """Reads an uploaded till export with the chosen columns and matches it. Saves nothing."""
+    text = load_upload(data.file_hash, ".csv")
+    try:
+        return review_sales(db, text, data.file_hash, data.filename, data.mapping, data.choices)
+    except ImportProblem as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+@app.post("/imports/sales/apply", response_model=ImportOut)
+def apply_sales_route(data: SalesApplyIn, db: Session = Depends(get_db)):
+    text = load_upload(data.file_hash, ".csv")
+    try:
+        return apply_sales(db, text, data)
+    except ImportProblem as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
 @app.post("/imports/{import_id}/undo", response_model=ImportOut)
 def undo_import_route(import_id: int, db: Session = Depends(get_db)):
-    try:
-        return undo_import(db, import_id)
-    except LookupError:
+    record = db.get(Import, import_id)
+    if record is None:
         raise HTTPException(status_code=404, detail="Import not found")
+    try:
+        if record.kind == ImportKind.SALES:
+            return undo_sales_import(db, record)
+        return undo_import(db, import_id)
     except ImportProblem as e:
         raise HTTPException(status_code=422, detail=str(e))

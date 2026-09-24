@@ -33,7 +33,8 @@ class Import(Base):
     file_hash = Column(String, nullable=True)     # SHA-256 of the file; the copy is uploads/<hash>.<ext>
     supplier = Column(String, nullable=True)
     reference = Column(String, nullable=True)     # e.g. the invoice number
-    effective_date = Column(Date, nullable=False) # e.g. the invoice date
+    effective_date = Column(Date, nullable=False) # e.g. the invoice date; for sales, the first day
+    period_end = Column(Date, nullable=True)      # for sales: the last day the file covers
     status = Column(Enum(ImportStatus), nullable=False, default=ImportStatus.APPLIED)
     lines_applied = Column(Integer, nullable=False, default=0)
     lines_ignored = Column(Integer, nullable=False, default=0)
@@ -125,6 +126,29 @@ class SalesRecord(Base):
     units_sold = Column(Integer, nullable=False)
     period_start = Column(Date, nullable=False)
     period_end = Column(Date, nullable=False)
+    import_id = Column(Integer, ForeignKey(Import.id), nullable=True)   # set if it came from a till import
+
+class TillMapping(Base):
+    # Remembered column choices for a till export, recognised by its header row
+    # (tills.header_signature), so the same export layout is filled in next time.
+    __tablename__ = "till_mappings"
+    id = Column(Integer, primary_key=True)
+    header_signature = Column(String, nullable=False, unique=True)
+    date_column = Column(String, nullable=False)
+    item_column = Column(String, nullable=False)
+    quantity_column = Column(String, nullable=False)
+    date_format = Column(String, nullable=False)       # e.g. "%d/%m/%Y"
+    refund_column = Column(String, nullable=True)      # a column marking refunds, if the till uses one
+    refund_value = Column(String, nullable=True)       # the value in it that means "refund"
+
+class TillItemAlias(Base):
+    # A remembered match: this till item name means this dish (or: ignore it).
+    # item is stored normalised (invoices.normalise).
+    __tablename__ = "till_item_aliases"
+    id = Column(Integer, primary_key=True)
+    item = Column(String, nullable=False, unique=True)
+    dish_id = Column(Integer, ForeignKey(Dish.id), nullable=True)   # None when ignore is True
+    ignore = Column(Boolean, nullable=False, default=False)
 
 class QuadrantType(enum.Enum):
     STAR = "Star"

@@ -326,3 +326,79 @@ class ImportOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# --- Till (sales) import -------------------------------------------------------------
+
+# The date formats a till export can use. Claude picks one; code does the parsing.
+DateFormat = Literal["%d/%m/%Y", "%Y-%m-%d", "%m/%d/%Y", "%d-%m-%Y", "%d.%m.%Y", "%d/%m/%y"]
+
+class TillMappingIn(BaseModel):
+    """Which column is which in a till export (column names as in its header row)."""
+    date_column: str = Field(min_length=1)
+    item_column: str = Field(min_length=1)
+    quantity_column: str = Field(min_length=1)
+    date_format: DateFormat
+    refund_column: Optional[str] = None     # a column marking refunds, if any
+    refund_value: Optional[str] = None      # the value in it that means "refund", e.g. "Refund"
+
+    class Config:
+        from_attributes = True
+
+class TillItemChoice(BaseModel):
+    item: str                               # the till's item name, as in the file
+    action: Literal["dish", "ignore"]
+    dish_id: Optional[int] = None
+
+class TillItemHint(BaseModel):
+    """Claude's suggestion for one till item name."""
+    item: str
+    kind: Literal["dish", "other"] = "dish"   # "other": drinks, add-ons, service charges
+    likely_dish: Optional[str] = None         # a dish name from the menu, exactly as written
+
+class SalesReviewIn(BaseModel):
+    file_hash: str
+    filename: Optional[str] = None
+    mapping: Optional[TillMappingIn] = None   # None: the remembered mapping for this layout
+    choices: list[TillItemChoice] = []        # the owner's changes; items not listed use the defaults
+
+class DishSuggestion(BaseModel):
+    id: int
+    name: str
+
+class SalesItemOut(BaseModel):
+    item: str
+    units: int                                # net units across the file
+    days: int                                 # days it sold on
+    action: Literal["dish", "ignore"]
+    dish_id: Optional[int] = None
+    remembered: bool = False
+    kind: Literal["dish", "other"] = "dish"
+    suggestions: list[DishSuggestion] = []
+    conflict_days: int = 0                    # days skipped: sales already entered another way
+    replace_days: int = 0                     # days replacing an earlier till import
+    flags: list[Literal["choose", "off_menu", "conflict", "replaces"]] = []
+
+class SalesReviewOut(BaseModel):
+    file_hash: str
+    filename: Optional[str] = None
+    header: list[str]
+    samples: list[list[str]]                  # the first rows, to help choose columns
+    mapping: Optional[TillMappingIn] = None
+    mapping_remembered: bool = False
+    already_imported: Optional[int] = None
+    rows: int = 0
+    skipped: dict[str, int] = {}              # reason -> rows skipped
+    first_date: Optional[date] = None
+    last_date: Optional[date] = None
+    units: int = 0                            # units that will be saved
+    dish_days: int = 0                        # daily totals that will be saved
+    replace_days: int = 0
+    conflict_days: int = 0
+    items: list[SalesItemOut] = []
+
+class SalesApplyIn(BaseModel):
+    file_hash: str
+    filename: Optional[str] = None
+    mapping: TillMappingIn
+    choices: list[TillItemChoice]
