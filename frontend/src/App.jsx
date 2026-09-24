@@ -73,7 +73,17 @@ function App() {
       .then((c) => {
         if (ignore) return
         setLastSale(c.last_date)
-        setRange((r) => r ?? { key: 'latest-month', ...presets(c.last_date)[0] })
+        setRange((r) => {
+          const options = presets(c.last_date)
+          if (!r) return { key: 'latest-month', ...options[0] }
+          // A preset follows the data: after new sales are imported, "Latest month"
+          // moves on to the new month. A custom range stays as chosen.
+          const preset = options.find((p) => p.key === r.key)
+          if (!preset || (preset.from === r.from && preset.to === r.to)) return r
+          const moved = { key: r.key, ...preset }
+          saveRange(moved)
+          return moved
+        })
       })
       .catch((err) => { if (!ignore) setError(err.message) })
     return () => { ignore = true }
