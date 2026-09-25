@@ -20,6 +20,15 @@ const MISSING = {
 
 const PLURAL = { Starter: 'Starters', Main: 'Mains', Side: 'Sides', Dessert: 'Desserts' }
 
+// The all-dishes view shows each category as its own tinted block, each with
+// one odd corner, like a menu board.
+const BLOCK = {
+  Main: 'bg-surface corner-bl',
+  Starter: 'bg-mustard-soft corner-tl',
+  Side: 'bg-basil-soft corner-tr',
+  Dessert: 'bg-plum-soft corner-br',
+}
+
 // Remember the chosen tab and filter, so "← Menu" from a dish page comes back
 // to the same view. Browser storage can be unavailable, so failures are ignored.
 const STORAGE_KEY = 'menu-view'
@@ -56,22 +65,23 @@ function Status({ dish, range, analysed, reasons }) {
   )
 }
 
-function DishTable({ dishes, range, analysedById, reasonsById }) {
+// `compact`: narrower columns, for the half-width category blocks.
+function DishTable({ dishes, range, analysedById, reasonsById, compact = false }) {
   return (
     <div className="overflow-x-auto">
-      <table className="table min-w-[600px] table-fixed">
+      <table className={`table table-fixed ${compact ? 'min-w-[480px]' : 'min-w-[600px]'}`}>
         <colgroup>
           <col />
-          <col className="w-24" />
-          <col className="w-28" />
-          <col className="w-24" />
-          <col className="w-48" />
+          <col className={compact ? 'w-20' : 'w-24'} />
+          <col className={compact ? 'w-20' : 'w-28'} />
+          <col className={compact ? 'w-20' : 'w-24'} />
+          <col className={compact ? 'w-36' : 'w-48'} />
         </colgroup>
         <thead>
           <tr>
             <th>Dish</th>
             <th className="text-right">Price</th>
-            <th className="text-right">Plate cost</th>
+            <th className="text-right">{compact ? 'Cost' : 'Plate cost'}</th>
             <th className="text-right">Margin</th>
             <th>Status</th>
           </tr>
@@ -109,7 +119,7 @@ function DishTable({ dishes, range, analysedById, reasonsById }) {
 function MenuPage({ allDishes, analysed, incomplete, setup, range, onChanged }) {
   // Statuses are for the chosen period: a dish off the menu then shows "Not on the menu".
   const saved = loadView()
-  const [category, setCategory] = useState(saved.category ?? CATEGORIES.find((c) => allDishes.some((d) => d.category === c)) ?? 'all')
+  const [category, setCategory] = useState(saved.category ?? 'all')
   const [status, setStatus] = useState(saved.status && saved.status !== 'attention' ? saved.status : 'all')
   const [search, setSearch] = useState('')
   const [adding, setAdding] = useState(false)
@@ -245,11 +255,17 @@ function MenuPage({ allDishes, analysed, incomplete, setup, range, onChanged }) 
             )}
           </div>
         ) : grouped ? (
-          grouped.map(({ c, dishes }) => (
-            <Card key={c ?? 'none'} title={c ? PLURAL[c] : 'No category'} aside={<span className="num">{dishes.length}</span>} flush>
-              <DishTable dishes={dishes} range={range} analysedById={analysedById} reasonsById={reasonsById} />
-            </Card>
-          ))
+          <div className="grid items-start gap-4 xl:grid-cols-2">
+            {grouped.map(({ c, dishes }) => (
+              <section key={c ?? 'none'} className={`card overflow-hidden ${BLOCK[c] ?? ''}`}>
+                <div className="card-header">
+                  <h2 className="figure text-[2.75rem]">{c ? PLURAL[c].toLowerCase() : 'no category'}</h2>
+                  <span className="num text-sm text-muted">{dishes.length}</span>
+                </div>
+                <DishTable dishes={dishes} range={range} analysedById={analysedById} reasonsById={reasonsById} compact />
+              </section>
+            ))}
+          </div>
         ) : (
           <Card flush>
             <DishTable dishes={shown} range={range} analysedById={analysedById} reasonsById={reasonsById} />

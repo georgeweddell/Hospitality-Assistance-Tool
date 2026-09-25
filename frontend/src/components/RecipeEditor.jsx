@@ -136,7 +136,7 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
             </Hint>
           )}
           <button type="button" onClick={askToEstimate} disabled={estimating || saving} className="btn btn-secondary btn-sm">
-            {estimating ? 'Estimating…' : '✦ Estimate with AI'}
+            {estimating ? 'Estimating…' : 'Estimate with AI'}
           </button>
         </span>
       }

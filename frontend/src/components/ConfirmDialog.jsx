@@ -24,7 +24,7 @@ function ConfirmDialog({ open, title, children, confirmLabel, busy = false, onCo
       className="m-auto w-[min(28rem,calc(100vw-2rem))] rounded-[14px] border border-line bg-surface p-0 text-ink shadow-xl backdrop:bg-ink/40"
     >
       <div className="space-y-3 p-6">
-        <h2 className="section-title">{title}</h2>
+        <h2 className="section-title normal-case">{title}</h2>
         <div className="text-muted">{children}</div>
       </div>
       <div className="flex justify-end gap-2 border-t border-line bg-bg px-6 py-4">

@@ -40,10 +40,11 @@ const byMenuOrder = (a, b) =>
   (CATEGORIES.indexOf(a.category) + 1 || 99) - (CATEGORIES.indexOf(b.category) + 1 || 99) || a.name.localeCompare(b.name)
 
 // A small icon button; its label shows as the browser's tooltip.
-function Icon({ label, onClick, disabled, children }) {
+// A small text button for a row's actions (words, not glyphs).
+function RowButton({ label, onClick, disabled, children }) {
   return (
     <button type="button" onClick={onClick} disabled={disabled} aria-label={label} title={label}
-            className="btn-icon text-base hover:bg-accent-soft hover:text-accent disabled:opacity-40">
+            className="btn btn-secondary btn-sm ml-1.5">
       {children}
     </button>
   )
@@ -159,7 +160,7 @@ function RecipesTable({ onChanged }) {
         </div>
         <button type="button" className="btn btn-primary" disabled={running !== null || missing.length === 0}
                 onClick={() => setAsking({ ids: missing, replaces: false })}>
-          ✦ Estimate {missing.length} with AI
+          Estimate {missing.length} with AI
         </button>
       </div>
 
@@ -235,12 +236,12 @@ function RecipesTable({ onChanged }) {
                       </div>
                     </td>
                     <td className="whitespace-nowrap text-right">
-                      <Icon label="Estimate with AI" disabled={working || running !== null}
-                            onClick={() => setAsking({ ids: [row.dish_id], name: row.name, replaces: row.status !== 'none' })}>✦</Icon>
-                      <Icon label={open?.id === row.dish_id ? 'Close' : 'Edit recipe'} disabled={working}
-                            onClick={() => edit(row.dish_id)}>✎</Icon>
+                      <RowButton label="Estimate with AI" disabled={working || running !== null}
+                                 onClick={() => setAsking({ ids: [row.dish_id], name: row.name, replaces: row.status !== 'none' })}>estimate</RowButton>
+                      <RowButton label={open?.id === row.dish_id ? 'Close' : 'Edit recipe'} disabled={working}
+                                 onClick={() => edit(row.dish_id)}>{open?.id === row.dish_id ? 'close' : 'edit'}</RowButton>
                       {row.status === 'ai_unchecked' && (
-                        <Icon label="Looks right" disabled={working} onClick={() => looksRight(row.dish_id)}>✓</Icon>
+                        <RowButton label="Looks right" disabled={working} onClick={() => looksRight(row.dish_id)}>looks right</RowButton>
                       )}
                     </td>
                   </tr>,
