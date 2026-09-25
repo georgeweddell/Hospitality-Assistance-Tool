@@ -9,6 +9,7 @@ import QuadrantBadge from './QuadrantBadge'
 import { quadrantColor, quadrantTextColor } from '../quadrants'
 import { percent, pounds } from '../format'
 import { placeLabels } from '../labelPlacement'
+import { navigate } from '../useHashRoute'
 
 // Chart geometry, shared by the chart and the label placement.
 const HEIGHT = 340
@@ -34,7 +35,9 @@ function zoneLabel(text, quadrant, position) {
 
 // One category's dishes plotted by popularity (menu mix) against margin, with
 // the four quadrants shaded and named so each dish's position reads at a glance.
-function QuadrantChart({ dishes, category }) {
+// Only the dishes in `labelled` (a Set of dish ids) are named on the chart, so
+// names don't pile up; every dish shows its name on hover, and a click opens it.
+function QuadrantChart({ dishes, category, labelled = new Set() }) {
   const [width, setWidth] = useState(520)
   const inCategory = dishes.filter((d) => d.category === category)
   const popLine = inCategory[0].popularity_threshold
@@ -51,8 +54,9 @@ function QuadrantChart({ dishes, category }) {
   const xTicks = []
   for (let t = 0; t <= xMax; t += xStep) xTicks.push(t)
 
+  const named = inCategory.filter((d) => labelled.has(d.dish_id))
   const placement = placeLabels(
-    inCategory.map((d) => ({ key: d.dish_id, x: d.menu_mix_percent, y: d.margin_pounds, text: d.dish_name })),
+    named.map((d) => ({ key: d.dish_id, x: d.menu_mix_percent, y: d.margin_pounds, text: d.dish_name })),
     {
       xDomain: [0, xMax],
       yDomain: [yMin, yMax],
@@ -66,6 +70,7 @@ function QuadrantChart({ dishes, category }) {
   const renderLabel = ({ x, y, width: w, height: h, index }) => {
     const dish = inCategory[index]
     const p = placement[dish.dish_id]
+    if (!p) return null   // not one of the named dishes: shown on hover instead
     return (
       <text x={x + w / 2 + p.dx} y={y + h / 2 + p.dy} textAnchor={p.anchor}
             fill="var(--ink)" fontSize={12} fontWeight={500}>
@@ -76,7 +81,7 @@ function QuadrantChart({ dishes, category }) {
 
   return (
     <Card
-      title={category}
+      title={`${category}s`}
       aside={
         <span className="inline-flex items-center gap-2">
           <span className="num">{inCategory.length} dishes</span>
@@ -117,7 +122,8 @@ function QuadrantChart({ dishes, category }) {
             <Tooltip content={<DishTooltip />} cursor={false} />
             <ReferenceLine x={popLine} strokeDasharray="4 4" />
             <ReferenceLine y={profLine} strokeDasharray="4 4" />
-            <Scatter data={inCategory} isAnimationActive={false}>
+            <Scatter data={inCategory} isAnimationActive={false} cursor="pointer"
+                     onClick={(point) => navigate(`menu/${point.dish_id ?? point.payload?.dish_id}`)}>
               {inCategory.map((dish) => (
                 <Cell key={dish.dish_id} fill={quadrantColor(dish.quadrant)} stroke="var(--surface)" strokeWidth={2} />
               ))}

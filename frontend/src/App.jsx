@@ -5,7 +5,7 @@ import { presets, previousRange, rangeQuery } from './dateRange'
 import Layout from './components/Layout'
 import OverviewPage from './components/OverviewPage'
 import ActionList from './components/ActionList'
-import QuadrantChart from './components/QuadrantChart'
+import InsightsPage from './components/InsightsPage'
 import MenuPage from './components/MenuPage'
 import DishPage from './components/DishPage'
 import IngredientsPage from './components/IngredientsPage'
@@ -16,7 +16,6 @@ import SetupPage from './components/SetupPage'
 import SetupChecklist from './components/SetupChecklist'
 import { setupComplete } from './setup'
 import RangePicker from './components/RangePicker'
-import { QuadrantLegend } from './components/QuadrantBadge'
 
 const TITLES = {
   overview: 'Overview',
@@ -196,17 +195,7 @@ function App() {
   } else if (page === 'actions') {
     content = <ActionList actions={data.actions} dishes={data.dishes} />
   } else if (page === 'analysis') {
-    const categories = [...new Set(data.dishes.map((d) => d.category))].filter(Boolean)
-    content = (
-      <div className="space-y-5">
-        <QuadrantLegend />
-        <div className="grid gap-5 xl:grid-cols-2">
-          {categories.map((category) => (
-            <QuadrantChart key={category} category={category} dishes={data.dishes} />
-          ))}
-        </div>
-      </div>
-    )
+    content = <InsightsPage dishes={data.dishes} prevDishes={data.prevDishes} actions={data.actions} range={data.range} />
   } else {
     content = (
       <OverviewPage dishes={data.dishes} prevDishes={data.prevDishes} actions={data.actions}

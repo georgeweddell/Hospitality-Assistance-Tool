@@ -1,42 +1,12 @@
+import Delta from './Delta'
 import Hint from './Hint'
 import QuadrantBadge from './QuadrantBadge'
-import { QUADRANT_ORDER, quadrantColor, quadrantTextColor } from '../quadrants'
+import { QUADRANT_ORDER, quadrantColor } from '../quadrants'
 import { percent, poundsRounded } from '../format'
 import { isFullMonth, previousLabel } from '../dateRange'
 import { IMPACT_EXPLAINED, explain } from '../actionText'
 import { navigate } from '../useHashRoute'
-
-// Totals for a set of analysed dishes.
-//   Contribution = sum of (margin x units sold)
-//   Sales        = sum of (menu price x units sold)
-//   Gross margin = contribution / sales
-function summarise(dishes) {
-  let contribution = 0
-  let sales = 0
-  let units = 0
-  for (const d of dishes) {
-    contribution += d.margin_pounds * d.units_sold
-    sales += d.menu_price * d.units_sold
-    units += d.units_sold
-  }
-  return { contribution, sales, units, grossMargin: sales > 0 ? (contribution / sales) * 100 : 0 }
-}
-
-const pctChange = (now, before) => (before > 0 ? ((now - before) / before) * 100 : null)
-
-// ▲ / ▼ with the size of the change. Rises in green; falls stay neutral.
-function Delta({ value, format = (v) => `${v}%` }) {
-  if (value == null) return null
-  const rounded = Math.round(value * 10) / 10
-  if (rounded === 0) return <span className="chip chip-muted num">=</span>
-  const up = rounded > 0
-  return (
-    <span className={`chip num ${up ? '' : 'chip-muted'}`}
-          style={up ? { color: quadrantTextColor('Star'), backgroundColor: `${quadrantColor('Star')}1f` } : undefined}>
-      {up ? '▲' : '▼'} {format(Math.abs(rounded))}
-    </span>
-  )
-}
+import { pctChange, summarise } from '../figures'
 
 function Figure({ label, value, children }) {
   return (
