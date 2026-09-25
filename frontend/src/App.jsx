@@ -176,7 +176,7 @@ function App() {
   } else if (page === 'menu') {
     content = (
       <MenuPage allDishes={data.allDishes} analysed={data.dishes} incomplete={data.incomplete}
-                range={data.range} onChanged={refresh} />
+                setup={data.setup} range={data.range} onChanged={refresh} />
     )
   } else if (page === 'sales') {
     content = <SalesPage range={data.range} coverage={data.coverage} onSaved={refresh} />
@@ -187,7 +187,7 @@ function App() {
         <SetupChecklist status={data.setup} />
         {hasSales && (
           <OverviewPage dishes={data.dishes} prevDishes={data.prevDishes} actions={data.actions}
-                        allDishes={data.allDishes} range={data.range} />
+                        allDishes={data.allDishes} range={data.range} unchecked={data.setup?.unchecked_recipes} />
         )}
       </div>
     )
@@ -210,7 +210,7 @@ function App() {
   } else {
     content = (
       <OverviewPage dishes={data.dishes} prevDishes={data.prevDishes} actions={data.actions}
-                    allDishes={data.allDishes} range={data.range} />
+                    allDishes={data.allDishes} range={data.range} unchecked={data.setup?.unchecked_recipes} />
     )
   }
 

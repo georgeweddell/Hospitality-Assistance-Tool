@@ -4,6 +4,7 @@ import { QUADRANT_ORDER, quadrantColor, quadrantTextColor } from '../quadrants'
 import { percent, poundsRounded } from '../format'
 import { isFullMonth, previousLabel } from '../dateRange'
 import { IMPACT_EXPLAINED, explain } from '../actionText'
+import { navigate } from '../useHashRoute'
 
 // Totals for a set of analysed dishes.
 //   Contribution = sum of (margin x units sold)
@@ -92,7 +93,17 @@ function MoveCard({ action, dish, rank, perMonth }) {
   )
 }
 
-function OverviewPage({ dishes, prevDishes, actions, allDishes, range }) {
+// Opens the Menu page on its Recipes tab.
+function openRecipes() {
+  try {
+    sessionStorage.setItem('menu-view', JSON.stringify({ category: 'recipes', status: 'all' }))
+  } catch {
+    // the Menu page opens on its default tab instead
+  }
+  navigate('menu')
+}
+
+function OverviewPage({ dishes, prevDishes, actions, allDishes, range, unchecked = 0 }) {
   const now = summarise(dishes)
   const hasPrev = prevDishes.length > 0
   const before = hasPrev ? summarise(prevDishes) : null
@@ -109,6 +120,15 @@ function OverviewPage({ dishes, prevDishes, actions, allDishes, range }) {
 
   return (
     <div className="space-y-6">
+      {unchecked > 0 && (
+        <span className="flex items-center gap-2">
+          <button type="button" onClick={openRecipes} className="chip chip-accent num">
+            {unchecked} unchecked AI recipe{unchecked === 1 ? '' : 's'}
+          </button>
+          <Hint label="About unchecked recipes"
+                content="Recipes estimated by AI and not yet checked. Their costs are estimates until you check them." />
+        </span>
+      )}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Figure label="Contribution" value={poundsRounded(now.contribution)}>
           {hasPrev && <Delta value={pctChange(now.contribution, before.contribution)}

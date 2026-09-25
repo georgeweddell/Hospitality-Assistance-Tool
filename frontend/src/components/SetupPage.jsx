@@ -2,17 +2,18 @@ import { useState } from 'react'
 import Card from './Card'
 import ImportReview from './ImportReview'
 import ReadingProgress from './ReadingProgress'
-import RecipeStep from './RecipeStep'
+import RecipesTable from './RecipesTable'
 import UploadButton from './UploadButton'
 import { Tick } from './SetupChecklist'
 import { navigate } from '../useHashRoute'
 import { firstUnfinished, setupSteps } from '../setup'
 
 // A new restaurant's path, one step at a time: menu, prices, recipes, sales,
-// results. Prices come before recipes so invoice ingredients (and their
-// prices) are in the list when recipes are written. Each step reuses an existing screen (the import reviews, the recipe
-// editor). Progress comes from the data itself (setup status), so leaving and
-// coming back just works: there's no stored "wizard position".
+// results. Prices come before recipes, so invoice ingredients (and their
+// prices) are in the list when recipes are written. Each step reuses an
+// existing screen: the import reviews and the Recipes table. Progress comes
+// from the data itself (setup status), so leaving and coming back just works:
+// there's no stored "wizard position".
 const RAIL = [
   ['dishes', 'Menu'],
   ['prices', 'Your prices'],
@@ -70,7 +71,14 @@ function SetupPage({ status, onChanged }) {
       </Card>
     )
   } else if (step === 'recipes') {
-    body = <RecipeStep queue={status.needs_recipe} total={status.dishes} onChanged={onChanged} onNext={() => go('sales')} />
+    body = (
+      <div className="space-y-4">
+        <RecipesTable onChanged={onChanged} />
+        <div className="flex justify-end">
+          <button type="button" onClick={() => go('sales')} className="btn btn-primary">Next: Sales</button>
+        </div>
+      </div>
+    )
   } else if (step === 'prices') {
     body = (
       <Card>

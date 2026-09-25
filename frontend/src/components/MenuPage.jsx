@@ -3,6 +3,7 @@ import Card from './Card'
 import DishForm from './DishForm'
 import Hint from './Hint'
 import QuadrantBadge from './QuadrantBadge'
+import RecipesTable from './RecipesTable'
 import { CATEGORIES } from '../categories'
 import { QUADRANT_ORDER } from '../quadrants'
 import { postJson } from '../api'
@@ -104,7 +105,7 @@ function DishTable({ dishes, range, analysedById, reasonsById }) {
   )
 }
 
-function MenuPage({ allDishes, analysed, incomplete, range, onChanged }) {
+function MenuPage({ allDishes, analysed, incomplete, setup, range, onChanged }) {
   // Statuses are for the chosen period: a dish off the menu then shows "Not on the menu".
   const saved = loadView()
   const [category, setCategory] = useState(saved.category ?? CATEGORIES.find((c) => allDishes.some((d) => d.category === c)) ?? 'all')
@@ -128,6 +129,8 @@ function MenuPage({ allDishes, analysed, incomplete, range, onChanged }) {
     ...(hasUncategorised ? [{ value: 'none', label: 'No category', count: allDishes.filter((d) => !d.category).length }] : []),
     { value: 'all', label: 'All', count: allDishes.length },
     { value: 'attention', label: 'Needs attention', count: incomplete.length, warn: true },
+    // Recipes to write or check: no recipe yet, or an unchecked AI estimate.
+    { value: 'recipes', label: 'Recipes', count: setup ? setup.needs_recipe.length + setup.unchecked_recipes : 0, warn: true },
   ]
 
   const inCategory = allDishes.filter((d) =>
@@ -192,55 +195,61 @@ function MenuPage({ allDishes, analysed, incomplete, range, onChanged }) {
         </Card>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-muted">
-          <span className="num font-semibold text-ink">{inCategory.length} dish{inCategory.length === 1 ? '' : 'es'}</span>
-          {!onAttentionTab && avgMargin != null && (
-            <> · average margin <span className="num font-semibold text-ink">{percent(avgMargin)}</span></>
-          )}
-          {!onAttentionTab && attentionHere > 0 && (
-            <>
-              {' · '}
-              <button type="button" onClick={() => choose({ category: 'attention' })} className="link">
-                {attentionHere} need{attentionHere === 1 ? 's' : ''} attention
-              </button>
-            </>
-          )}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <input type="search" value={search} onChange={(e) => setSearch(e.target.value)}
-                 placeholder="Search dishes" className="input w-52" aria-label="Search dishes" />
-          {!onAttentionTab && (
-            <select value={status} onChange={(e) => choose({ status: e.target.value })} className="input w-auto"
-                    aria-label="Filter by quadrant">
-              <option value="all">All quadrants</option>
-              {QUADRANT_ORDER.map((q) => <option key={q} value={q}>{q}s</option>)}
-            </select>
-          )}
-        </div>
-      </div>
-
-      {shown.length === 0 ? (
-        <div className="empty">
-          {allDishes.length === 0 ? 'No dishes yet'
-            : onAttentionTab && !term ? 'Nothing needs attention'
-            : 'No dishes match.'}
-          {((status !== 'all' && !onAttentionTab) || term) && allDishes.length > 0 && (
-            <button type="button" onClick={() => { setSearch(''); choose({ status: 'all' }) }} className="link ml-2">
-              Clear filters
-            </button>
-          )}
-        </div>
-      ) : grouped ? (
-        grouped.map(({ c, dishes }) => (
-          <Card key={c ?? 'none'} title={c ? PLURAL[c] : 'No category'} aside={<span className="num">{dishes.length}</span>} flush>
-            <DishTable dishes={dishes} range={range} analysedById={analysedById} reasonsById={reasonsById} />
-          </Card>
-        ))
+      {category === 'recipes' ? (
+        <RecipesTable onChanged={onChanged} />
       ) : (
-        <Card flush>
-          <DishTable dishes={shown} range={range} analysedById={analysedById} reasonsById={reasonsById} />
-        </Card>
+        <>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-muted">
+            <span className="num font-semibold text-ink">{inCategory.length} dish{inCategory.length === 1 ? '' : 'es'}</span>
+            {!onAttentionTab && avgMargin != null && (
+              <> · average margin <span className="num font-semibold text-ink">{percent(avgMargin)}</span></>
+            )}
+            {!onAttentionTab && attentionHere > 0 && (
+              <>
+                {' · '}
+                <button type="button" onClick={() => choose({ category: 'attention' })} className="link">
+                  {attentionHere} need{attentionHere === 1 ? 's' : ''} attention
+                </button>
+              </>
+            )}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <input type="search" value={search} onChange={(e) => setSearch(e.target.value)}
+                   placeholder="Search dishes" className="input w-52" aria-label="Search dishes" />
+            {!onAttentionTab && (
+              <select value={status} onChange={(e) => choose({ status: e.target.value })} className="input w-auto"
+                      aria-label="Filter by quadrant">
+                <option value="all">All quadrants</option>
+                {QUADRANT_ORDER.map((q) => <option key={q} value={q}>{q}s</option>)}
+              </select>
+            )}
+          </div>
+        </div>
+
+        {shown.length === 0 ? (
+          <div className="empty">
+            {allDishes.length === 0 ? 'No dishes yet'
+              : onAttentionTab && !term ? 'Nothing needs attention'
+              : 'No dishes match.'}
+            {((status !== 'all' && !onAttentionTab) || term) && allDishes.length > 0 && (
+              <button type="button" onClick={() => { setSearch(''); choose({ status: 'all' }) }} className="link ml-2">
+                Clear filters
+              </button>
+            )}
+          </div>
+        ) : grouped ? (
+          grouped.map(({ c, dishes }) => (
+            <Card key={c ?? 'none'} title={c ? PLURAL[c] : 'No category'} aside={<span className="num">{dishes.length}</span>} flush>
+              <DishTable dishes={dishes} range={range} analysedById={analysedById} reasonsById={reasonsById} />
+            </Card>
+          ))
+        ) : (
+          <Card flush>
+            <DishTable dishes={shown} range={range} analysedById={analysedById} reasonsById={reasonsById} />
+          </Card>
+        )}
+        </>
       )}
     </div>
   )
