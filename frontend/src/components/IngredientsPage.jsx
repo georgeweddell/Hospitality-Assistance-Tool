@@ -175,16 +175,19 @@ function IngredientsPage({ onChanged }) {
 
   return (
     <div className="space-y-5">
-      <div className="card flex flex-col gap-3 px-5 py-[18px]">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="label">Costed on your own prices</p>
-          <p className="num text-muted">
-            <span className="font-display text-xl font-semibold text-ink">{ownInUse}</span> of {inUse.length} ingredients in use
-          </p>
+      <div className="tile tile-basil corner-bl flex-row flex-wrap items-center gap-x-12 gap-y-4 px-7 py-6">
+        <div className="flex flex-col gap-2">
+          <span className="tile-label">your own prices</span>
+          <span className="figure text-[4.5rem]">
+            {ownInUse}<span className="text-[2.25rem] opacity-80"> / {inUse.length}</span>
+          </span>
         </div>
-        <div className="h-2.5 overflow-hidden rounded-full bg-line" role="img"
-             aria-label={`${ownInUse} of ${inUse.length} ingredients in use have your own prices`}>
-          <div className="h-full rounded-full bg-accent" style={{ width: `${inUse.length ? (ownInUse / inUse.length) * 100 : 0}%` }} />
+        <div className="flex min-w-[240px] flex-1 flex-col gap-2.5">
+          <div className="h-3 overflow-hidden rounded-full bg-bg/25" role="img"
+               aria-label={`${ownInUse} of ${inUse.length} ingredients in use have your own prices`}>
+            <div className="h-full rounded-full bg-mustard" style={{ width: `${inUse.length ? (ownInUse / inUse.length) * 100 : 0}%` }} />
+          </div>
+          <span className="tile-label">ingredients in use · the rest on benchmark</span>
         </div>
       </div>
 

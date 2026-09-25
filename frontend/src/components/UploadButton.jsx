@@ -5,7 +5,8 @@ import { UPLOADS, readUpload } from '../imports'
 // hands back what its review screen needs. `reading` is shared by the page's
 // buttons, so only one file is read at a time. With `onFiles`, the picked
 // files are handed over unread (for a useUploadQueue); `multiple` allows several.
-function UploadButton({ kind, label, reading, setReading, onRead, onError, onFiles, multiple = false, primary = false }) {
+// `className` adds to the button's classes (e.g. an outline in the text colour, on a colour tile).
+function UploadButton({ kind, label, reading, setReading, onRead, onError, onFiles, multiple = false, primary = false, className = '' }) {
   const input = useRef(null)
 
   const pick = (e) => {
@@ -31,7 +32,7 @@ function UploadButton({ kind, label, reading, setReading, onRead, onError, onFil
       <input ref={input} type="file" accept={UPLOADS[kind].accept} multiple={multiple} className="sr-only"
              onChange={pick} tabIndex={-1} aria-hidden="true" />
       <button type="button" onClick={() => input.current.click()} disabled={reading !== null}
-              className={`btn ${primary ? 'btn-primary' : 'btn-secondary'}`}>
+              className={`btn ${primary ? 'btn-primary' : 'btn-secondary'} ${className}`}>
         {reading === kind ? UPLOADS[kind].reading : label}
       </button>
     </>

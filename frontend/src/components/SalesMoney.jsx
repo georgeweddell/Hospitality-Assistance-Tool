@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, CartesianGrid, Cell, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import Card from './Card'
 import Hint from './Hint'
 import { getJson } from '../api'
@@ -19,13 +19,24 @@ function withAverage(days) {
   })
 }
 
-function Figure({ label, value, sub }) {
+// Friday to Sunday, the busy end of the week, in tomato; other days in mustard.
+const weekend = (iso) => [0, 5, 6].includes(new Date(`${iso}T00:00:00Z`).getUTCDay())
+
+function Figure({ label, value, sub, tone }) {
   return (
-    <div className="card flex flex-col gap-2.5 px-5 py-[18px]">
-      <p className="label">{label}</p>
-      <p className="stat-value text-[1.625rem]">{value}</p>
-      {sub && <p className="num text-sm text-muted">{sub}</p>}
+    <div className={`tile min-h-[132px] ${tone}`}>
+      <span className="tile-label">{label}{sub && ` · ${sub}`}</span>
+      <span className="figure text-[clamp(2.5rem,4vw,3.75rem)]">{value}</span>
     </div>
+  )
+}
+
+function Key({ className, label }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className={className} />
+      {label}
+    </span>
   )
 }
 
@@ -46,9 +57,9 @@ function DayTooltip({ active, payload }) {
   )
 }
 
-function Sellers({ title, dishes }) {
+function Sellers({ title, dishes, className }) {
   return (
-    <Card title={title} flush>
+    <Card title={title} flush className={className}>
       <table className="table">
         <tbody>
           {dishes.map((d) => (
@@ -91,16 +102,23 @@ function SalesMoney({ range, coverage }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Figure label="Dish sales" value={poundsRounded(summary.total_sales)} />
-        <Figure label="Dishes sold" value={Math.round(summary.total_units).toLocaleString('en-GB')} />
-        <Figure label="Busiest day" value={poundsRounded(busiest.sales)} sub={shortDate(busiest.day)} />
-        <Figure label="Average day" value={poundsRounded(summary.total_sales / trading.length)}
-                sub={`${trading.length} trading days`} />
+        <Figure label="dish sales" value={poundsRounded(summary.total_sales)} tone="tile-tomato corner-tr" />
+        <Figure label="dishes sold" value={Math.round(summary.total_units).toLocaleString('en-GB')} tone="tile-outline" />
+        <Figure label="busiest day" value={poundsRounded(busiest.sales)} sub={shortDate(busiest.day).toLowerCase()} tone="tile-mustard" />
+        <Figure label="average day" value={poundsRounded(summary.total_sales / trading.length)}
+                sub={`${trading.length} trading`} tone="tile-basil corner-tl" />
       </div>
 
       <Card title="Sales by day"
-            aside={<Hint align="right" label="About these figures"
-                         content="Units sold × the menu price charged that day, including VAT. The line is the average of each day and the six before it." />}>
+            aside={
+              <span className="flex flex-wrap items-center gap-4 font-mono text-xs text-ink">
+                <Key className="h-3 w-3 rounded-[3px] bg-mustard" label="mon–thu" />
+                <Key className="h-3 w-3 rounded-[3px] bg-accent" label="fri–sun" />
+                <Key className="h-[3px] w-4 bg-ink" label="7-day average" />
+                <Hint align="right" label="About these figures"
+                      content="Units sold × the menu price charged that day, including VAT. The line is the average of each day and the six before it." />
+              </span>
+            }>
         <div className="chart">
           <ResponsiveContainer width="100%" height={260}>
             <ComposedChart data={days} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -109,8 +127,10 @@ function SalesMoney({ range, coverage }) {
               <YAxis tickFormatter={(v) => poundsRounded(v)} width={64} tickLine={false} axisLine={false} />
               <Tooltip content={<DayTooltip />} cursor={{ fill: 'var(--line)', fillOpacity: 0.5 }}
                        isAnimationActive={false} offset={16} wrapperStyle={{ outline: 'none' }} />
-              <Bar dataKey="sales" fill="var(--accent)" fillOpacity={0.85} radius={[3, 3, 0, 0]} />
-              <Line dataKey="average" stroke="var(--ink)" strokeWidth={2} dot={false} type="monotone" />
+              <Bar dataKey="sales" radius={[6, 6, 2, 2]}>
+                {days.map((d) => <Cell key={d.day} fill={weekend(d.day) ? 'var(--accent)' : 'var(--mustard)'} />)}
+              </Bar>
+              <Line dataKey="average" stroke="var(--ink)" strokeWidth={3} dot={false} type="monotone" />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -134,8 +154,8 @@ function SalesMoney({ range, coverage }) {
 
       {shown > 0 && (
         <div className="grid gap-5 lg:grid-cols-2">
-          <Sellers title="Best sellers" dishes={summary.dishes.slice(0, shown)} />
-          <Sellers title="Lowest sellers" dishes={summary.dishes.slice(-shown).reverse()} />
+          <Sellers title="Best sellers" dishes={summary.dishes.slice(0, shown)} className="corner-tl bg-basil-soft" />
+          <Sellers title="Lowest sellers" dishes={summary.dishes.slice(-shown).reverse()} className="corner-tr bg-plum-soft" />
         </div>
       )}
     </div>

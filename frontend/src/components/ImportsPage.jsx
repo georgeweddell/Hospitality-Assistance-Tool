@@ -11,6 +11,13 @@ import useUploadQueue from '../useUploadQueue'
 
 const KIND_LABELS = { invoice: 'Invoice', sales: 'Sales', menu: 'Menu' }
 
+// One colour tile per kind of file, each with its upload button.
+const TILES = [
+  { kind: 'menu', word: 'menu', formats: 'pdf · photo', tone: 'tile-mustard corner-tr' },
+  { kind: 'invoice', word: 'invoices', formats: 'pdf · photo · several', tone: 'tile-tomato', multiple: true },
+  { kind: 'sales', word: 'sales', formats: 'csv till export', tone: 'tile-basil corner-tl' },
+]
+
 // Upload an invoice, a till export or a menu, check what Claude read, apply it; and
 // the history of everything imported, with Undo.
 function ImportsPage({ onChanged }) {
@@ -61,19 +68,27 @@ function ImportsPage({ onChanged }) {
   if (queue.active) return <QueueReview queue={queue} onApplied={(record) => { setApplied(record); onChanged() }} />
 
   const upload = { reading, setReading, onError: setError, onRead: (r) => { setApplied(null); setReview(r) } }
-  const uploadButtons = (
-    <div className="flex flex-wrap gap-2">
-      <UploadButton kind="menu" label="Upload menu" {...upload} />
-      <UploadButton kind="invoice" label="Upload invoices" {...upload} onFiles={queue.start} multiple />
-      <UploadButton kind="sales" label="Upload sales" {...upload} />
+  const uploadTiles = (
+    <div className="grid gap-4 md:grid-cols-3">
+      {TILES.map((t) => (
+        <div key={t.kind} className={`tile min-h-[120px] flex-row items-center ${t.tone}`}>
+          <div className="flex flex-col gap-1.5">
+            <span className="figure text-[3rem]">{t.word}</span>
+            <span className="tile-label">{t.formats}</span>
+          </div>
+          <UploadButton kind={t.kind} label={t.multiple ? 'Choose files' : 'Choose file'} {...upload}
+                        onFiles={t.multiple ? queue.start : undefined} multiple={t.multiple}
+                        className="border-current text-inherit hover:bg-surface/20" />
+        </div>
+      ))}
     </div>
   )
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="flex items-center gap-3 text-muted">
-          {applied && (
+      {uploadTiles}
+      {applied && (
+        <div>
             <span className="chip chip-accent num">
               {{
                 sales: `${applied.lines_applied} daily totals saved`,
@@ -81,10 +96,8 @@ function ImportsPage({ onChanged }) {
                 invoice: `${applied.lines_applied} prices saved from ${applied.supplier}`,
               }[applied.kind]}
             </span>
-          )}
-        </span>
-        {uploadButtons}
-      </div>
+        </div>
+      )}
       {reading && <ReadingProgress kind={reading} />}
       {error && <p className="alert-error">{error}</p>}
 
