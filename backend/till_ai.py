@@ -70,8 +70,8 @@ def build_items_prompt(items, dish_names):
 The restaurant's menu has these dishes: {", ".join(dish_names)}.
 
 For every item name, in the same order:
-- kind: "dish" if it's food from the menu (a size or variant of a dish counts, e.g. "MARG 12" for Margherita);
-  "other" for drinks, add-ons, extras, service charges and anything else that isn't a dish.
+- kind: "dish" for any food dish (a size or variant counts, e.g. "MARG 12" for Margherita), even one that
+  isn't in the list below; "other" for drinks, add-ons, extras, service charges and anything else that isn't a dish.
 - likely_dish: for a "dish", the menu dish it is, written exactly as in the list above; empty if none fits.
 """
 
