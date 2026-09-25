@@ -58,7 +58,8 @@ class Fact:
     label: str      # short, what it is, e.g. "Margherita: margin per plate"
     value: float | str | list
     unit: str       # '£', '%', 'change %' (signed), 'pts', 'count', 'a day', '£/kg', '£/l', '£ each',
-                    # 'plates' ([extra, per day]), 'weekday split' ([Mon-Thu, Fri-Sun] a day), 'date' or 'text'
+                    # 'plates' ([extra, per day]), 'weekday split' ([Mon-Thu, Fri-Sun] a day), 'x' (a ratio),
+                    # 'date' or 'text'
     note: str = ''  # how it's worked out, shown on hover; kept out of the label so the chip stays short
     # A [before, after] pair in a money unit is one fact shown as "£7.40 → £8.20/kg".
 
@@ -87,6 +88,8 @@ def format_value(value, unit) -> str:
         return f'{value:,.0f}'
     if unit == 'a day':
         return f'{value:.1f} a day'
+    if unit == 'x':
+        return f'{value:.2f}×'
     if unit in ('£/kg', '£/l'):
         return f'£{value:,.2f}/{unit[2:]}'
     if unit == '£ each':
@@ -358,9 +361,13 @@ def price_changes(ctx: ReportContext) -> str:
     for _, day, ingredient, old, new, effects, period_effect in sorted(rows, key=lambda r: -r[0])[:8]:
         old_v, unit = price_display(old.price_per_unit, ingredient.unit)
         new_v, _ = price_display(new.price_per_unit, ingredient.unit)
+        after = day > ctx.end
         lines.append(f'{ingredient.name}, from {day:%d %b %Y} ({new.source.value}'
-                     + (f', {new.supplier}' if new.supplier else '') + '):')
-        lines.append('  ' + f.add(f'{ingredient.name}: price', [old_v, new_v], unit, note=f'from {day:%d %b %Y}'))
+                     + (f', {new.supplier}' if new.supplier else '') + '):'
+                     + (' AFTER this period ended. Costs for both periods already use this price, so it does not '
+                        'explain any change between them; it matters for margins from now on.' if after else ''))
+        lines.append('  ' + f.add(f'{ingredient.name}: price', [old_v, new_v], unit,
+                                  note=f'from {day:%d %b %Y}' + (', after the period' if after else '')))
         lines.append('  ' + f.add(f'{ingredient.name}: price change', pct_change(new_v, old_v), 'change %'))
         for dish, per_plate in sorted(effects, key=lambda e: -abs(e[1]))[:4]:
             lines.append('  ' + f.add(f'{dish.name}: plate cost change', per_plate, '£', note=f'from the {ingredient.name} price'))
@@ -458,14 +465,28 @@ def weekday_by_dish(ctx: ReportContext, summary) -> str:
         weekend = sum(per_day.get(d, 0) for d in weekend_days) / len(weekend_days)
         rows.append((c.dish_name, c.category.value, c.quadrant.value, weekday, weekend))
 
+    # Weekend plates a day for each weekday plate: the whole menu's, to judge each dish against.
+    ratio = lambda r: r[4] / r[3] if r[3] else float('inf')
+    menu_weekday, menu_weekend = sum(r[3] for r in rows), sum(r[4] for r in rows)
+    menu_ratio = menu_weekend / menu_weekday if menu_weekday else None
+
     def fact(name, category, quadrant, weekday, weekend):
+        mine = weekend / weekday if weekday else None
+        note = 'Mon–Thu against Fri–Sun'
+        if mine is not None and menu_ratio:
+            note += f'; {mine:.2f}× weekend to weekday, whole menu {menu_ratio:.2f}×'
         return (f'  {name} ({category}, {quadrant}): '
-                + f.add(f'{name}: plates a day', [weekday, weekend], 'weekday split', note='Mon–Thu against Fri–Sun'))
+                + f.add(f'{name}: plates a day', [weekday, weekend], 'weekday split', note=note))
 
     lines = [f'Plates per trading day, Monday to Thursday ({len(weekday_days)} days) against Friday to Sunday '
-             f'({len(weekend_days)} days).', 'Most plates on weekdays:']
+             f'({len(weekend_days)} days).']
+    if menu_ratio:
+        lines.append(f.add('Whole menu: weekend plates per weekday plate', menu_ratio, 'x',
+                           note='plates a day Fri–Sun for each plate a day Mon–Thu')
+                     + '. Judge each dish against this: a dish only a little above or below it follows the '
+                       'same weekly pattern as the rest of the menu.')
+    lines.append('Most plates on weekdays:')
     lines += [fact(*r) for r in sorted(rows, key=lambda r: -r[3])[:5]]
-    ratio = lambda r: r[4] / r[3] if r[3] else float('inf')
     lines.append('Most weekend-heavy (weekend plates a day for each weekday plate):')
     lines += [fact(*r) for r in sorted(rows, key=ratio, reverse=True)[:4]]
     lines.append('Holds up best on weekdays:')

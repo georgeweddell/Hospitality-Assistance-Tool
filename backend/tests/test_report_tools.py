@@ -134,6 +134,16 @@ def test_weekdays_against_weekends_by_dish(db, menu):
     # Margherita sold 30 on the Monday and none on the Saturday; Diavola the opposite, 10.
     assert f['Margherita: plates a day'] == [30.0, 0.0]
     assert f['Diavola: plates a day'] == [0.0, 10.0]
+    # The whole menu: 10 weekend plates a day for 30 weekday plates = 0.33x, to judge each dish against
+    assert f['Whole menu: weekend plates per weekday plate'] == pytest.approx(0.33)
+
+
+def test_a_price_change_after_the_period_is_marked_as_after(db, menu, cost_item, add_price):
+    add_price(cost_item, 1.50, PriceSource.INVOICE, date(2026, 10, 5))
+    ctx = ReportContext(db, *SEPTEMBER, today=date(2026, 10, 20))
+    text = run_tool(ctx, 'price_changes', {})
+    assert 'AFTER this period ended' in text
+    assert ctx.facts.items['f1'].note == 'from 05 Oct 2026, after the period'
 
 
 def test_data_gaps_lists_dishes_left_out_of_the_analysis(db, menu, add_dish):
