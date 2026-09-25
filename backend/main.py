@@ -28,6 +28,7 @@ from sales_report import sales_summary
 from menu_ai import read_menu
 from tills import apply_sales, decode, items_needing_hints, read_csv, remembered_mapping, review_sales, undo_sales_import
 from till_ai import propose_columns, suggest_items
+from price_changes import find_menu_price_changes, find_price_changes
 import report_agent
 from models import Report, ReportStatus
 from database import SessionLocal
@@ -716,6 +717,31 @@ def undo_import_route(import_id: int, db: Session = Depends(get_db)):
         return undo_import(db, import_id)
     except ImportProblem as e:
         raise HTTPException(status_code=422, detail=str(e))
+
+
+# --- Ingredient price changes (price_changes.py) ----------------------------------
+
+@app.get("/price-changes", response_model=list[schemas.PriceChangeOut])
+def get_price_changes(start: date | None = Query(None, alias="from"), end: date | None = Query(None, alias="to"),
+                      db: Session = Depends(get_db)):
+    """
+    Price changes for ingredients in current recipes, from the start of the period to
+    today, biggest effect first. Rises of 5% or more are alerts.
+    """
+    start, end = resolve_range(db, start, end)
+    units = {d.dish_id: d.units_sold for d in classify_all_dishes(db, start, end)}
+    return [schemas.PriceChangeOut(**{k: v for k, v in vars(c).items() if k != 'dishes'},
+                                   dishes=[vars(e) for e in c.dishes],
+                                   is_alert=c.is_alert, after_period=c.day > end)
+            for c in find_price_changes(db, start, date.today(), units)]
+
+
+@app.get("/menu-price-changes", response_model=list[schemas.MenuPriceChangeOut])
+def get_menu_price_changes(start: date | None = Query(None, alias="from"), end: date | None = Query(None, alias="to"),
+                           db: Session = Depends(get_db)):
+    """Menu price changes from the start of the period to today, newest first."""
+    start, end = resolve_range(db, start, end)
+    return [vars(c) for c in find_menu_price_changes(db, start, date.today())]
 
 
 # --- Reports (the report agent, report_agent.py) --------------------------------------

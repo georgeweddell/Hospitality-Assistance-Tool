@@ -197,6 +197,34 @@ class DishClassificationOut(BaseModel):
     quadrant: QuadrantType
     skipped_ingredients: list[str] = []
 
+class PriceChangeDishOut(BaseModel):
+    dish_id: int
+    name: str
+    per_plate: float
+
+class PriceChangeOut(BaseModel):
+    """An ingredient price change (price_changes.py); prices per base unit, like everywhere."""
+    ingredient_id: int
+    name: str
+    unit: UnitType
+    day: date
+    old_price: float
+    new_price: float
+    source: str
+    supplier: Optional[str] = None
+    change_percent: float
+    is_alert: bool                 # a rise of price_changes.ALERT_PERCENT or more
+    after_period: bool             # dated after the chosen period ended
+    dishes: list[PriceChangeDishOut]
+    period_effect: float           # £ change in contribution at the period's plates sold
+
+class MenuPriceChangeOut(BaseModel):
+    dish_id: int
+    name: str
+    day: date
+    old_price: float
+    new_price: float
+
 class ReportIn(BaseModel):
     """Starting a report: an optional focus or question from the owner."""
     focus: Optional[str] = Field(default=None, max_length=500)
@@ -253,6 +281,7 @@ class SetupStatusOut(BaseModel):
     # page's Recipes step works through them one at a time.
     needs_recipe: list[int] = []
     unchecked_recipes: int = 0   # AI estimates saved in bulk, not yet checked by the owner
+    own_cost_share: Optional[float] = None   # % of the menu's recipe cost on own prices (own_prices.menu_own_share)
 
 class ResetIn(BaseModel):
     mode: Literal["fresh", "demo"]
@@ -520,6 +549,7 @@ class RecipeRowOut(BaseModel):
     food_cost_percent: Optional[float] = None   # plate cost as a % of the menu price
     checks: list[Literal["food_cost_high", "food_cost_low", "big_line", "few_ingredients", "left_out", "unit"]] = []
     recipe_check: bool = False                  # the menu description changed (menu import)
+    own_share_percent: Optional[float] = None   # % of the plate cost from the restaurant's own prices (own_prices.py)
 
 
 # --- Sales money (Sales page) -------------------------------------------------------------

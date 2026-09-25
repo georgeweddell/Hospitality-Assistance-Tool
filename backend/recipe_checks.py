@@ -12,6 +12,7 @@ Thresholds agreed with George (kitchen sense, easy to change here):
 Food cost % uses the menu price as stored (VAT included), like the margins.
 """
 
+from own_prices import own_share
 from costing import cost_dish
 from models import DishIngredient, Ingredient, UnitType
 from schemas import RecipeRowOut
@@ -62,4 +63,5 @@ def recipe_row(db, dish, menu_price):
         food_cost_percent=round(food_cost, 1) if food_cost is not None else None,
         checks=recipe_checks(lines, food_cost, dish.skipped_ingredients),
         recipe_check=dish.recipe_check,
+        own_share_percent=own_share(db, dish.id) if lines else None,
     )

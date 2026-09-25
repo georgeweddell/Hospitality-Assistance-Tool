@@ -24,9 +24,11 @@ from datetime import date, timedelta
 
 from costing import best_price, menu_prices
 from menu_engineering import build_action_list, classify_all_dishes, list_incomplete_dishes
-from models import Dish, DishIngredient, Ingredient, IngredientPrice, PriceSource, SalesRecord, UnitType
+from models import Dish, DishIngredient, Ingredient, PriceSource, SalesRecord, UnitType
 from onboarding import setup_status
 from periods import month_bounds
+from price_changes import find_price_changes
+from own_prices import own_share
 from sales_report import sales_summary
 
 WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -281,6 +283,8 @@ def dish_detail(ctx: ReportContext, dish: str) -> str:
             f'Quadrant: {now.quadrant.value}{was}.',
             f.add(f'{name}: menu price', now.menu_price, '£', note='average charged over the period'),
             f.add(f'{name}: plate cost', now.plate_cost, '£'),
+            f.add(f'{name}: plate cost on own prices', own_share(ctx.db, found.id, ctx.today) or 0.0, '%',
+                  note="the rest is benchmark estimates, so the margin is only as firm as this"),
             f.add(f'{name}: margin per plate', now.margin_pounds, '£'),
             f.add(f'{name}: gross margin', now.margin_percent, '%'),
             f.add(f'{name}: plates sold', now.units_sold, 'count'),
@@ -327,51 +331,30 @@ def dish_detail(ctx: ReportContext, dish: str) -> str:
 def price_changes(ctx: ReportContext) -> str:
     """
     Ingredient price changes from the start of the period to today, for ingredients
-    in current recipes: old and new price, and the £ effect on each dish using it.
-    A change is when the price costing uses (costing.best_price) moves on a day.
+    in current recipes: old and new price, and the £ effect on each dish using it
+    (the shared logic in price_changes.find_price_changes).
     """
     f = ctx.facts
-    in_use = defaultdict(list)   # ingredient id -> [(dish, quantity)]
-    for row in ctx.db.query(DishIngredient):
-        in_use[row.ingredient_id].append((ctx.db.get(Dish, row.dish_id), row.quantity))
     units = {d.dish_id: d.units_sold for d in ctx.now}
-
-    changes = []
-    for ingredient_id in in_use:
-        new_rows = ctx.db.query(IngredientPrice).filter(
-            IngredientPrice.ingredient_id == ingredient_id,
-            IngredientPrice.effective_date >= ctx.start, IngredientPrice.effective_date <= ctx.today)
-        for day in sorted({p.effective_date for p in new_rows}):
-            old = best_price(ctx.db, ingredient_id, as_of=day - timedelta(days=1))
-            new = best_price(ctx.db, ingredient_id, as_of=day)
-            if old and new and new.effective_date == day and new.price_per_unit != old.price_per_unit:
-                changes.append((day, ingredient_id, old, new))
+    changes = find_price_changes(ctx.db, ctx.start, ctx.today, units)
     if not changes:
         return f'No ingredient price changes since {ctx.start:%d %b %Y} for ingredients in your recipes.'
 
-    rows = []
-    for day, ingredient_id, old, new in changes:
-        ingredient = ctx.db.get(Ingredient, ingredient_id)
-        delta = new.price_per_unit - old.price_per_unit
-        effects = [(dish, quantity * delta) for dish, quantity in in_use[ingredient_id]]
-        period_effect = sum(per_plate * units.get(dish.id, 0) for dish, per_plate in effects)
-        rows.append((abs(period_effect), day, ingredient, old, new, effects, period_effect))
-
     lines = [f'Price changes since {ctx.start:%d %b %Y} (the period effect uses this period\'s units sold):']
-    for _, day, ingredient, old, new, effects, period_effect in sorted(rows, key=lambda r: -r[0])[:8]:
-        old_v, unit = price_display(old.price_per_unit, ingredient.unit)
-        new_v, _ = price_display(new.price_per_unit, ingredient.unit)
-        after = day > ctx.end
-        lines.append(f'{ingredient.name}, from {day:%d %b %Y} ({new.source.value}'
-                     + (f', {new.supplier}' if new.supplier else '') + '):'
+    for c in changes[:8]:
+        unit_type = UnitType(c.unit)
+        old_v, unit = price_display(c.old_price, unit_type)
+        new_v, _ = price_display(c.new_price, unit_type)
+        after = c.day > ctx.end
+        lines.append(f'{c.name}, from {c.day:%d %b %Y} ({c.source}' + (f', {c.supplier}' if c.supplier else '') + '):'
                      + (' AFTER this period ended. Costs for both periods already use this price, so it does not '
                         'explain any change between them; it matters for margins from now on.' if after else ''))
-        lines.append('  ' + f.add(f'{ingredient.name}: price', [old_v, new_v], unit,
-                                  note=f'from {day:%d %b %Y}' + (', after the period' if after else '')))
-        lines.append('  ' + f.add(f'{ingredient.name}: price change', pct_change(new_v, old_v), 'change %'))
-        for dish, per_plate in sorted(effects, key=lambda e: -abs(e[1]))[:4]:
-            lines.append('  ' + f.add(f'{dish.name}: plate cost change', per_plate, '£', note=f'from the {ingredient.name} price'))
-        lines.append('  ' + f.add(f'{ingredient.name}: effect on contribution', -period_effect, '£',
+        lines.append('  ' + f.add(f'{c.name}: price', [old_v, new_v], unit,
+                                  note=f'from {c.day:%d %b %Y}' + (', after the period' if after else '')))
+        lines.append('  ' + f.add(f'{c.name}: price change', c.change_percent, 'change %'))
+        for e in c.dishes[:4]:
+            lines.append('  ' + f.add(f'{e.name}: plate cost change', e.per_plate, '£', note=f'from the {c.name} price'))
+        lines.append('  ' + f.add(f'{c.name}: effect on contribution', c.period_effect, '£',
                                   note="over the period, at this period's sales"))
     return '\n'.join(lines)
 
@@ -514,6 +497,9 @@ def data_gaps(ctx: ReportContext) -> str:
                            note="in current recipes; not yet from the restaurant's own invoices"))
         lines.append(f.add('Ingredients on own prices', status.ingredients_with_own_price / status.ingredients_in_use * 100,
                            '%', note='share of the ingredients in current recipes'))
+    if status.own_cost_share is not None:
+        lines.append(f.add('Recipe cost on own prices', status.own_cost_share, '%',
+                           note='share of the cost of one plate of each dish on the menu'))
     return '\n'.join(lines) if lines else 'No gaps: every dish is analysed, recipes are checked and every day has sales.'
 
 
