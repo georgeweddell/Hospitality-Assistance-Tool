@@ -35,7 +35,7 @@ function RangePicker({ range, lastSale, coverage, onChange }) {
         <select
           value={customOpen ? 'custom' : range.key}
           onChange={(e) => choosePreset(e.target.value)}
-          className="input w-auto font-semibold"
+          className="input input-pill w-auto"
           aria-label="Period"
         >
           {options.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}

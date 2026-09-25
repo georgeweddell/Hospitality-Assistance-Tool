@@ -488,6 +488,170 @@ body {
     color: var(--line-strong);
   }
 
+  /* A select drawn as a pill (the period picker). */
+  .input-pill {
+    padding: 0.625rem 1.125rem;
+    border-color: var(--ink);
+    border-radius: 999px;
+    background: transparent;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    cursor: pointer;
+  }
+
+  /* --- Figure blocks: flat colour tiles with one odd corner ----------------- */
+  /* <div class="block block-tomato corner-tr"> <span class="block-label">…</span>
+     <span class="figure">…</span> </div>. The figure's size is set per use. */
+  .block {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 28px;
+    background: var(--surface);
+    color: var(--ink);
+  }
+  .block-tomato {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .block-mustard {
+    background: var(--mustard);
+  }
+  .block-basil {
+    background: var(--basil);
+    color: var(--bg);
+  }
+  .block-outline {
+    background: transparent;
+    border: 2px solid var(--ink);
+  }
+  .corner-tl { border-top-left-radius: 6px; }
+  .corner-tr { border-top-right-radius: 6px; }
+  .corner-bl { border-bottom-left-radius: 6px; }
+  .corner-br { border-bottom-right-radius: 6px; }
+  .block-label {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+  }
+  .figure {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-stretch: 75%;
+    font-size: 4.5rem;
+    letter-spacing: -0.03em;
+    line-height: 0.85;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* --- Ticket rail: recommended changes hanging off an ink rail (TicketRail.jsx) --- */
+  .rail {
+    height: 12px;
+    border-radius: 999px;
+    background: var(--ink);
+  }
+  .rail-tickets {
+    display: flex;
+    gap: 1.25rem;
+    /* Room above for the tilted tickets' corners, then pulled up onto the rail. */
+    margin-top: -8px;
+    padding: 6px 1.125rem 1.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .rail-tickets::-webkit-scrollbar {
+    display: none;
+  }
+  .ticket {
+    position: relative;
+    display: flex;
+    flex: 0 0 15rem;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1.25rem 1.25rem 1.375rem;
+    border: 2px solid var(--ink);
+    border-top: none;
+    border-radius: 0 0 14px 14px;
+    background: var(--surface);
+    color: var(--ink);
+    text-decoration: none;
+    transform: rotate(var(--tilt, 0deg));
+    transform-origin: top center;
+    transition: transform 0.15s;
+  }
+  .ticket:hover {
+    transform: rotate(0deg);
+  }
+  .ticket:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  .ticket-clip {
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    width: 44px;
+    height: 12px;
+    margin-left: -22px;
+    border: 2px solid var(--ink);
+    border-radius: 3px;
+    background: var(--mustard);
+  }
+  .ticket-meta {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .ticket-name {
+    margin: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-stretch: 75%;
+    font-size: 2.125rem;
+    letter-spacing: -0.03em;
+    line-height: 0.9;
+  }
+  .ticket-foot {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: auto;
+    padding-top: 0.75rem;
+    border-top: 2px dashed var(--line-strong);
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+  }
+  .ticket-impact {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-stretch: 75%;
+    font-size: 2.5rem;
+    letter-spacing: -0.03em;
+    line-height: 0.9;
+    color: var(--accent);
+  }
+
+  /* A rubber stamp for a quadrant (Stamp.jsx); colour and tilt set inline. */
+  .stamp {
+    align-self: flex-start;
+    padding: 0.25rem 0.625rem;
+    border: 2.5px solid currentColor;
+    border-radius: 6px;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    transform: rotate(var(--tilt, -3deg));
+    white-space: nowrap;
+  }
+
   /* --- Messages ------------------------------------------------------------ */
   .alert-error {
     padding: 0.75rem 1rem;

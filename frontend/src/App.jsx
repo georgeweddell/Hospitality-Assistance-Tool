@@ -18,15 +18,15 @@ import { setupComplete } from './setup'
 import RangePicker from './components/RangePicker'
 
 const TITLES = {
-  overview: 'Overview',
-  actions: 'Actions',
-  menu: 'Menu',
-  ingredients: 'Ingredients',
-  sales: 'Sales',
-  imports: 'Imports',
-  analysis: 'Insights',
-  settings: 'Settings',
-  setup: 'Set up',
+  overview: 'overview',
+  actions: 'actions',
+  menu: 'menu',
+  ingredients: 'ingredients',
+  sales: 'sales',
+  imports: 'imports',
+  analysis: 'insights',
+  settings: 'settings',
+  setup: 'set up',
 }
 
 // Pages whose figures depend on the chosen period.
