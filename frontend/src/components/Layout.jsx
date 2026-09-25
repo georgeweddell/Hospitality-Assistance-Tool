@@ -39,7 +39,7 @@ function Layout({ page, title, toolbar, badges = {}, children }) {
   return (
     <div className="min-h-screen bg-bg text-ink">
       {/* One row on wide screens; below xl the nav drops to its own row and scrolls sideways. */}
-      <header className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-7 gap-y-4 px-4 pt-5 sm:px-10 lg:pt-7">
+      <header className="mx-auto flex print:hidden max-w-7xl flex-wrap items-center gap-x-7 gap-y-4 px-4 pt-5 sm:px-10 lg:pt-7">
         <Brand />
         <nav className="tabs order-last w-full xl:order-none xl:w-auto" aria-label="Main">
           {NAV.map((item) => (

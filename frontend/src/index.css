@@ -74,6 +74,14 @@ body {
   margin: 0;
 }
 
+/* Printing (reports): keep the colour tiles and chips, which browsers drop by default. */
+@media print {
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
+
 @layer components {
   /* --- Type --------------------------------------------------------- */
   /* Headings and big figures: Bricolage at its narrowest and heaviest. */

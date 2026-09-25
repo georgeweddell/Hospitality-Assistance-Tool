@@ -16,6 +16,7 @@ import SetupPage from './components/SetupPage'
 import SetupChecklist from './components/SetupChecklist'
 import { setupComplete } from './setup'
 import RangePicker from './components/RangePicker'
+import ReportsPage from './components/ReportsPage'
 
 const TITLES = {
   overview: 'overview',
@@ -27,6 +28,7 @@ const TITLES = {
   analysis: 'insights',
   settings: 'settings',
   setup: 'set up',
+  reports: 'reports',
 }
 
 // Pages whose figures depend on the chosen period.
@@ -154,6 +156,8 @@ function App() {
     content = <ImportsPage onChanged={refresh} />
   } else if (page === 'settings') {
     content = <SettingsPage onReset={afterReset} onChanged={refresh} />
+  } else if (page === 'reports') {
+    content = <ReportsPage id={id} range={range} />
   } else if (!data) {
     content = (
       <div className="flex items-center gap-3 text-muted">

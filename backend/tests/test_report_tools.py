@@ -46,6 +46,8 @@ def test_facts_are_numbered_in_order_and_formatted_by_code():
     assert list(facts.items) == ['f1', 'f2', 'f3']
     assert format_value(8.2, '£/kg') == '£8.20/kg'
     assert format_value(-168.4, '£') == '-£168'
+    assert format_value(14.44, 'change %') == '+14.4%'     # a change carries its sign; a share doesn't
+    assert format_value(14.44, '%') == '14.4%'
 
 
 def test_period_summary_against_the_previous_month(db, menu):

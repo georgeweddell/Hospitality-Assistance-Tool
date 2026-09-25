@@ -57,7 +57,7 @@ class Fact:
     id: str
     label: str      # what it is, e.g. "Margherita margin per plate"
     value: float | str
-    unit: str       # '£', '%', 'pts', 'count', '£/kg', '£/l', '£ each', 'date' or 'text'
+    unit: str       # '£', '%', 'change %' (signed), 'pts', 'count', '£/kg', '£/l', '£ each', 'date' or 'text'
 
 
 def format_value(value, unit) -> str:
@@ -67,6 +67,8 @@ def format_value(value, unit) -> str:
         return f'{sign}£{abs(value):,.0f}' if abs(value) >= 100 else f'{sign}£{abs(value):,.2f}'
     if unit == '%':
         return f'{value:.1f}%'
+    if unit == 'change %':
+        return f'{value:+.1f}%'
     if unit == 'pts':
         return f'{value:+.1f} pts'
     if unit == 'count':
@@ -166,10 +168,10 @@ def period_summary(ctx: ReportContext) -> str:
     if ctx.prev:
         lines += [
             f.add('Contribution, previous period', before['contribution'], '£'),
-            f.add('Contribution change', pct_change(now['contribution'], before['contribution']), '%'),
-            f.add('Sales change', pct_change(now['sales'], before['sales']), '%'),
+            f.add('Contribution change', pct_change(now['contribution'], before['contribution']), 'change %'),
+            f.add('Sales change', pct_change(now['sales'], before['sales']), 'change %'),
             f.add('Gross margin change', now['gp'] - before['gp'], 'pts'),
-            f.add('Dishes sold change', pct_change(now['units'], before['units']), '%'),
+            f.add('Dishes sold change', pct_change(now['units'], before['units']), 'change %'),
         ]
     else:
         lines.append('No sales in the previous period, so no comparison.')
@@ -325,7 +327,7 @@ def price_changes(ctx: ReportContext) -> str:
                      + (f', {new.supplier}' if new.supplier else '') + '):')
         lines.append('  ' + f.add(f'{ingredient.name} price before', old_v, unit))
         lines.append('  ' + f.add(f'{ingredient.name} price after', new_v, unit))
-        lines.append('  ' + f.add(f'{ingredient.name} price change', pct_change(new_v, old_v), '%'))
+        lines.append('  ' + f.add(f'{ingredient.name} price change', pct_change(new_v, old_v), 'change %'))
         for dish, per_plate in sorted(effects, key=lambda e: -abs(e[1]))[:4]:
             lines.append('  ' + f.add(f'{dish.name} plate cost change from {ingredient.name}', per_plate, '£'))
         lines.append('  ' + f.add(f'{ingredient.name}: effect on contribution over the period', -period_effect, '£'))

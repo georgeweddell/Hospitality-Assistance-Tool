@@ -1,6 +1,7 @@
 import Delta from './Delta'
 import Hint from './Hint'
 import TicketRail from './TicketRail'
+import { GenerateReportButton } from './ReportsPage'
 import { QUADRANTS, quadrantTextColor } from '../quadrants'
 import { percent, poundsRounded } from '../format'
 import { previousLabel, rangeLabel } from '../dateRange'
@@ -78,15 +79,21 @@ function OverviewPage({ dishes, prevDishes, actions, range, unchecked = 0 }) {
 
   return (
     <div className="space-y-8">
-      {unchecked > 0 && (
-        <span className="flex items-center gap-2">
-          <button type="button" onClick={openRecipes} className="chip chip-accent num">
-            {unchecked} unchecked AI recipe{unchecked === 1 ? '' : 's'}
-          </button>
-          <Hint label="About unchecked recipes"
-                content="Recipes estimated by AI and not yet checked. Their costs are estimates until you check them." />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {unchecked > 0 ? (
+          <span className="flex items-center gap-2">
+            <button type="button" onClick={openRecipes} className="chip chip-accent num">
+              {unchecked} unchecked AI recipe{unchecked === 1 ? '' : 's'}
+            </button>
+            <Hint label="About unchecked recipes"
+                  content="Recipes estimated by AI and not yet checked. Their costs are estimates until you check them." />
+          </span>
+        ) : <span />}
+        <span className="flex items-center gap-4">
+          <a href="#/reports" className="link font-mono text-sm font-normal">past reports</a>
+          <GenerateReportButton range={range} />
         </span>
-      )}
+      </div>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <div className="tile tile-tomato min-h-[300px] px-8 py-7">
