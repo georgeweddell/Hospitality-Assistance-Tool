@@ -36,16 +36,16 @@ function saveCategory(category) {
 
 function Figure({ label, value, children }) {
   return (
-    <div className="card flex flex-col gap-3 px-5 py-[18px]">
-      <p className="label">{label}</p>
-      <p className="stat-value">{value}</p>
+    <div className="tile tile-outline">
+      <span className="tile-label">{label}</span>
+      <span className="figure text-[clamp(2.25rem,3.5vw,3.25rem)]">{value}</span>
       <div className="min-h-[22px]">{children}</div>
     </div>
   )
 }
 
 const DishLink = ({ id, name }) => (
-  <a href={`#/menu/${id}`} className="font-display text-xl font-semibold leading-tight hover:text-accent">{name}</a>
+  <a href={`#/menu/${id}`} className="figure text-[2.5rem] hover:underline">{name}</a>
 )
 
 function InsightsPage({ dishes, prevDishes, actions, range }) {
@@ -79,11 +79,11 @@ function InsightsPage({ dishes, prevDishes, actions, range }) {
 
   return (
     <div className="space-y-5">
-      <select value={category ?? 'all'} onChange={(e) => choose(e.target.value)} className="input w-auto"
+      <select value={category ?? 'all'} onChange={(e) => choose(e.target.value)} className="input input-pill w-auto"
               aria-label="Show">
-        <option value="all">All categories ({dishes.length})</option>
+        <option value="all">all categories ({dishes.length})</option>
         {present.map((c) => (
-          <option key={c} value={c}>{PLURAL[c]} ({dishes.filter((d) => d.category === c).length})</option>
+          <option key={c} value={c}>{PLURAL[c].toLowerCase()} ({dishes.filter((d) => d.category === c).length})</option>
         ))}
       </select>
 
@@ -93,36 +93,34 @@ function InsightsPage({ dishes, prevDishes, actions, range }) {
 
         <div className="space-y-5">
           {earner && (
-            <Card title="Top earner"
-                  aside={<Hint align="right" label="About top earner" content="Margin × units sold: what the dish contributed over the period." />}>
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <DishLink id={earner.dish_id} name={earner.dish_name} />
-                  <QuadrantBadge quadrant={earner.quadrant} />
-                </div>
-                <p className="stat-value">{poundsRounded(earner.margin_pounds * earner.units_sold)}</p>
-                <p className="num text-sm text-muted">{earner.units_sold} sold · {pounds(earner.margin_pounds)} margin</p>
-              </div>
-            </Card>
+            <div className="tile tile-basil corner-bl">
+              <span className="flex items-center justify-between gap-2">
+                <span className="tile-label">top earner</span>
+                <Hint align="right" label="About top earner" content="Margin × units sold: what the dish contributed over the period." />
+              </span>
+              <DishLink id={earner.dish_id} name={earner.dish_name} />
+              <span className="tile-label num">
+                {poundsRounded(earner.margin_pounds * earner.units_sold)} · {earner.units_sold} sold · {pounds(earner.margin_pounds)} margin
+              </span>
+            </div>
           )}
 
-          <Card title="Biggest opportunity"
-                aside={<Hint align="right" label="About the opportunity" content={IMPACT_EXPLAINED} />}>
+          <div className="tile tile-tomato corner-tl">
+            <span className="flex items-center justify-between gap-2">
+              <span className="tile-label">biggest opportunity</span>
+              <Hint align="right" label="About the opportunity" content={IMPACT_EXPLAINED} />
+            </span>
             {opportunity ? (
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <DishLink id={opportunity.dish_id} name={opportunity.dish_name} />
-                  <Hint content={explain(byId[opportunity.dish_id])}>
-                    <span className="chip chip-accent">{VERB[opportunity.quadrant]}</span>
-                  </Hint>
-                </div>
-                <p className="flex items-baseline gap-1.5">
-                  <span className="stat-value">+{poundsRounded(opportunity.impact_pounds)}</span>
-                  {isFullMonth(range) && <span className="text-muted">/ month</span>}
-                </p>
-              </div>
-            ) : <p className="text-muted">None</p>}
-          </Card>
+              <>
+                <DishLink id={opportunity.dish_id} name={opportunity.dish_name} />
+                <Hint content={explain(byId[opportunity.dish_id])}>
+                  <span className="tile-label num">
+                    {VERB[opportunity.quadrant].toLowerCase()} · +{poundsRounded(opportunity.impact_pounds)}{isFullMonth(range) && ' / month'}
+                  </span>
+                </Hint>
+              </>
+            ) : <span className="tile-label">none</span>}
+          </div>
 
           <Card title={`Since ${since}`} flush>
             {!hasPrev ? (
@@ -130,7 +128,7 @@ function InsightsPage({ dishes, prevDishes, actions, range }) {
             ) : moved.length === 0 ? (
               <p className="card-body text-muted">No quadrant changes</p>
             ) : (
-              <ul className="divide-y divide-line border-t border-line">
+              <ul className="divide-y-[1.5px] divide-dashed divide-line-strong border-t-[1.5px] border-dashed border-line-strong">
                 {moved.map((d) => (
                   <li key={d.dish_id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
                     <a href={`#/menu/${d.dish_id}`} className="font-semibold hover:text-accent">{d.dish_name}</a>

@@ -6,7 +6,7 @@ import {
 import Card from './Card'
 import Hint from './Hint'
 import QuadrantBadge from './QuadrantBadge'
-import { quadrantColor, quadrantTextColor } from '../quadrants'
+import { QUADRANTS, quadrantColor, quadrantTextColor } from '../quadrants'
 import { percent, pounds } from '../format'
 import { placeLabels } from '../labelPlacement'
 import { navigate } from '../useHashRoute'
@@ -25,13 +25,17 @@ function zoneLabel(text, quadrant, position) {
   return {
     value: text,
     position,
-    offset: 10,
+    offset: 12,
     fill: quadrantTextColor(quadrant),
-    fontSize: 11,
-    fontWeight: 700,
-    letterSpacing: '0.06em',
+    fontSize: 20,
+    fontWeight: 800,
+    fontFamily: 'var(--font-display)',
+    letterSpacing: '-0.02em',
   }
 }
+
+// Width of a label pill: DM Mono at 12px is about 7.2px a character.
+const pillWidth = (text) => text.length * 7.2 + 20
 
 const signedPounds = (v) => (v > 0 ? `+£${v}` : v < 0 ? `−£${-v}` : '£0')
 
@@ -100,20 +104,27 @@ function QuadrantChart({ dishes, category = null, labelled = new Set() }) {
       yDomain: [yMin, yMax],
       width: width - MARGIN.left - MARGIN.right - Y_AXIS_WIDTH,
       height: HEIGHT - MARGIN.top - MARGIN.bottom - X_AXIS_HEIGHT,
-      corners: { topLeft: 'PUZZLES', topRight: 'STARS', bottomLeft: 'DOGS', bottomRight: 'PLOWHORSES' },
+      corners: { topLeft: 'puzzles', topRight: 'stars', bottomLeft: 'dogs', bottomRight: 'plowhorses' },
     },
   )
 
-  // Draws each named dish on one line at its placed position around the dot.
+  // Draws each named dish as a dark pill at its placed position around the dot.
   const renderLabel = ({ x, y, width: w, height: h, index }) => {
     const dish = points[index]
     const p = dish && placement[dish.dish_id]
     if (!p) return null   // not one of the named dishes (shown on hover instead)
+    const tx = x + w / 2 + p.dx
+    const ty = y + h / 2 + p.dy
+    const pw = pillWidth(dish.dish_name)
+    const left = p.anchor === 'start' ? tx - 10 : p.anchor === 'end' ? tx - pw + 10 : tx - pw / 2
     return (
-      <text x={x + w / 2 + p.dx} y={y + h / 2 + p.dy} textAnchor={p.anchor}
-            fill="var(--ink)" fontSize={12} fontWeight={500}>
-        {dish.dish_name}
-      </text>
+      <g pointerEvents="none">
+        <rect x={left} y={ty - 15} width={pw} height={22} rx={11} fill="var(--ink)" />
+        <text x={left + pw / 2} y={ty} textAnchor="middle" fill="var(--bg)" fontSize={12}
+              fontFamily="var(--font-mono)">
+          {dish.dish_name}
+        </text>
+      </g>
     )
   }
 
@@ -130,14 +141,14 @@ function QuadrantChart({ dishes, category = null, labelled = new Set() }) {
       <div className="chart">
         <ResponsiveContainer width="100%" height={HEIGHT} onResize={(w) => setWidth(w)}>
           <ScatterChart margin={MARGIN}>
-            <ReferenceArea x1={0} x2={xLine} y1={yLine} y2={yMax} fill={quadrantColor('Puzzle')}
-                           fillOpacity={0.07} stroke="none" label={zoneLabel('PUZZLES', 'Puzzle', 'insideTopLeft')} />
-            <ReferenceArea x1={xLine} x2={xMax} y1={yLine} y2={yMax} fill={quadrantColor('Star')}
-                           fillOpacity={0.07} stroke="none" label={zoneLabel('STARS', 'Star', 'insideTopRight')} />
-            <ReferenceArea x1={0} x2={xLine} y1={yMin} y2={yLine} fill={quadrantColor('Dog')}
-                           fillOpacity={0.07} stroke="none" label={zoneLabel('DOGS', 'Dog', 'insideBottomLeft')} />
-            <ReferenceArea x1={xLine} x2={xMax} y1={yMin} y2={yLine} fill={quadrantColor('Plowhorse')}
-                           fillOpacity={0.07} stroke="none" label={zoneLabel('PLOWHORSES', 'Plowhorse', 'insideBottomRight')} />
+            <ReferenceArea x1={0} x2={xLine} y1={yLine} y2={yMax} fill={QUADRANTS.Puzzle.tint}
+                           fillOpacity={1} stroke="none" label={zoneLabel('puzzles', 'Puzzle', 'insideTopLeft')} />
+            <ReferenceArea x1={xLine} x2={xMax} y1={yLine} y2={yMax} fill={QUADRANTS.Star.tint}
+                           fillOpacity={1} stroke="none" label={zoneLabel('stars', 'Star', 'insideTopRight')} />
+            <ReferenceArea x1={0} x2={xLine} y1={yMin} y2={yLine} fill={QUADRANTS.Dog.tint}
+                           fillOpacity={1} stroke="none" label={zoneLabel('dogs', 'Dog', 'insideBottomLeft')} />
+            <ReferenceArea x1={xLine} x2={xMax} y1={yMin} y2={yLine} fill={QUADRANTS.Plowhorse.tint}
+                           fillOpacity={1} stroke="none" label={zoneLabel('plowhorses', 'Plowhorse', 'insideBottomRight')} />
             <CartesianGrid vertical={false} />
             <XAxis type="number" dataKey="x" domain={[0, xMax]} ticks={xTicks} tickFormatter={xFormat}
                    height={X_AXIS_HEIGHT} label={{ value: xLabel, position: 'bottom', offset: 6 }} />

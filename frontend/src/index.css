@@ -28,6 +28,7 @@
   --mustard-soft: #f3e1b0;
   --basil: #2e5a36;
   --basil-soft: #d6e5d3;
+  --plum-soft: #eadae4;
 
   /* Feedback */
   --warn: #7a5600;
@@ -62,6 +63,7 @@
   --color-mustard-soft: var(--mustard-soft);
   --color-basil: var(--basil);
   --color-basil-soft: var(--basil-soft);
+  --color-plum-soft: var(--plum-soft);
   --color-warn: var(--warn);
   --color-warn-bg: var(--warn-bg);
   --color-danger: var(--danger);
@@ -91,6 +93,7 @@ body {
     font-size: 1.5rem;
     letter-spacing: -0.03em;
     line-height: 1.1;
+    text-transform: lowercase;   /* a label, like the nav; titles holding a name opt out with normal-case */
   }
   .label {
     font-family: var(--font-mono);
@@ -338,6 +341,7 @@ body {
     color: var(--ink);
     font-family: var(--font-mono);
     font-size: 0.8125rem;
+    text-transform: lowercase;
     white-space: nowrap;
     cursor: pointer;
   }
@@ -366,6 +370,7 @@ body {
     color: var(--ink);
     font-family: var(--font-mono);
     font-size: 0.8125rem;
+    text-transform: lowercase;
     cursor: pointer;
   }
   .segmented button[aria-pressed='true'] {
@@ -534,6 +539,12 @@ body {
   .tile-label {
     font-family: var(--font-mono);
     font-size: 0.8125rem;
+    text-transform: lowercase;
+  }
+  /* An ⓘ on a coloured tile takes the tile's text colour. */
+  .tile .hint-icon {
+    border-color: currentColor;
+    color: inherit;
   }
   .figure {
     font-family: var(--font-display);
@@ -716,8 +727,9 @@ body {
   stroke: var(--ink);
   stroke-opacity: 0.6;
 }
+/* Dish names on the quadrant chart sit in dark pills (QuadrantChart renderLabel). */
 .chart .recharts-label-list text {
-  fill: var(--ink);
+  fill: var(--bg);
+  font-family: var(--font-mono);
   font-size: 12px;
-  font-weight: 600;
 }
