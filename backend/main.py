@@ -5,10 +5,10 @@ from costing import cost_dish, best_price, menu_price_on, menu_prices
 from database import Base, engine
 import models
 import schemas
-from fastapi import Depends, HTTPException, Query, UploadFile
+from fastapi import Depends, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 from database import get_db
-from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, MenuPriceOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn, BenchmarkSyncOut, InvoiceDraft, InvoiceReviewOut, InvoiceApplyIn, ImportOut, SalesReviewIn, SalesReviewOut, SalesApplyIn, MenuApplyIn
+from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, MenuPriceOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn, BenchmarkSyncOut, InvoiceDraft, InvoiceReviewOut, InvoiceApplyIn, ImportOut, SalesReviewIn, SalesReviewOut, SalesApplyIn, MenuApplyIn, MenuReviewOut
 from models import Dish, DishIngredient, Import, ImportKind, Ingredient, IngredientPrice, MenuPrice, MenuPriceSource, SalesRecord, TillItemAlias
 from recipe_ai import estimate_recipe
 from matching import match_recipe_ingredients
@@ -22,7 +22,8 @@ from seed_demo import backup_database, reset_database
 from benchmarks import sync_benchmarks
 from invoices import ImportProblem, apply_invoice, review_invoice, undo_import
 from invoice_ai import read_invoice
-from menus import apply_menu
+from menus import apply_menu, review_menu
+from menu_ai import read_menu
 from tills import apply_sales, decode, items_needing_hints, read_csv, remembered_mapping, review_sales, undo_sales_import
 from till_ai import propose_columns, suggest_items
 import re
@@ -598,6 +599,21 @@ def apply_sales_route(data: SalesApplyIn, db: Session = Depends(get_db)):
         return apply_sales(db, text, data)
     except ImportProblem as e:
         raise HTTPException(status_code=422, detail=str(e))
+
+@app.post("/imports/menu/read", response_model=MenuReviewOut)
+def read_menu_route(file: UploadFile, start_date: date | None = Form(None), db: Session = Depends(get_db)):
+    """
+    Claude reads an uploaded menu; code compares it with the stored dishes.
+    start_date: when the new menu starts (default today). Saves nothing but the file.
+    """
+    content, media_type, file_hash = read_upload(file)
+    try:
+        draft = read_menu(db, content, media_type)
+    except anthropic.APIConnectionError:
+        raise HTTPException(status_code=503, detail="Couldn't reach the AI service to read the menu. Check your internet connection and try again.")
+    except anthropic.APIStatusError as e:
+        raise HTTPException(status_code=502, detail=f"The AI service returned an error ({e.status_code}) reading the menu. Try again in a moment.")
+    return review_menu(db, draft, start_date or date.today(), filename=file.filename, file_hash=file_hash)
 
 @app.post("/imports/menu/apply", response_model=ImportOut)
 def apply_menu_route(data: MenuApplyIn, db: Session = Depends(get_db)):
