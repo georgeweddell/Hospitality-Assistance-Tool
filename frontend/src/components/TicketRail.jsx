@@ -8,9 +8,10 @@ import { poundsRounded } from '../format'
 const TILTS = [-2.2, 1.4, -0.8, 2, -1.4]
 const STAMP_TILTS = [-4, 3, -2, 2, -3]
 
-export function Ticket({ action, category, number, tilt = 0, stampTilt = -3 }) {
+// `href`: where the ticket goes; its dish, unless shown on that dish's own page.
+export function Ticket({ action, category, number, tilt = 0, stampTilt = -3, href = `#/menu/${action.dish_id}` }) {
   return (
-    <a href={`#/menu/${action.dish_id}`} className="ticket" style={{ '--tilt': `${tilt}deg` }}>
+    <a href={href} className="ticket" style={{ '--tilt': `${tilt}deg` }}>
       <span className="ticket-clip" aria-hidden="true" />
       <span className="ticket-meta">
         <span>TKT {String(number).padStart(2, '0')}</span>
