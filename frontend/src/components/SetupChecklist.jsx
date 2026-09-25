@@ -2,30 +2,23 @@ import Hint from './Hint'
 import { navigate } from '../useHashRoute'
 import { setupSteps } from '../setup'
 
-function go(step) {
-  if (step.menuTab) {
-    try {
-      sessionStorage.setItem('menu-view', JSON.stringify({ category: step.menuTab, status: 'all' }))
-    } catch {
-      // the Menu page just opens on its default tab
-    }
-  }
-  navigate(step.to)
-}
-
-function Tick({ done, n }) {
+// small: for the Setup page's step rail.
+export function Tick({ done, n, small = false }) {
+  const size = small ? 'h-5 w-5 text-xs' : 'h-7 w-7 text-sm'
   return done ? (
-    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-accent-ink" aria-label="Done">
-      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="3"
+    <span className={`flex ${size} shrink-0 items-center justify-center rounded-full bg-accent text-accent-ink`} aria-label="Done">
+      <svg viewBox="0 0 24 24" className={small ? 'h-3 w-3' : 'h-4 w-4'} fill="none" stroke="currentColor" strokeWidth="3"
            strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10" /></svg>
     </span>
   ) : (
-    <span className="num flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-line-strong text-sm font-semibold text-muted">
+    <span className={`num flex ${size} shrink-0 items-center justify-center rounded-full border-2 border-line-strong font-semibold text-muted`}>
       {n}
     </span>
   )
 }
 
+// Setup progress on the Overview, until the required steps are done. The work
+// itself happens on the Setup page, which opens at the first unfinished step.
 function SetupChecklist({ status }) {
   const steps = setupSteps(status)
   const required = steps.filter((s) => !s.optional)
@@ -35,7 +28,10 @@ function SetupChecklist({ status }) {
     <section className="card">
       <div className="card-header">
         <h2 className="section-title">Set up</h2>
-        <span className="count num">{done} / {required.length}</span>
+        <span className="flex items-center gap-3">
+          <span className="count num">{done} / {required.length}</span>
+          <button type="button" onClick={() => navigate('setup')} className="btn btn-primary btn-sm">Continue setup</button>
+        </span>
       </div>
       <ol>
         {steps.map((s, i) => (
@@ -47,10 +43,6 @@ function SetupChecklist({ status }) {
               {s.hint && <Hint content={s.hint} label={`About ${s.label}`} />}
             </span>
             <span className="num w-20 text-right text-muted">{s.figure}</span>
-            <button type="button" onClick={() => go(s)}
-                    className={`btn btn-sm w-32 ${!s.done && !s.optional ? 'btn-primary' : 'btn-secondary'}`}>
-              {s.action}
-            </button>
           </li>
         ))}
       </ol>

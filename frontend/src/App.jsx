@@ -12,6 +12,7 @@ import IngredientsPage from './components/IngredientsPage'
 import SalesPage from './components/SalesPage'
 import ImportsPage from './components/ImportsPage'
 import SettingsPage from './components/SettingsPage'
+import SetupPage from './components/SetupPage'
 import SetupChecklist from './components/SetupChecklist'
 import { setupComplete } from './setup'
 import RangePicker from './components/RangePicker'
@@ -26,6 +27,7 @@ const TITLES = {
   imports: 'Imports',
   analysis: 'Insights',
   settings: 'Settings',
+  setup: 'Set up',
 }
 
 // Pages whose figures depend on the chosen period.
@@ -160,6 +162,8 @@ function App() {
         Loading menu data…
       </div>
     )
+  } else if (page === 'setup') {
+    content = <SetupPage status={data.setup} onChanged={refresh} />
   } else if (page === 'menu' && id) {
     content = (
       <DishPage

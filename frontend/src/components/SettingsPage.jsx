@@ -3,6 +3,7 @@ import Card from './Card'
 import ConfirmDialog from './ConfirmDialog'
 import Hint from './Hint'
 import { postJson } from '../api'
+import { navigate } from '../useHashRoute'
 
 const OPTIONS = [
   {
@@ -53,6 +54,7 @@ function SettingsPage({ onReset, onChanged }) {
         setBackup(result.backup)
         setAsking(null)
         onReset()
+        if (asking.mode === 'fresh') navigate('setup')   // a new restaurant starts with the guided setup
       })
       .catch((err) => {
         setError(err.message)

@@ -41,14 +41,17 @@ function findProblems(rows, byId) {
   return problems
 }
 
-function RecipeEditor({ dish, ingredients, onSaved }) {
+// initialDraft: an AI draft already fetched (the setup page prepares the next
+// dish's in advance). The editor then starts from it, marked as an AI draft;
+// as always, nothing is saved until Save. onEstimated: told when AI was used.
+function RecipeEditor({ dish, ingredients, onSaved, initialDraft = null, onEstimated }) {
   const byId = Object.fromEntries(ingredients.map((i) => [i.id, i]))
   const sortedIngredients = [...ingredients].sort((a, b) => a.name.localeCompare(b.name))
 
-  const [rows, setRows] = useState(() => dish.lines.map(rowFromLine))
-  const [skipped, setSkipped] = useState(dish.skipped_ingredients)
-  const [dirty, setDirty] = useState(false)
-  const [isDraft, setIsDraft] = useState(false)
+  const [rows, setRows] = useState(() => (initialDraft ? initialDraft.map(rowFromDraft) : dish.lines.map(rowFromLine)))
+  const [skipped, setSkipped] = useState(initialDraft ? [] : dish.skipped_ingredients)
+  const [dirty, setDirty] = useState(initialDraft !== null)
+  const [isDraft, setIsDraft] = useState(initialDraft !== null)
   const [estimating, setEstimating] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -92,6 +95,7 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
         setDirty(true)
         setIsDraft(true)
         setShowProblems(false)
+        onEstimated?.()
       })
       .catch((err) => setError(err.message))
       .finally(() => setEstimating(false))

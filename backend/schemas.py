@@ -237,6 +237,9 @@ class SetupStatusOut(BaseModel):
     ingredients_in_use: int
     ingredients_with_own_price: int
     has_sales: bool
+    # Dishes on the menu still without a recipe, in menu order: the setup
+    # page's Recipes step works through them one at a time.
+    needs_recipe: list[int] = []
 
 class ResetIn(BaseModel):
     mode: Literal["fresh", "demo"]

@@ -6,7 +6,7 @@ checklist on the Overview until the restaurant has its first results.
 from datetime import date
 
 from costing import best_price
-from models import Dish, DishIngredient, PriceSource, SalesRecord
+from models import Dish, DishIngredient, DishType, PriceSource, SalesRecord
 from schemas import SetupStatusOut
 
 
@@ -32,4 +32,14 @@ def setup_status(db, today=None) -> SetupStatusOut:
         ingredients_in_use=len(in_use),
         ingredients_with_own_price=own_priced,
         has_sales=db.query(SalesRecord).first() is not None,
+        needs_recipe=[d.id for d in sorted(dishes, key=menu_order) if d.id not in with_recipe],
     )
+
+
+MENU_ORDER = [DishType.STARTER, DishType.MAIN, DishType.SIDE, DishType.DESSERT]   # as a menu reads
+
+
+def menu_order(dish):
+    """Starters first, then down the menu; dishes without a category last; then by name."""
+    position = MENU_ORDER.index(dish.category) if dish.category else len(MENU_ORDER)
+    return position, dish.name.lower()

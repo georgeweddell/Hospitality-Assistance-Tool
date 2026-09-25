@@ -29,6 +29,19 @@ def fresh_session(engine):
     return sessionmaker(bind=engine)()
 
 
+def test_dishes_needing_a_recipe_come_in_menu_order(db, add_dish, cost_item):
+    # Starters before mains, no category last, then by name. Dishes with a recipe, or off the menu, aren't listed.
+    tiramisu = add_dish("Tiramisu", 7.00, DishType.DESSERT)
+    diavola = add_dish("Diavola", 13.00, DishType.MAIN)
+    arancini = add_dish("Arancini", 7.50, DishType.STARTER)
+    special = add_dish("Special", 10.00, None)
+    add_dish("Margherita", 11.00, DishType.MAIN, recipe=[(cost_item, 2)])
+    add_dish("Marinara", 9.00, DishType.MAIN, on_menu_until=date(2026, 7, 31))
+
+    status = setup_status(db, today=TODAY)
+    assert status.needs_recipe == [arancini.id, diavola.id, tiramisu.id, special.id]
+
+
 def test_start_fresh_keeps_only_the_benchmark_ingredients(engine):
     reset_database(engine, with_demo=False)
     db = fresh_session(engine)
