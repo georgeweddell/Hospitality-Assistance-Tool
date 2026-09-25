@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Card from './Card'
 import ConfirmDialog from './ConfirmDialog'
 import ImportReview from './ImportReview'
+import ReadingProgress from './ReadingProgress'
 import UploadButton from './UploadButton'
 import { getJson, postJson } from '../api'
 import { shortDate } from '../format'
@@ -67,7 +68,6 @@ function ImportsPage({ onChanged }) {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="flex items-center gap-3 text-muted">
-          {reading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-line border-t-accent" aria-hidden="true" />}
           {applied && (
             <span className="chip chip-accent num">
               {{
@@ -80,6 +80,7 @@ function ImportsPage({ onChanged }) {
         </span>
         {uploadButtons}
       </div>
+      {reading && <ReadingProgress kind={reading} />}
       {error && <p className="alert-error">{error}</p>}
 
       {!imports ? (

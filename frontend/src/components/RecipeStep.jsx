@@ -63,7 +63,7 @@ function RecipeStep({ queue, total, onChanged, onNext }) {
             <span className="chip chip-accent num">{done} with a recipe</span>
             {skipped.size > 0 && <span className="chip chip-warn num">{skipped.size} skipped</span>}
           </span>
-          <button type="button" onClick={onNext} className="btn btn-primary">Next: Your prices</button>
+          <button type="button" onClick={onNext} className="btn btn-primary">Next: Sales</button>
         </div>
       </Card>
     )

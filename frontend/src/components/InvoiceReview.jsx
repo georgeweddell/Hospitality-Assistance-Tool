@@ -78,7 +78,8 @@ function Line({ line, ingredients, byId, onChange }) {
             <input aria-label="New ingredient name" className="input" value={line.new_ingredient_name}
                    onChange={set('new_ingredient_name')} />
             {line.suggestions.length > 0 && (
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-muted">Or use:</span>
                 {line.suggestions.map((s) => (
                   <button key={s.id} type="button" className="chip chip-accent"
                           onClick={() => onChange({ ...line, action: 'update', ingredient_id: s.id })}>

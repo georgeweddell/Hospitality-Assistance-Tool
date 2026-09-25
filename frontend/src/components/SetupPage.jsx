@@ -1,20 +1,22 @@
 import { useState } from 'react'
 import Card from './Card'
 import ImportReview from './ImportReview'
+import ReadingProgress from './ReadingProgress'
 import RecipeStep from './RecipeStep'
 import UploadButton from './UploadButton'
 import { Tick } from './SetupChecklist'
 import { navigate } from '../useHashRoute'
 import { firstUnfinished, setupSteps } from '../setup'
 
-// A new restaurant's path, one step at a time: menu, recipes, prices, sales,
-// results. Each step reuses an existing screen (the import reviews, the recipe
+// A new restaurant's path, one step at a time: menu, prices, recipes, sales,
+// results. Prices come before recipes so invoice ingredients (and their
+// prices) are in the list when recipes are written. Each step reuses an existing screen (the import reviews, the recipe
 // editor). Progress comes from the data itself (setup status), so leaving and
 // coming back just works: there's no stored "wizard position".
 const RAIL = [
   ['dishes', 'Menu'],
-  ['recipes', 'Recipes'],
   ['prices', 'Your prices'],
+  ['recipes', 'Recipes'],
   ['sales', 'Sales'],
   ['results', 'Results'],
 ]
@@ -62,13 +64,13 @@ function SetupPage({ status, onChanged }) {
           <div className="flex flex-wrap items-center gap-3">
             <a href="#/menu" className="link text-sm">Add dishes by hand</a>
             <UploadButton kind="menu" label="Upload your menu" primary={status.dishes === 0} {...uploadProps} />
-            {status.dishes > 0 && <button type="button" onClick={() => go('recipes')} className="btn btn-primary">Next: Recipes</button>}
+            {status.dishes > 0 && <button type="button" onClick={() => go('prices')} className="btn btn-primary">Next: Your prices</button>}
           </div>
         </div>
       </Card>
     )
   } else if (step === 'recipes') {
-    body = <RecipeStep queue={status.needs_recipe} total={status.dishes} onChanged={onChanged} onNext={() => go('prices')} />
+    body = <RecipeStep queue={status.needs_recipe} total={status.dishes} onChanged={onChanged} onNext={() => go('sales')} />
   } else if (step === 'prices') {
     body = (
       <Card>
@@ -77,8 +79,8 @@ function SetupPage({ status, onChanged }) {
           <div className="flex flex-wrap items-center gap-3">
             <a href="#/ingredients" className="link text-sm">Enter prices by hand</a>
             <UploadButton kind="invoice" label="Upload an invoice" primary={!steps.prices.done} {...uploadProps} />
-            <button type="button" onClick={() => go('sales')} className={`btn ${steps.prices.done ? 'btn-primary' : 'btn-secondary'}`}>
-              {steps.prices.done ? 'Next: Sales' : 'Skip'}
+            <button type="button" onClick={() => go('recipes')} className={`btn ${steps.prices.done ? 'btn-primary' : 'btn-secondary'}`}>
+              {steps.prices.done ? 'Next: Recipes' : 'Skip'}
             </button>
           </div>
         </div>
@@ -129,6 +131,7 @@ function SetupPage({ status, onChanged }) {
         ))}
       </nav>
       {error && <p className="alert-error">{error}</p>}
+      {reading && <ReadingProgress kind={reading} />}
       {body}
     </div>
   )

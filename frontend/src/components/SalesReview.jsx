@@ -251,7 +251,8 @@ function SalesReview({ initial, dishes, onApplied, onCancel }) {
                           {sortedDishes.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                         </select>
                         {!ignored && choice.dish_id == null && it.suggestions.length > 0 && (
-                          <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            <span className="text-xs text-muted">Or use:</span>
                             {it.suggestions.map((s) => (
                               <button key={s.id} type="button" className="chip chip-accent" onClick={() => choose(it.item, s.id)}>
                                 {s.name}
