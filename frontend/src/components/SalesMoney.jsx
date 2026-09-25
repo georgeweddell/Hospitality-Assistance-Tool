@@ -32,11 +32,16 @@ function Figure({ label, value, sub }) {
 function DayTooltip({ active, payload }) {
   if (!active || !payload?.length) return null
   const d = payload[0].payload
+  const weekday = new Date(`${d.day}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' })
   return (
-    <div className="card px-3 py-2 text-sm shadow-lg">
-      <p className="font-semibold">{shortDate(d.day)}</p>
-      <p className="num">{pounds(d.sales)} · {Math.round(d.units)} sold</p>
-      <p className="num text-muted">7-day average {pounds(d.average)}</p>
+    <div className="chart-tip">
+      <p className="chart-tip-title">{shortDate(d.day)}</p>
+      <p className="chart-tip-kicker">{weekday}</p>
+      <div className="chart-tip-figures">
+        <div><div className="chart-tip-value">{pounds(d.sales)}</div><div className="chart-tip-label">sales</div></div>
+        <div><div className="chart-tip-value">{Math.round(d.units)}</div><div className="chart-tip-label">sold</div></div>
+        <div><div className="chart-tip-value">{pounds(d.average)}</div><div className="chart-tip-label">7-day average</div></div>
+      </div>
     </div>
   )
 }
@@ -102,7 +107,8 @@ function SalesMoney({ range, coverage }) {
               <CartesianGrid vertical={false} />
               <XAxis dataKey="day" tickFormatter={dayLabel} minTickGap={24} tickLine={false} />
               <YAxis tickFormatter={(v) => poundsRounded(v)} width={64} tickLine={false} axisLine={false} />
-              <Tooltip content={<DayTooltip />} cursor={{ fill: 'var(--line)', fillOpacity: 0.5 }} />
+              <Tooltip content={<DayTooltip />} cursor={{ fill: 'var(--line)', fillOpacity: 0.5 }}
+                       isAnimationActive={false} offset={16} wrapperStyle={{ outline: 'none' }} />
               <Bar dataKey="sales" fill="var(--accent)" fillOpacity={0.85} radius={[3, 3, 0, 0]} />
               <Line dataKey="average" stroke="var(--ink)" strokeWidth={2} dot={false} type="monotone" />
             </ComposedChart>

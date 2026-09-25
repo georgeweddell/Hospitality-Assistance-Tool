@@ -143,7 +143,8 @@ function QuadrantChart({ dishes, category = null, labelled = new Set() }) {
                    height={X_AXIS_HEIGHT} label={{ value: xLabel, position: 'bottom', offset: 6 }} />
             <YAxis type="number" dataKey="y" domain={[yMin, yMax]} ticks={yTicks} tickFormatter={yFormat}
                    width={Y_AXIS_WIDTH} />
-            <Tooltip content={<DishTooltip />} cursor={false} />
+            <Tooltip content={<DishTooltip />} cursor={false} isAnimationActive={false} offset={16}
+                     wrapperStyle={{ outline: 'none' }} />
             <ReferenceLine x={xLine} strokeDasharray="4 4" />
             <ReferenceLine y={yLine} strokeDasharray="4 4" />
             <Scatter data={points} isAnimationActive={false} cursor="pointer"
@@ -160,22 +161,33 @@ function QuadrantChart({ dishes, category = null, labelled = new Set() }) {
   )
 }
 
+function TipFigure({ value, label }) {
+  return (
+    <div>
+      <div className="chart-tip-value">{value}</div>
+      <div className="chart-tip-label">{label}</div>
+    </div>
+  )
+}
+
 function DishTooltip({ active, payload }) {
   if (!active || !payload || payload.length === 0) return null
   const dish = payload[0].payload
 
   return (
-    <div className="card px-3 py-2.5 text-sm shadow-md">
-      <div className="mb-1.5 flex items-center gap-2">
-        <strong>{dish.dish_name}</strong>
+    <div className="chart-tip" style={{ '--tip-edge': quadrantColor(dish.quadrant) }}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="chart-tip-title">{dish.dish_name}</p>
+          <p className="chart-tip-kicker">{dish.category}</p>
+        </div>
         <QuadrantBadge quadrant={dish.quadrant} />
       </div>
-      <dl className="num grid grid-cols-[auto_auto] gap-x-4 gap-y-0.5">
-        <dt className="text-muted">Category</dt><dd className="text-right">{dish.category}</dd>
-        <dt className="text-muted">Margin</dt><dd className="text-right">{pounds(dish.margin_pounds)}</dd>
-        <dt className="text-muted">Share of {dish.category?.toLowerCase()}s</dt><dd className="text-right">{percent(dish.menu_mix_percent)}</dd>
-        <dt className="text-muted">Units sold</dt><dd className="text-right">{dish.units_sold}</dd>
-      </dl>
+      <div className="chart-tip-figures">
+        <TipFigure value={pounds(dish.margin_pounds)} label="margin" />
+        <TipFigure value={percent(dish.menu_mix_percent)} label={`of ${dish.category?.toLowerCase()}s`} />
+        <TipFigure value={dish.units_sold} label="sold" />
+      </div>
     </div>
   )
 }
