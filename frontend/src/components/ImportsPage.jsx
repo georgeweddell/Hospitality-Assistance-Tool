@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import Card from './Card'
 import ConfirmDialog from './ConfirmDialog'
 import ImportReview from './ImportReview'
+import QueueReview from './QueueReview'
 import ReadingProgress from './ReadingProgress'
 import UploadButton from './UploadButton'
 import { getJson, postJson } from '../api'
 import { shortDate } from '../format'
+import useUploadQueue from '../useUploadQueue'
 
 const KIND_LABELS = { invoice: 'Invoice', sales: 'Sales', menu: 'Menu' }
 
@@ -20,6 +22,8 @@ function ImportsPage({ onChanged }) {
   const [undoing, setUndoing] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  // Several invoices at once, reviewed one after another.
+  const queue = useUploadQueue(() => setLoads((n) => n + 1))
 
   useEffect(() => {
     let ignore = false
@@ -54,12 +58,13 @@ function ImportsPage({ onChanged }) {
   }
 
   if (review) return <ImportReview upload={review} onApplied={afterApply} onCancel={() => setReview(null)} />
+  if (queue.active) return <QueueReview queue={queue} onApplied={(record) => { setApplied(record); onChanged() }} />
 
   const upload = { reading, setReading, onError: setError, onRead: (r) => { setApplied(null); setReview(r) } }
   const uploadButtons = (
     <div className="flex flex-wrap gap-2">
       <UploadButton kind="menu" label="Upload menu" {...upload} />
-      <UploadButton kind="invoice" label="Upload invoice" {...upload} />
+      <UploadButton kind="invoice" label="Upload invoices" {...upload} onFiles={queue.start} />
       <UploadButton kind="sales" label="Upload sales" {...upload} />
     </div>
   )

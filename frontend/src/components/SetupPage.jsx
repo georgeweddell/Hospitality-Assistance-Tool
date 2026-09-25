@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import Card from './Card'
 import ImportReview from './ImportReview'
+import QueueReview from './QueueReview'
 import ReadingProgress from './ReadingProgress'
 import RecipesTable from './RecipesTable'
 import UploadButton from './UploadButton'
 import { Tick } from './SetupChecklist'
 import { navigate } from '../useHashRoute'
 import { firstUnfinished, setupSteps } from '../setup'
+import useUploadQueue from '../useUploadQueue'
 
 // A new restaurant's path, one step at a time: menu, prices, recipes, sales,
 // results. Prices come before recipes, so invoice ingredients (and their
@@ -45,6 +47,8 @@ function SetupPage({ status, onChanged }) {
   }
   const nextOf = (key) => RAIL[RAIL.findIndex(([k]) => k === key) + 1][0]
   const uploadProps = { reading, setReading, onError: setError, onRead: setUpload }
+  // Invoices can be several at once; after the last one, move on to recipes.
+  const queue = useUploadQueue(() => setStep('recipes'))
 
   // After an upload is applied: refresh the figures and move on.
   const applied = () => {
@@ -55,7 +59,9 @@ function SetupPage({ status, onChanged }) {
   }
 
   let body
-  if (upload) {
+  if (queue.active) {
+    body = <QueueReview queue={queue} onApplied={onChanged} />
+  } else if (upload) {
     body = <ImportReview upload={upload} onApplied={applied} onCancel={() => setUpload(null)} />
   } else if (step === 'dishes') {
     body = (
@@ -86,7 +92,8 @@ function SetupPage({ status, onChanged }) {
           <Figure label="Ingredients on your own prices" value={steps.prices.figure} />
           <div className="flex flex-wrap items-center gap-3">
             <a href="#/ingredients" className="link text-sm">Enter prices by hand</a>
-            <UploadButton kind="invoice" label="Upload an invoice" primary={!steps.prices.done} {...uploadProps} />
+            <UploadButton kind="invoice" label="Upload invoices" primary={!steps.prices.done} {...uploadProps}
+                          onFiles={queue.start} />
             <button type="button" onClick={() => go('recipes')} className={`btn ${steps.prices.done ? 'btn-primary' : 'btn-secondary'}`}>
               {steps.prices.done ? 'Next: Recipes' : 'Skip'}
             </button>
