@@ -156,7 +156,8 @@ def period_summary(ctx: ReportContext) -> str:
     f = ctx.facts
     now, before = summarise(ctx.now), summarise(ctx.prev)
     lines = [f'Period: {describe(ctx.start, ctx.end)}. Compared with: {describe(ctx.prev_start, ctx.prev_end)}. '
-             "Plate costs use today's ingredient prices, as everywhere in the app."]
+             "Plate costs use today's ingredient prices, as everywhere in the app, for both periods: so a change "
+             "in gross margin between them comes from what sold and at what menu prices, not from ingredient costs."]
     if not ctx.now:
         return lines[0] + ' No sales recorded in this period, so there is nothing to analyse.'
     lines += [
