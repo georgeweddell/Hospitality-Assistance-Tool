@@ -79,13 +79,16 @@ function InsightsPage({ dishes, prevDishes, actions, range }) {
 
   return (
     <div className="space-y-5">
-      <select value={category ?? 'all'} onChange={(e) => choose(e.target.value)} className="input input-pill w-auto"
-              aria-label="Show">
-        <option value="all">all categories ({dishes.length})</option>
-        {present.map((c) => (
-          <option key={c} value={c}>{PLURAL[c].toLowerCase()} ({dishes.filter((d) => d.category === c).length})</option>
-        ))}
-      </select>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <select value={category ?? 'all'} onChange={(e) => choose(e.target.value)} className="input input-pill w-auto"
+                aria-label="Show">
+          <option value="all">all categories ({dishes.length})</option>
+          {present.map((c) => (
+            <option key={c} value={c}>{PLURAL[c].toLowerCase()} ({dishes.filter((d) => d.category === c).length})</option>
+          ))}
+        </select>
+        <a href="#/reports" className="btn btn-secondary">Reports</a>
+      </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {/* A fresh chart per filter: Recharts can otherwise ask for labels of dots that have gone */}
