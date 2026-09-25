@@ -1,7 +1,6 @@
 import Delta from './Delta'
 import Hint from './Hint'
 import TicketRail from './TicketRail'
-import { GenerateReportButton } from './ReportsPage'
 import { QUADRANTS, quadrantTextColor } from '../quadrants'
 import { percent, poundsRounded } from '../format'
 import { previousLabel, rangeLabel } from '../dateRange'
@@ -89,10 +88,7 @@ function OverviewPage({ dishes, prevDishes, actions, range, unchecked = 0 }) {
                   content="Recipes estimated by AI and not yet checked. Their costs are estimates until you check them." />
           </span>
         ) : <span />}
-        <span className="flex items-center gap-4">
-          <a href="#/reports" className="link font-mono text-sm font-normal">past reports</a>
-          <GenerateReportButton range={range} />
-        </span>
+        <a href="#/reports" className="btn btn-primary">Generate report</a>
       </div>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">

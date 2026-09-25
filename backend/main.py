@@ -738,7 +738,8 @@ def still_running(report: Report, db) -> bool:
 
 
 @app.post("/reports")
-def start_report(start: date | None = Query(None, alias="from"), end: date | None = Query(None, alias="to"),
+def start_report(request: schemas.ReportIn | None = None,
+                 start: date | None = Query(None, alias="from"), end: date | None = Query(None, alias="to"),
                  db: Session = Depends(get_db)):
     """
     Starts a report for the period in the background and returns straight away.
@@ -752,7 +753,8 @@ def start_report(start: date | None = Query(None, alias="from"), end: date | Non
     if not db.query(SalesRecord).filter(SalesRecord.period_start >= start, SalesRecord.period_end <= end).first():
         raise HTTPException(status_code=422, detail="No sales in this period to report on")
 
-    report = Report(period_start=start, period_end=end)
+    focus = (request.focus or '').strip() if request else ''
+    report = Report(period_start=start, period_end=end, focus=focus or None)
     db.add(report)
     db.commit()
     job = threading.Thread(target=report_agent.run_report_job,

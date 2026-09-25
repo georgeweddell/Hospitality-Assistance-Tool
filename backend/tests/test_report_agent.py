@@ -167,6 +167,14 @@ def test_investigating_on_and_on_past_the_limit_fails_the_report(ctx):
         run_report(ctx, claude)
 
 
+def test_the_owners_focus_goes_into_the_brief(ctx):
+    claude = FakeClaude(reply(tool_use('period_summary')), reply(tool_use('write_report', good_report())))
+    run_report(ctx, claude, focus='Why are desserts so quiet?')
+    brief = claude.requests[0]['messages'][0]['content']
+    assert brief.startswith('Write the report for September 2026')
+    assert '<focus>\nWhy are desserts so quiet?\n</focus>' in brief
+
+
 def test_thinking_goes_back_to_claude_unchanged(ctx):
     thought = SimpleNamespace(type='thinking', thinking='Start with the summary.', signature='sig123')
     claude = FakeClaude(reply(thought, tool_use('period_summary')), reply(tool_use('write_report', good_report())))
@@ -229,5 +237,5 @@ def test_a_report_whose_job_has_gone_is_marked_interrupted(db):
 def test_a_report_needs_sales_in_the_period(db, monkeypatch):
     monkeypatch.setattr(report_agent, 'client', lambda: pytest.fail('Claude should not be called'))
     with pytest.raises(main.HTTPException) as e:
-        main.start_report(*SEPTEMBER, db=db)
+        main.start_report(None, *SEPTEMBER, db=db)
     assert e.value.status_code == 422

@@ -13,14 +13,14 @@ import { shortDate } from '../format'
 
 const POLL_MS = 1000
 
-// Starts a report for the period and opens it.
-export function GenerateReportButton({ range, className = '' }) {
+// Starts a report for the period (with the owner's optional focus) and opens it.
+export function GenerateReportButton({ range, focus = '', className = '' }) {
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState(null)
   const start = () => {
     setStarting(true)
     setError(null)
-    postJson(`/reports?${rangeQuery(range)}`)
+    postJson(`/reports?${rangeQuery(range)}`, { focus: focus.trim() || null })
       .then((report) => navigate(`reports/${report.id}`))
       .catch((err) => {
         setError(err.message)
@@ -168,11 +168,16 @@ function ReportView({ id, range }) {
         )}
       </div>
 
+      {report.focus && (
+        <p className="max-w-3xl font-mono text-sm">
+          <span className="text-muted">focus · </span>{report.focus}
+        </p>
+      )}
       {report.status === 'running' && <Trail report={report} seconds={seconds} />}
       {report.status === 'failed' && (
         <div className="alert-error flex flex-wrap items-center justify-between gap-3">
           <span>{report.error}</span>
-          {range && <GenerateReportButton range={range} />}
+          {range && <GenerateReportButton range={range} focus={report.focus ?? ''} />}
         </div>
       )}
       {report.status === 'done' && <Report report={report} />}
@@ -183,6 +188,7 @@ function ReportView({ id, range }) {
 // Past reports, newest first, and a new one for the chosen period.
 function ReportList({ range }) {
   const [reports, setReports] = useState(null)
+  const [focus, setFocus] = useState('')
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -196,12 +202,20 @@ function ReportList({ range }) {
   return (
     <div className="space-y-5">
       {range && (
-        <div className="tile tile-mustard corner-tr min-h-[120px] flex-row flex-wrap items-center gap-6">
+        <div className="tile tile-mustard corner-tr gap-5 px-7 py-6">
           <div className="flex flex-col gap-1.5">
             <span className="tile-label">new report</span>
             <span className="figure text-[3rem]">{rangeLabel(range).toLowerCase()}</span>
           </div>
-          <GenerateReportButton range={range} className="bg-surface hover:bg-bg" />
+          <label className="field">
+            <span className="tile-label">any particular focus or question (optional)</span>
+            <textarea value={focus} onChange={(e) => setFocus(e.target.value)} rows={2} maxLength={500}
+                      placeholder="e.g. desserts, weekday trade, the mozzarella price"
+                      className="input resize-y border-ink" />
+          </label>
+          <div className="flex justify-end">
+            <GenerateReportButton range={range} focus={focus} className="bg-surface hover:bg-bg" />
+          </div>
         </div>
       )}
       {error && <p className="alert-error">{error}</p>}

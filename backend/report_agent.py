@@ -171,17 +171,24 @@ class ReportFailed(Exception):
 
 
 def run_report(ctx: ReportContext, client, on_step: Callable[[dict], None] = lambda step: None,
-               on_usage: Callable[[int, int], None] = lambda i, o: None) -> ReportDraft:
+               on_usage: Callable[[int, int], None] = lambda i, o: None, focus: str | None = None) -> ReportDraft:
     """
     The agent loop. `client` is an Anthropic client (or a scripted fake in tests).
-    Calls on_step with each tool call as it happens, for the live trail.
+    Calls on_step with each tool call as it happens, for the live trail. `focus` is
+    the owner's optional question, added to the brief.
     Returns the checked draft, or raises ReportFailed.
     """
     dish_names = [d.name for d in ctx.db.query(Dish).all()]
     tools = tool_definitions() + [WRITE_REPORT]
-    messages = [{'role': 'user', 'content':
-                 f'Write the report for {describe(ctx.start, ctx.end)}, compared with '
-                 f'{describe(ctx.prev_start, ctx.prev_end)}. Today is {ctx.today:%d %B %Y}.'}]
+    brief = (f'Write the report for {describe(ctx.start, ctx.end)}, compared with '
+             f'{describe(ctx.prev_start, ctx.prev_end)}. Today is {ctx.today:%d %B %Y}.')
+    if focus:
+        # The owner's own words, marked off from the instructions. The numbers rule
+        # and the checks still apply to the answer.
+        brief += ('\n\nThe owner asked the report to focus on this:\n<focus>\n' + focus + '\n</focus>\n'
+                  'Investigate it first and answer it in the report as far as the data allows, citing the facts. '
+                  'If the data cannot answer part of it, say so plainly in a finding (citing the closest facts).')
+    messages = [{'role': 'user', 'content': brief}]
     tool_calls = 0
     fixes_left = MAX_FIX_ATTEMPTS
     nudged = False
@@ -254,7 +261,7 @@ def run_report_job(report_id: int, session_factory, client, today=None):
             report.output_tokens += output_tokens
 
         try:
-            draft = run_report(ctx, client, on_step, on_usage)
+            draft = run_report(ctx, client, on_step, on_usage, focus=report.focus)
             report.content = draft.model_dump()
             report.status = ReportStatus.DONE
         except ReportFailed as e:
@@ -288,7 +295,7 @@ def report_out(report: Report) -> dict:
 
     return {
         'id': report.id, 'created_at': report.created_at, 'status': report.status.value,
-        'period_start': report.period_start, 'period_end': report.period_end,
+        'period_start': report.period_start, 'period_end': report.period_end, 'focus': report.focus,
         'trail': report.trail, 'error': report.error,
         'next_steps': items('next_steps'), 'findings': items('findings'),
         'input_tokens': report.input_tokens, 'output_tokens': report.output_tokens,

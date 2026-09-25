@@ -194,6 +194,7 @@ class Report(Base):
     created_at = Column(DateTime, nullable=False, default=datetime.now)
     period_start = Column(Date, nullable=False)
     period_end = Column(Date, nullable=False)
+    focus = Column(String, nullable=True)    # the owner's own question or focus, if they gave one
     status = Column(Enum(ReportStatus), nullable=False, default=ReportStatus.RUNNING)
     # JSON columns are reassigned, never changed in place (SQLAlchemy only notices reassignment).
     trail = Column(JSON, nullable=False, default=list)    # [{"tool", "input", "label"}] as the agent works
