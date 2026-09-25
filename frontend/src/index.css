@@ -1,32 +1,39 @@
 @import "tailwindcss";
 
 /* =====================================================================
-   Docket design system
+   Docket design system ("deli counter")
    Every colour, font and shared component style lives here. Components
    use these tokens and classes instead of their own one-off styles, so
    the whole app stays consistent. Change a look here, not in a page.
+   Type: Bricolage Grotesque for headings, figures and text (figures are
+   narrow and heavy); DM Mono for labels, buttons and numbers in tables.
    ===================================================================== */
 
 :root {
   /* Paper and ink */
-  --bg: #f6f1e7;           /* page: cream paper */
-  --surface: #fffdf8;      /* cards, inputs */
-  --ink: #221c17;          /* text */
-  --muted: #6e6358;        /* secondary text (4.9:1 on --bg) */
-  --line: #e6dccb;         /* borders, dividers */
-  --line-strong: #d3c5ae;  /* hover borders, dashed empty states */
+  --bg: #f1e9d6;           /* page: cream */
+  --surface: #fffbf2;      /* cards, inputs: paper */
+  --ink: #211c17;          /* text, outlines */
+  --muted: #6b6152;        /* secondary text (4.9:1 on --bg) */
+  --line: #e2d7bf;         /* fills: progress track, muted chips */
+  --line-strong: #c9bfa8;  /* dashed dividers, input borders */
 
-  /* Brand: tomato */
-  --accent: #cf3f2a;
-  --accent-hover: #b5341f;
-  --accent-soft: #fbe3dc;
-  --accent-ink: #ffffff;
+  /* Brand: tomato, mustard, basil */
+  --accent: #b8341e;
+  --accent-hover: #9c2b18;
+  --accent-soft: #f6dcd2;
+  --accent-ink: #fff6e6;
+  --mustard: #e8b43a;
+  --mustard-hover: #d9a21e;
+  --mustard-soft: #f3e1b0;
+  --basil: #2e5a36;
+  --basil-soft: #d6e5d3;
 
   /* Feedback */
-  --warn: #8f5a00;
-  --warn-bg: #fbefd6;
-  --danger: #b42318;
-  --danger-bg: #fdecea;
+  --warn: #7a5600;
+  --warn-bg: #f3e1b0;
+  --danger: #a3261a;
+  --danger-bg: #f6dcd2;
 
   color-scheme: light;
   font-family: var(--font-sans);
@@ -37,8 +44,9 @@
 }
 
 @theme inline {
-  --font-display: 'Fraunces', Georgia, serif;
-  --font-sans: 'Instrument Sans', system-ui, sans-serif;
+  --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-sans: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, monospace;
 
   --color-bg: var(--bg);
   --color-surface: var(--surface);
@@ -50,6 +58,10 @@
   --color-accent-hover: var(--accent-hover);
   --color-accent-soft: var(--accent-soft);
   --color-accent-ink: var(--accent-ink);
+  --color-mustard: var(--mustard);
+  --color-mustard-soft: var(--mustard-soft);
+  --color-basil: var(--basil);
+  --color-basil-soft: var(--basil-soft);
   --color-warn: var(--warn);
   --color-warn-bg: var(--warn-bg);
   --color-danger: var(--danger);
@@ -62,95 +74,104 @@ body {
 
 @layer components {
   /* --- Type --------------------------------------------------------- */
+  /* Headings and big figures: Bricolage at its narrowest and heaviest. */
   .page-title {
     margin: 0;
     font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 2.125rem;
-    letter-spacing: -0.01em;
-    line-height: 1.1;
+    font-weight: 800;
+    font-stretch: 75%;
+    font-size: 4rem;
+    letter-spacing: -0.03em;
+    line-height: 0.85;
   }
   .section-title {
     margin: 0;
     font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 1.25rem;
-    line-height: 1.25;
+    font-weight: 800;
+    font-size: 1.5rem;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
   }
   .label {
+    font-family: var(--font-mono);
     font-size: 0.8125rem;
-    font-weight: 600;
+    font-weight: 400;
     color: var(--muted);
   }
   .num {
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
   .stat-value {
     font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 2rem;
-    line-height: 1;
+    font-weight: 800;
+    font-stretch: 75%;
+    font-size: 2.75rem;
+    letter-spacing: -0.03em;
+    line-height: 0.9;
     font-variant-numeric: tabular-nums;
   }
   .link {
     color: var(--accent);
     font-weight: 600;
-    text-decoration: none;
+    text-decoration: underline;
+    text-underline-offset: 3px;
     cursor: pointer;
   }
   .link:hover {
     color: var(--accent-hover);
-    text-decoration: underline;
   }
 
-  /* --- Buttons ------------------------------------------------------ */
+  /* --- Buttons: pills with an ink outline ------------------------------- */
   .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    padding: 0.625rem 1rem;
-    border: 1px solid transparent;
-    border-radius: 10px;
-    font-size: 0.9375rem;
-    font-weight: 600;
+    padding: 0.6875rem 1.125rem;
+    border: 1.5px solid var(--ink);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    font-weight: 500;
     line-height: 1.25;
     white-space: nowrap;
     cursor: pointer;
-    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+    transition: background-color 0.15s, color 0.15s;
+  }
+  .btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
   .btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
   .btn-primary {
-    background: var(--accent);
-    color: var(--accent-ink);
+    background: var(--mustard);
+    color: var(--ink);
   }
   .btn-primary:hover:not(:disabled) {
-    background: var(--accent-hover);
+    background: var(--mustard-hover);
   }
   .btn-secondary {
-    background: var(--surface);
-    border-color: var(--line);
+    background: transparent;
     color: var(--ink);
   }
   .btn-secondary:hover:not(:disabled) {
-    border-color: var(--line-strong);
-    background: var(--bg);
+    background: var(--surface);
   }
   .btn-danger {
-    background: var(--surface);
-    border-color: var(--line);
+    background: transparent;
+    border-color: var(--danger);
     color: var(--danger);
   }
   .btn-danger:hover:not(:disabled) {
-    border-color: var(--danger);
+    background: var(--danger-bg);
   }
   .btn-sm {
     padding: 0.375rem 0.75rem;
-    font-size: 0.875rem;
-    border-radius: 8px;
+    font-size: 0.75rem;
   }
   .btn-icon {
     padding: 0.25rem 0.5rem;
@@ -160,7 +181,7 @@ body {
     font-size: 1.125rem;
     line-height: 1;
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: 999px;
   }
   .btn-icon:hover {
     color: var(--danger);
@@ -176,18 +197,21 @@ body {
   .input {
     width: 100%;
     box-sizing: border-box;
-    padding: 0.5625rem 0.75rem;
-    border: 1px solid var(--line);
-    border-radius: 10px;
+    padding: 0.5625rem 0.875rem;
+    border: 1.5px solid var(--line-strong);
+    border-radius: 12px;
     background: var(--surface);
     color: var(--ink);
     font: inherit;
     font-size: 0.9375rem;
   }
+  .input:hover:not(:disabled) {
+    border-color: var(--ink);
+  }
   .input:focus {
     outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-soft);
+    border-color: var(--ink);
+    box-shadow: 0 0 0 3px var(--mustard-soft);
   }
   .input:disabled {
     opacity: 0.5;
@@ -196,21 +220,21 @@ body {
     border-color: var(--danger);
   }
 
-  /* --- Cards ------------------------------------------------------------ */
+  /* --- Cards: paper with an ink outline -------------------------------- */
   .card {
     background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 14px;
+    border: 2px solid var(--ink);
+    border-radius: 22px;
   }
   .card-header {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 0.75rem;
-    padding: 1.125rem 1.25rem 0.875rem;
+    padding: 1.125rem 1.375rem 0.875rem;
   }
   .card-body {
-    padding: 0 1.25rem 1.25rem;
+    padding: 0 1.375rem 1.375rem;
   }
 
   /* --- Chips and counts ------------------------------------------------ */
@@ -218,14 +242,15 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    padding: 0.1875rem 0.5625rem;
+    padding: 0.1875rem 0.625rem;
     border-radius: 999px;
+    font-family: var(--font-mono);
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 400;
     white-space: nowrap;
   }
   .chip-warn {
-    background: var(--warn-bg);
+    background: var(--mustard-soft);
     color: var(--warn);
   }
   .chip-muted {
@@ -233,8 +258,8 @@ body {
     color: var(--muted);
   }
   .chip-accent {
-    background: var(--accent-soft);
-    color: var(--accent-hover);
+    background: var(--accent);
+    color: var(--accent-ink);
   }
   .count {
     display: inline-block;
@@ -242,18 +267,18 @@ body {
     padding: 0 0.375rem;
     border-radius: 999px;
     background: var(--line);
-    color: var(--muted);
+    color: var(--ink);
+    font-family: var(--font-mono);
     font-size: 0.75rem;
-    font-weight: 600;
     text-align: center;
     font-variant-numeric: tabular-nums;
   }
   .count-warn {
-    background: var(--warn-bg);
-    color: var(--warn);
+    background: var(--mustard);
+    color: var(--ink);
   }
 
-  /* --- Tables ------------------------------------------------------------ */
+  /* --- Tables: mono headers, dashed rows ---------------------------------- */
   .table {
     width: 100%;
     border-collapse: collapse;
@@ -261,28 +286,27 @@ body {
   }
   .table th {
     padding: 0.625rem 0.75rem;
-    border-bottom: 1px solid var(--line);
     text-align: left;
-    font-size: 0.8125rem;
-    font-weight: 600;
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
     color: var(--muted);
     white-space: nowrap;
   }
   .table td {
     padding: 0.75rem;
-    border-bottom: 1px solid var(--line);
+    border-top: 1.5px dashed var(--line-strong);
     vertical-align: middle;
-  }
-  .table tbody tr:last-child td {
-    border-bottom: 0;
   }
   .table th:first-child,
   .table td:first-child {
-    padding-left: 1.25rem;
+    padding-left: 1.375rem;
   }
   .table th:last-child,
   .table td:last-child {
-    padding-right: 1.25rem;
+    padding-right: 1.375rem;
   }
   .table .row-link {
     cursor: pointer;
@@ -291,13 +315,11 @@ body {
     background: var(--bg);
   }
 
-  /* --- Tabs and segmented controls --------------------------------------- */
+  /* --- Tabs and segmented controls: pills --------------------------------- */
   .tabs {
     display: flex;
-    gap: 0.25rem;
-    /* The grey line is an inset shadow, not a border, so the active tab's
-       underline can sit on it without overflowing (which showed a scrollbar). */
-    box-shadow: inset 0 -1px 0 var(--line);
+    gap: 0.375rem;
+    padding: 2px;
     overflow-x: auto;
     overflow-y: hidden;
   }
@@ -305,45 +327,46 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    padding: 0.625rem 0.75rem;
-    border: none;
-    border-bottom: 2px solid transparent;
-    background: none;
-    color: var(--muted);
-    font: inherit;
-    font-weight: 500;
+    padding: 0.5rem 0.9375rem;
+    border: 1.5px solid var(--ink);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
     white-space: nowrap;
     cursor: pointer;
   }
   .tab:hover {
-    color: var(--ink);
+    background: var(--surface);
   }
   .tab[aria-current='page'] {
-    border-bottom-color: var(--accent);
-    color: var(--ink);
-    font-weight: 600;
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .tab[aria-current='page'] .count {
+    background: var(--bg);
   }
   .segmented {
     display: inline-flex;
     gap: 0.25rem;
-    padding: 0.25rem;
-    border-radius: 12px;
-    background: var(--line);
+    padding: 0.1875rem;
+    border: 1.5px solid var(--ink);
+    border-radius: 999px;
   }
   .segmented button {
-    padding: 0.375rem 0.75rem;
+    padding: 0.375rem 0.875rem;
     border: none;
-    border-radius: 8px;
+    border-radius: 999px;
     background: transparent;
-    color: var(--muted);
-    font: inherit;
-    font-size: 0.875rem;
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
     cursor: pointer;
   }
   .segmented button[aria-pressed='true'] {
-    background: var(--surface);
-    color: var(--ink);
-    font-weight: 600;
+    background: var(--ink);
+    color: var(--bg);
   }
 
   /* --- Hints: explanations on hover or click (Hint.jsx) ------------------ */
@@ -354,21 +377,21 @@ body {
     width: 1.125rem;
     height: 1.125rem;
     padding: 0;
-    border: 1.5px solid var(--line-strong);
+    border: 1.5px solid var(--muted);
     border-radius: 999px;
     background: transparent;
     color: var(--muted);
-    font-family: var(--font-display);
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
-    font-weight: 700;
-    font-style: italic;
+    font-weight: 500;
     line-height: 1;
     cursor: help;
   }
   .hint-icon:hover,
   .hint-icon[aria-expanded='true'] {
-    border-color: var(--accent);
-    color: var(--accent);
+    border-color: var(--ink);
+    background: var(--ink);
+    color: var(--bg);
   }
   .hint-trigger {
     display: inline-flex;
@@ -385,12 +408,10 @@ body {
     z-index: 100;
     width: max-content;
     max-width: 18rem;
-    padding: 0.625rem 0.75rem;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--surface);
-    box-shadow: 0 8px 24px rgb(34 28 23 / 0.12);
-    color: var(--ink);
+    padding: 0.75rem 0.875rem;
+    border-radius: 14px;
+    background: var(--ink);
+    color: var(--bg);
     font-family: var(--font-sans);
     font-size: 0.875rem;
     font-weight: 400;
@@ -402,7 +423,7 @@ body {
 
   /* --- Progress bar (file reading, bulk estimates) ------------------------------ */
   .progress {
-    height: 6px;
+    height: 10px;
     border-radius: 999px;
     background: var(--line);
     overflow: hidden;
@@ -415,74 +436,77 @@ body {
   }
 
   /* --- Chart tooltips (QuadrantChart, SalesMoney) --------------------------- */
-  /* A small docket: coloured edge (the dish's quadrant, or the accent), name in
-     the display face, figures side by side with their labels underneath. */
+  /* An ink ticket: a coloured strip on top (the dish's quadrant, or the
+     accent), the name in heavy type, figures side by side in mono. */
   .chart-tip {
     min-width: 13rem;
-    padding: 0.75rem 0.875rem 0.75rem 1rem;
-    border: 1px solid var(--line);
-    border-left: 4px solid var(--tip-edge, var(--accent));
-    border-radius: 10px;
-    background: var(--surface);
-    box-shadow: 0 10px 28px rgb(34 28 23 / 0.14);
-    color: var(--ink);
+    padding: 0.75rem 0.9375rem 0.8125rem;
+    border-top: 5px solid var(--tip-edge, var(--accent));
+    border-radius: 14px;
+    background: var(--ink);
+    color: var(--bg);
     font-family: var(--font-sans);
   }
   .chart-tip-title {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 1.0625rem;
-    font-weight: 600;
-    line-height: 1.2;
+    font-size: 1.25rem;
+    font-weight: 800;
+    font-stretch: 80%;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
   }
   .chart-tip-kicker {
     margin: 0.125rem 0 0;
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
-    font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--line-strong);
   }
   .chart-tip-figures {
     display: flex;
     gap: 1.125rem;
     margin-top: 0.625rem;
     padding-top: 0.625rem;
-    border-top: 1px dashed var(--line-strong);
+    border-top: 1.5px dashed rgb(241 233 214 / 0.35);
   }
   .chart-tip-value {
-    font-family: var(--font-display);
-    font-size: 1.0625rem;
-    font-weight: 600;
-    line-height: 1.1;
+    font-family: var(--font-mono);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    line-height: 1.2;
     font-variant-numeric: tabular-nums;
   }
   .chart-tip-label {
+    font-family: var(--font-mono);
     font-size: 0.6875rem;
-    color: var(--muted);
+    color: var(--line-strong);
   }
 
   /* --- Messages ------------------------------------------------------------ */
   .alert-error {
     padding: 0.75rem 1rem;
-    border: 1px solid #f1c4be;
-    border-radius: 10px;
+    border: 1.5px solid var(--danger);
+    border-radius: 14px;
     background: var(--danger-bg);
     color: var(--danger);
     font-size: 0.9375rem;
   }
   .alert-info {
     padding: 0.625rem 0.875rem;
-    border-radius: 10px;
-    background: var(--accent-soft);
+    border-radius: 14px;
+    background: var(--mustard-soft);
     color: var(--ink);
     font-size: 0.9375rem;
   }
   .empty {
     padding: 2rem;
-    border: 1px dashed var(--line-strong);
-    border-radius: 14px;
+    border: 2px dashed var(--line-strong);
+    border-radius: 22px;
     text-align: center;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
     color: var(--muted);
   }
 }
@@ -503,23 +527,27 @@ body {
 }
 
 /* Recharts draws SVG with its own colours; these rules swap in the tokens. */
-.chart .recharts-cartesian-grid line,
+.chart .recharts-cartesian-grid line {
+  stroke: var(--line-strong);
+  stroke-dasharray: 4 4;
+}
 .chart .recharts-cartesian-axis-line,
 .chart .recharts-cartesian-axis-tick-line {
-  stroke: var(--line);
+  stroke: var(--ink);
 }
 /* Axis text only: the quadrant zone labels set their own colours. */
 .chart .recharts-cartesian-axis-tick-value,
 .chart .recharts-cartesian-axis .recharts-label {
   fill: var(--muted);
+  font-family: var(--font-mono);
   font-size: 12px;
 }
 .chart .recharts-reference-line line {
   stroke: var(--ink);
-  stroke-opacity: 0.5;
+  stroke-opacity: 0.6;
 }
 .chart .recharts-label-list text {
   fill: var(--ink);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
 }
