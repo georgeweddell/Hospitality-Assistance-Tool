@@ -8,7 +8,7 @@ import schemas
 from fastapi import Depends, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 from database import get_db
-from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, MenuPriceOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn, BenchmarkSyncOut, InvoiceDraft, InvoiceReviewOut, InvoiceApplyIn, ImportOut, SalesReviewIn, SalesReviewOut, SalesApplyIn, MenuApplyIn, MenuReviewOut, MenuReviewIn, MenuDraft, RecipeRowOut, RecipeConfirm, ConfirmedIngredient
+from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, MenuPriceOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn, BenchmarkSyncOut, InvoiceDraft, InvoiceReviewOut, InvoiceApplyIn, ImportOut, SalesReviewIn, SalesReviewOut, SalesApplyIn, MenuApplyIn, MenuReviewOut, MenuReviewIn, MenuDraft, RecipeRowOut, RecipeConfirm, ConfirmedIngredient, SalesSummaryOut
 from models import Dish, DishIngredient, Import, ImportKind, RecipeStatus, Ingredient, IngredientPrice, MenuPrice, MenuPriceSource, SalesRecord, TillItemAlias
 from recipe_ai import estimate_recipe
 from matching import match_recipe_ingredients
@@ -24,6 +24,7 @@ from invoices import ImportProblem, apply_invoice, review_invoice, undo_import
 from invoice_ai import read_invoice
 from menus import apply_menu, review_menu, on_menu_at
 from recipe_checks import recipe_row
+from sales_report import sales_summary
 from menu_ai import read_menu
 from tills import apply_sales, decode, items_needing_hints, read_csv, remembered_mapping, review_sales, undo_sales_import
 from till_ai import propose_columns, suggest_items
@@ -456,6 +457,12 @@ def get_sales_coverage(start: date | None = Query(None, alias="from"), end: date
 
     return SalesCoverageOut(first_date=first_date, last_date=last_date, start=start, end=end,
                             days_with_sales=sorted(days), partial_records=len(overlapping) - len(inside))
+
+@app.get("/sales/summary", response_model=SalesSummaryOut)
+def get_sales_summary(start: date | None = Query(None, alias="from"), end: date | None = Query(None, alias="to"),
+                      db: Session = Depends(get_db)):
+    """Sales £ by day, category and dish for the period (the Sales page's charts)."""
+    return sales_summary(db, *resolve_range(db, start, end))
 
 @app.get("/sales/entries", response_model=list[SalesEntryOut])
 def get_sales_entries(start: date = Query(alias="from"), end: date = Query(alias="to"), db: Session = Depends(get_db)):

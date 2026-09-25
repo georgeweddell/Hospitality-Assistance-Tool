@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Card from './Card'
 import Hint from './Hint'
+import SalesMoney from './SalesMoney'
 import { getJson, putJson } from '../api'
 import { daysBetween, eachDay, rangeLabel, rangeQuery } from '../dateRange'
 import { CATEGORIES } from '../categories'
@@ -143,6 +144,8 @@ function SalesPage({ range, coverage, onSaved }) {
   const covered = coverage.days_with_sales.length
   return (
     <div className="space-y-6">
+      <SalesMoney range={range} coverage={coverage} />
+
       <Card title="Coverage" aside={<span className="num">{covered} of {daysBetween(range.from, range.to)} days</span>}>
         <CoverageStrip range={range} coverage={coverage} />
       </Card>

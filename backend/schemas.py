@@ -508,3 +508,32 @@ class RecipeRowOut(BaseModel):
     food_cost_percent: Optional[float] = None   # plate cost as a % of the menu price
     checks: list[Literal["food_cost_high", "food_cost_low", "big_line", "few_ingredients", "left_out", "unit"]] = []
     recipe_check: bool = False                  # the menu description changed (menu import)
+
+
+# --- Sales money (Sales page) -------------------------------------------------------------
+
+class SalesByDayOut(BaseModel):
+    day: date
+    sales: float    # £, at the menu price charged that day (VAT included)
+    units: float
+
+class SalesByCategoryOut(BaseModel):
+    category: Optional[DishType] = None
+    sales: float
+    units: float
+
+class SalesByDishOut(BaseModel):
+    dish_id: int
+    name: str
+    category: Optional[DishType] = None
+    sales: float
+    units: float
+
+class SalesSummaryOut(BaseModel):
+    start: date
+    end: date
+    total_sales: float
+    total_units: float
+    days: list[SalesByDayOut]              # every day in the period, including days with no sales
+    categories: list[SalesByCategoryOut]   # highest sales first
+    dishes: list[SalesByDishOut]           # highest sales first
