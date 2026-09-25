@@ -76,6 +76,8 @@ def test_dish_detail_finds_a_dish_by_name_whatever_the_case(db, menu):
     assert f['Margherita units sold, previous period'] == 20
     # 30 of the 40 mains sold = 75%
     assert f["Margherita share of its category's units"] == 75.0
+    # September's weeks run from the 1st: the last, 29-30 Sep, is only 2 days and says so
+    assert 'Margherita units 29 Sep to 30 Sep (only 2 days)' in f
 
 
 def test_an_unknown_dish_comes_back_as_a_message_not_an_error(db, menu):

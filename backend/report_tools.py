@@ -155,7 +155,8 @@ def period_summary(ctx: ReportContext) -> str:
     """Contribution, sales, gross margin and dishes sold, this period against the previous one."""
     f = ctx.facts
     now, before = summarise(ctx.now), summarise(ctx.prev)
-    lines = [f'Period: {describe(ctx.start, ctx.end)}. Compared with: {describe(ctx.prev_start, ctx.prev_end)}.']
+    lines = [f'Period: {describe(ctx.start, ctx.end)}. Compared with: {describe(ctx.prev_start, ctx.prev_end)}. '
+             "Plate costs use today's ingredient prices, as everywhere in the app."]
     if not ctx.now:
         return lines[0] + ' No sales recorded in this period, so there is nothing to analyse.'
     lines += [
@@ -281,7 +282,9 @@ def dish_detail(ctx: ReportContext, dish: str) -> str:
         while week_start <= ctx.end:
             week_end = min(week_start + timedelta(days=6), ctx.end)
             units = sum(u for day, u in per_day.items() if week_start <= day <= week_end)
-            lines.append('  ' + f.add(f'{name} units {week_start:%d %b} to {week_end:%d %b}', units, 'count'))
+            days = (week_end - week_start).days + 1
+            short = f' (only {days} days)' if days < 7 else ''   # so a short last week isn't read as a fall
+            lines.append('  ' + f.add(f'{name} units {week_start:%d %b} to {week_end:%d %b}{short}', units, 'count'))
             week_start = week_end + timedelta(days=1)
     return '\n'.join(lines)
 

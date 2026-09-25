@@ -11,7 +11,10 @@ Claude chooses which tools to call and in what order; code decides whether to
 run them, what they return, and when to stop.
 
 Guardrails:
-  - At most MAX_TOOL_CALLS investigations; then Claude must write.
+  - At most MAX_TOOL_CALLS investigations; then Claude is told to write, further
+    tool calls are refused, and after MAX_TURNS_OVER_LIMIT such turns it fails.
+    (Sonnet 5 thinks before answering, and with thinking on the API doesn't allow
+    forcing a tool with tool_choice, so the limit is enforced this way.)
   - The report must cite fact ids for every number and contain no digits
     (check_report). If it breaks the rules, the problems go back to Claude
     once to fix; a second failure fails the report rather than showing it.
@@ -29,6 +32,8 @@ from report_tools import ReportContext, describe, format_value, run_tool, tool_d
 MODEL = "claude-sonnet-5"   # the reasoning model, as for invoices and menus
 MAX_TOOL_CALLS = 12
 MAX_FIX_ATTEMPTS = 1
+MAX_TURNS_OVER_LIMIT = 3
+LAST_CALL = 'That was the last investigation. Call write_report next.'
 
 SYSTEM = """You are an experienced restaurant consultant reviewing a small UK restaurant's menu \
 performance for its owner. You have tools that read the restaurant's own data. Investigate like a \
@@ -39,13 +44,18 @@ Finish by calling write_report with:
 - next_steps: the few things the owner should do next, most valuable first. Concrete and practical, \
 in kitchen language (reprice, re-engineer the recipe, feature it on the specials board, check the \
 supplier invoice), not generic advice.
-- findings: what you found that explains the figures.
+- findings: what you found that explains the figures. Each finding adds something the next steps \
+don't already say (the why behind them, or something worth knowing); don't repeat a next step as a finding.
 
 The numbers rule, which is checked by code: never write a number, digit, price or percentage in any \
 title or detail. Instead cite the ids of the facts that support each item (e.g. ["f7", "f13"]); the \
 page shows those numbers next to your words. Write "rose", "fell", "the biggest", "about a third" \
-style words only when a cited fact shows it. Only use facts the tools returned. Dish names are fine \
-as they are.
+style words only when a cited fact shows it. Only use facts the tools returned. Cite the two to four \
+facts that matter most for each item, not every related one. Dish names are fine as they are.
+
+Only claim what the data shows. It has no information on how customers would react to a price change, \
+why a dish sells, or what competitors charge, so don't say a change will or won't affect demand: say \
+what to try and what to watch. Compare like with like (a short week against a full one is not a fall).
 
 Be brief: titles under ten words, details one or two sentences. British English."""
 
@@ -139,11 +149,21 @@ def trail_label(name: str, tool_input: dict) -> str:
             'data_gaps': 'Checking for gaps in the data', 'write_report': 'Writing the report'}.get(name, name)
 
 
-def as_dict(block) -> dict:
-    """An API content block as plain data, to send back in the next request."""
+def as_dict(block) -> dict | None:
+    """
+    An API content block as plain data, to send back in the next request.
+    Thinking blocks must go back unchanged (with their signature), or the API
+    refuses the next request.
+    """
     if block.type == 'tool_use':
         return {'type': 'tool_use', 'id': block.id, 'name': block.name, 'input': block.input}
-    return {'type': 'text', 'text': block.text}
+    if block.type == 'text':
+        return {'type': 'text', 'text': block.text}
+    if block.type == 'thinking':
+        return {'type': 'thinking', 'thinking': block.thinking, 'signature': block.signature}
+    if block.type == 'redacted_thinking':
+        return {'type': 'redacted_thinking', 'data': block.data}
+    return None
 
 
 class ReportFailed(Exception):
@@ -165,17 +185,14 @@ def run_report(ctx: ReportContext, client, on_step: Callable[[dict], None] = lam
     tool_calls = 0
     fixes_left = MAX_FIX_ATTEMPTS
     nudged = False
+    turns_over_limit = 0
 
     while True:
-        # Out of investigations: from now on Claude can only write the report.
-        forced = tool_calls >= MAX_TOOL_CALLS
-        reply = client.messages.create(
-            model=MODEL, max_tokens=4096, system=SYSTEM, tools=tools, messages=messages,
-            **({'tool_choice': {'type': 'tool', 'name': 'write_report'}} if forced else {}))
+        reply = client.messages.create(model=MODEL, max_tokens=16000, system=SYSTEM, tools=tools, messages=messages)
         usage = getattr(reply, 'usage', None)
         if usage:
             on_usage(usage.input_tokens, usage.output_tokens)
-        messages.append({'role': 'assistant', 'content': [as_dict(b) for b in reply.content]})
+        messages.append({'role': 'assistant', 'content': [d for d in map(as_dict, reply.content) if d]})
 
         uses = [b for b in reply.content if b.type == 'tool_use']
         if not uses:
@@ -186,6 +203,10 @@ def run_report(ctx: ReportContext, client, on_step: Callable[[dict], None] = lam
             messages.append({'role': 'user', 'content': 'Finish by calling write_report.'})
             continue
 
+        if tool_calls >= MAX_TOOL_CALLS and any(u.name != 'write_report' for u in uses):
+            turns_over_limit += 1
+            if turns_over_limit > MAX_TURNS_OVER_LIMIT:
+                raise ReportFailed('Claude kept investigating after the limit without writing the report.')
         results = []
         for use in uses:
             if use.name == 'write_report':
@@ -206,6 +227,8 @@ def run_report(ctx: ReportContext, client, on_step: Callable[[dict], None] = lam
                 on_step({'tool': use.name, 'input': use.input, 'label': trail_label(use.name, use.input)})
                 results.append({'type': 'tool_result', 'tool_use_id': use.id,
                                 'content': run_tool(ctx, use.name, use.input)})
+        if tool_calls >= MAX_TOOL_CALLS:
+            results.append({'type': 'text', 'text': LAST_CALL})
         messages.append({'role': 'user', 'content': results})
 
 

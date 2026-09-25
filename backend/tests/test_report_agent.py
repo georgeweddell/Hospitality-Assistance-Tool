@@ -13,7 +13,7 @@ from sqlalchemy.orm import sessionmaker
 import main
 import report_agent
 from models import DishType, Report, ReportStatus
-from report_agent import MAX_TOOL_CALLS, ReportFailed, check_report, report_out, run_report, run_report_job
+from report_agent import LAST_CALL, MAX_TOOL_CALLS, MAX_TURNS_OVER_LIMIT, ReportFailed, check_report, report_out, run_report, run_report_job
 from report_tools import ReportContext
 
 SEPTEMBER = (date(2026, 9, 1), date(2026, 9, 30))
@@ -146,13 +146,33 @@ def test_breaking_the_rules_twice_fails_the_report(ctx):
         run_report(ctx, claude)
 
 
-def test_after_the_tool_limit_claude_is_made_to_write(ctx):
-    investigations = [reply(tool_use('sales_pattern', {'by': 'weekday'}, id=f'tu_{i}')) for i in range(MAX_TOOL_CALLS)]
-    claude = FakeClaude(*investigations, reply(tool_use('write_report', good_report())))
+def investigations(n, start=0):
+    return [reply(tool_use('sales_pattern', {'by': 'weekday'}, id=f'tu_{i}')) for i in range(start, start + n)]
+
+
+def test_after_the_tool_limit_claude_is_told_to_write_and_more_tools_are_refused(ctx):
+    claude = FakeClaude(*investigations(MAX_TOOL_CALLS + 1), reply(tool_use('write_report', good_report())))
     run_report(ctx, claude)
 
-    assert 'tool_choice' not in claude.requests[MAX_TOOL_CALLS - 1]
-    assert claude.requests[MAX_TOOL_CALLS]['tool_choice'] == {'type': 'tool', 'name': 'write_report'}
+    last_allowed = claude.requests[MAX_TOOL_CALLS]['messages'][-1]['content']
+    assert last_allowed[-1] == {'type': 'text', 'text': LAST_CALL}
+    refused = claude.requests[MAX_TOOL_CALLS + 1]['messages'][-1]['content'][0]
+    assert refused['is_error'] is True
+    assert refused['content'] == 'No more investigation: call write_report now.'
+
+
+def test_investigating_on_and_on_past_the_limit_fails_the_report(ctx):
+    claude = FakeClaude(*investigations(MAX_TOOL_CALLS + MAX_TURNS_OVER_LIMIT + 1))
+    with pytest.raises(ReportFailed, match='kept investigating'):
+        run_report(ctx, claude)
+
+
+def test_thinking_goes_back_to_claude_unchanged(ctx):
+    thought = SimpleNamespace(type='thinking', thinking='Start with the summary.', signature='sig123')
+    claude = FakeClaude(reply(thought, tool_use('period_summary')), reply(tool_use('write_report', good_report())))
+    run_report(ctx, claude)
+    sent_back = claude.requests[1]['messages'][1]['content'][0]
+    assert sent_back == {'type': 'thinking', 'thinking': 'Start with the summary.', 'signature': 'sig123'}
 
 
 def test_stopping_without_a_report_gets_one_reminder(ctx):
