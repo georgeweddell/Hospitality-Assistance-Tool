@@ -169,6 +169,8 @@ function App() {
         dishId={id}
         range={data.range}
         analysed={data.dishes.find((d) => d.dish_id === id)}
+        action={data.actions.find((a) => a.dish_id === id)}
+        actionRank={data.actions.findIndex((a) => a.dish_id === id) + 1}
         onChanged={refresh}
       />
     )
