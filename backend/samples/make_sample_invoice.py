@@ -104,8 +104,9 @@ def build_page():
     return "\n".join(ops)
 
 
-def write_pdf(path):
-    content = build_page().encode("cp1252")   # WinAnsi encoding, so the pound sign prints
+def pdf_bytes(page_ops):
+    """A one-page A4 PDF from drawing commands (Helvetica and Helvetica-Bold as F1 / F2)."""
+    content = page_ops.encode("cp1252")   # WinAnsi encoding, so the pound sign prints
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
         b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
@@ -125,10 +126,10 @@ def write_pdf(path):
     for offset in offsets:
         out += b"%010d 00000 n \n" % offset
     out += b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (len(objects) + 1, xref)
-    path.write_bytes(bytes(out))
+    return bytes(out)
 
 
 if __name__ == "__main__":
     target = Path(__file__).parent / "sample-invoice.pdf"
-    write_pdf(target)
+    target.write_bytes(pdf_bytes(build_page()))
     print(f"Wrote {target}")
