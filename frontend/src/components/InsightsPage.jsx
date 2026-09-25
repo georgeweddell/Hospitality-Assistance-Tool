@@ -10,13 +10,14 @@ import { pctChange, summarise } from '../figures'
 import { pounds, poundsRounded } from '../format'
 import { isFullMonth, previousLabel } from '../dateRange'
 
-// Insights: one menu-engineering chart for the chosen category, with the
-// highlights beside it (top earner, biggest opportunity, what moved) and the
-// category's figures against the previous period underneath.
+// Insights: one menu-engineering chart, filtered by a dropdown that starts on
+// all categories, with the highlights beside it (top earner, biggest
+// opportunity, what moved) and the figures against the previous period
+// underneath. Everything follows the filter.
 
 const PLURAL = { Starter: 'Starters', Main: 'Mains', Side: 'Sides', Dessert: 'Desserts' }
 
-// The chosen category survives a reload in this tab (storage can be unavailable).
+// The chosen filter survives a reload in this tab (storage can be unavailable).
 const STORAGE_KEY = 'insights-category'
 function loadCategory() {
   try {
@@ -50,14 +51,14 @@ const DishLink = ({ id, name }) => (
 function InsightsPage({ dishes, prevDishes, actions, range }) {
   const present = CATEGORIES.filter((c) => dishes.some((d) => d.category === c))
   const [chosen, setChosen] = useState(loadCategory)
-  const category = present.includes(chosen) ? chosen : present.includes('Main') ? 'Main' : present[0]
-  const choose = (c) => {
-    setChosen(c)
-    saveCategory(c)
+  const category = present.includes(chosen) ? chosen : null   // null: all categories
+  const choose = (value) => {
+    setChosen(value)
+    saveCategory(value)
   }
 
-  const inCategory = dishes.filter((d) => d.category === category)
-  const prevInCategory = prevDishes.filter((d) => d.category === category)
+  const inCategory = category ? dishes.filter((d) => d.category === category) : dishes
+  const prevInCategory = category ? prevDishes.filter((d) => d.category === category) : prevDishes
   const prevById = Object.fromEntries(prevDishes.map((d) => [d.dish_id, d]))
   const byId = Object.fromEntries(inCategory.map((d) => [d.dish_id, d]))
   const hasPrev = prevDishes.length > 0
@@ -78,17 +79,17 @@ function InsightsPage({ dishes, prevDishes, actions, range }) {
 
   return (
     <div className="space-y-5">
-      <nav className="tabs" aria-label="Category">
+      <select value={category ?? 'all'} onChange={(e) => choose(e.target.value)} className="input w-auto"
+              aria-label="Show">
+        <option value="all">All categories ({dishes.length})</option>
         {present.map((c) => (
-          <button key={c} type="button" className="tab" aria-current={c === category ? 'page' : undefined} onClick={() => choose(c)}>
-            {PLURAL[c]}
-            <span className="count">{dishes.filter((d) => d.category === c).length}</span>
-          </button>
+          <option key={c} value={c}>{PLURAL[c]} ({dishes.filter((d) => d.category === c).length})</option>
         ))}
-      </nav>
+      </select>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <QuadrantChart key={category} dishes={dishes} category={category} labelled={labelled} />
+        {/* A fresh chart per filter: Recharts can otherwise ask for labels of dots that have gone */}
+        <QuadrantChart key={category ?? 'all'} dishes={dishes} category={category} labelled={labelled} />
 
         <div className="space-y-5">
           {earner && (
