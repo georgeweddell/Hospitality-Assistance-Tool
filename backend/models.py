@@ -179,3 +179,26 @@ class QuadrantType(enum.Enum):
     PLOWHORSE = "Plowhorse"
     PUZZLE = "Puzzle"
     DOG = "Dog"
+
+class ReportStatus(enum.Enum):
+    RUNNING = "running"
+    DONE = "done"
+    FAILED = "failed"
+
+class Report(Base):
+    # One report written by the report agent (report_agent.py), kept as a
+    # snapshot: the facts it used and what Claude wrote, so a past report reads
+    # the same later even after the data changes.
+    __tablename__ = "reports"
+    id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.now)
+    period_start = Column(Date, nullable=False)
+    period_end = Column(Date, nullable=False)
+    status = Column(Enum(ReportStatus), nullable=False, default=ReportStatus.RUNNING)
+    # JSON columns are reassigned, never changed in place (SQLAlchemy only notices reassignment).
+    trail = Column(JSON, nullable=False, default=list)    # [{"tool", "input", "label"}] as the agent works
+    facts = Column(JSON, nullable=False, default=list)    # report_tools.Fact as dicts
+    content = Column(JSON, nullable=True)                 # {"next_steps": [...], "findings": [...]} once done
+    error = Column(String, nullable=True)
+    input_tokens = Column(Integer, nullable=False, default=0)
+    output_tokens = Column(Integer, nullable=False, default=0)

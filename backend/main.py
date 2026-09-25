@@ -28,6 +28,10 @@ from sales_report import sales_summary
 from menu_ai import read_menu
 from tills import apply_sales, decode, items_needing_hints, read_csv, remembered_mapping, review_sales, undo_sales_import
 from till_ai import propose_columns, suggest_items
+import report_agent
+from models import Report, ReportStatus
+from database import SessionLocal
+import threading
 import re
 import hashlib
 from pathlib import Path
@@ -712,3 +716,66 @@ def undo_import_route(import_id: int, db: Session = Depends(get_db)):
         return undo_import(db, import_id)
     except ImportProblem as e:
         raise HTTPException(status_code=422, detail=str(e))
+
+
+# --- Reports (the report agent, report_agent.py) --------------------------------------
+
+# Reports being written right now: report id -> its background thread.
+REPORT_JOBS: dict[int, threading.Thread] = {}
+
+
+def still_running(report: Report, db) -> bool:
+    """A report marked running whose thread has gone (e.g. the server restarted) is marked failed."""
+    if report.status != ReportStatus.RUNNING:
+        return False
+    job = REPORT_JOBS.get(report.id)
+    if job is None or not job.is_alive():
+        report.status = ReportStatus.FAILED
+        report.error = report.error or 'Interrupted before it finished. Generate it again.'
+        db.commit()
+        return False
+    return True
+
+
+@app.post("/reports")
+def start_report(start: date | None = Query(None, alias="from"), end: date | None = Query(None, alias="to"),
+                 db: Session = Depends(get_db)):
+    """
+    Starts a report for the period in the background and returns straight away.
+    The page then polls GET /reports/{id} for the trail and, when done, the report.
+    One at a time: each costs a few pence of Claude time.
+    """
+    start, end = resolve_range(db, start, end)
+    running = [r for r in db.query(Report).filter(Report.status == ReportStatus.RUNNING) if still_running(r, db)]
+    if running:
+        raise HTTPException(status_code=409, detail="A report is already being written")
+    if not db.query(SalesRecord).filter(SalesRecord.period_start >= start, SalesRecord.period_end <= end).first():
+        raise HTTPException(status_code=422, detail="No sales in this period to report on")
+
+    report = Report(period_start=start, period_end=end)
+    db.add(report)
+    db.commit()
+    job = threading.Thread(target=report_agent.run_report_job,
+                           args=(report.id, SessionLocal, report_agent.client()), daemon=True)
+    REPORT_JOBS[report.id] = job
+    job.start()
+    return report_agent.report_out(report)
+
+
+@app.get("/reports")
+def list_reports(db: Session = Depends(get_db)):
+    """Past reports, newest first (without their contents)."""
+    reports = db.query(Report).order_by(Report.created_at.desc(), Report.id.desc()).all()
+    for r in reports:
+        still_running(r, db)
+    return [{"id": r.id, "created_at": r.created_at, "status": r.status.value,
+             "period_start": r.period_start, "period_end": r.period_end} for r in reports]
+
+
+@app.get("/reports/{report_id}")
+def get_report(report_id: int, db: Session = Depends(get_db)):
+    report = db.get(Report, report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Report not found")
+    still_running(report, db)
+    return report_agent.report_out(report)
