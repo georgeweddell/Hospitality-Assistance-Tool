@@ -186,7 +186,7 @@ function App() {
         <SetupChecklist status={data.setup} />
         {hasSales && (
           <OverviewPage dishes={data.dishes} prevDishes={data.prevDishes} actions={data.actions}
-                        allDishes={data.allDishes} range={data.range} unchecked={data.setup?.unchecked_recipes} />
+                        range={data.range} unchecked={data.setup?.unchecked_recipes} />
         )}
       </div>
     )
@@ -199,7 +199,7 @@ function App() {
   } else {
     content = (
       <OverviewPage dishes={data.dishes} prevDishes={data.prevDishes} actions={data.actions}
-                    allDishes={data.allDishes} range={data.range} unchecked={data.setup?.unchecked_recipes} />
+                    range={data.range} unchecked={data.setup?.unchecked_recipes} />
     )
   }
 

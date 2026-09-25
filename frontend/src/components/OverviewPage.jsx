@@ -1,65 +1,56 @@
 import Delta from './Delta'
 import Hint from './Hint'
-import QuadrantBadge from './QuadrantBadge'
-import { QUADRANT_ORDER, quadrantColor } from '../quadrants'
+import TicketRail from './TicketRail'
+import { QUADRANTS, quadrantTextColor } from '../quadrants'
 import { percent, poundsRounded } from '../format'
-import { isFullMonth, previousLabel } from '../dateRange'
-import { IMPACT_EXPLAINED, explain } from '../actionText'
+import { previousLabel, rangeLabel } from '../dateRange'
+import { IMPACT_EXPLAINED } from '../actionText'
 import { navigate } from '../useHashRoute'
 import { pctChange, summarise } from '../figures'
 
-function Figure({ label, value, children }) {
-  return (
-    <div className="card flex flex-col gap-3 px-5 py-[18px]">
-      <p className="label">{label}</p>
-      <p className="stat-value">{value}</p>
-      <div className="min-h-[22px]">{children}</div>
-    </div>
-  )
-}
+// £36,036 → £36k for the big figure (the full amount sits underneath).
+const short = (v) => (Math.abs(v) >= 10000 ? `£${Math.round(v / 1000)}k` : poundsRounded(v))
 
-const OffChip = ({ children }) => <span className="chip chip-muted">{children}</span>
+// Tiles in the same places as the chart's zones: Puzzles top left, Stars top right.
+// Each keeps one round corner, the one facing the middle of the grid.
+const TILES = [
+  { q: 'Puzzle', corner: 'corner-tr corner-bl corner-br' },
+  { q: 'Star', corner: 'corner-tl corner-bl corner-br' },
+  { q: 'Dog', corner: 'corner-tl corner-tr corner-br' },
+  { q: 'Plowhorse', corner: 'corner-tl corner-tr corner-bl' },
+]
+// Lower is better, for marking a move up or down.
+const STANDING = { Star: 0, Plowhorse: 1, Puzzle: 1, Dog: 2 }
 
-// What moved between the previous period and this one, as data rows.
-function changesSince(dishes, prevDishes, allDishes, range) {
+// How each dish changed since the previous period: 'new', '↑', '↓' or '→'
+// (a sideways move, Plowhorse ↔ Puzzle), plus how many dishes left.
+function movesSince(dishes, prevDishes) {
   const prevById = Object.fromEntries(prevDishes.map((d) => [d.dish_id, d]))
-  const nowById = Object.fromEntries(dishes.map((d) => [d.dish_id, d]))
-  const menuById = Object.fromEntries(allDishes.map((d) => [d.id, d]))
-  const rows = []
-
+  const nowIds = new Set(dishes.map((d) => d.dish_id))
+  const moves = {}
   for (const d of dishes) {
     const p = prevById[d.dish_id]
-    if (!p) {
-      rows.push({ id: d.dish_id, name: d.dish_name, rank: 2, from: <OffChip>New</OffChip>, to: d.quadrant, units: null })
-    } else if (p.quadrant !== d.quadrant) {
-      rows.push({ id: d.dish_id, name: d.dish_name, rank: d.quadrant === 'Star' ? 0 : 1,
-        from: <QuadrantBadge quadrant={p.quadrant} />, to: d.quadrant, units: pctChange(d.units_sold, p.units_sold) })
+    if (!p) moves[d.dish_id] = { mark: 'new' }
+    else if (p.quadrant !== d.quadrant) {
+      const diff = STANDING[d.quadrant] - STANDING[p.quadrant]
+      moves[d.dish_id] = { mark: diff < 0 ? '↑' : diff > 0 ? '↓' : '→', from: p.quadrant }
     }
   }
-  for (const p of prevDishes) {
-    if (nowById[p.dish_id]) continue
-    const until = menuById[p.dish_id]?.on_menu_until
-    rows.push({ id: p.dish_id, name: p.dish_name, rank: 3, from: <QuadrantBadge quadrant={p.quadrant} />,
-      toChip: <OffChip>{until && until < range.from ? 'Off menu' : 'Not analysed'}</OffChip>, units: null })
-  }
-  return rows.sort((a, b) => a.rank - b.rank)
+  const gone = prevDishes.filter((p) => !nowIds.has(p.dish_id)).length
+  return { moves, gone }
 }
 
-function MoveCard({ action, dish, rank, perMonth }) {
+function DishPill({ dish, move }) {
+  const style = !move ? 'bg-surface'
+    : move.mark === 'new' ? 'bg-ink text-bg'
+    : move.mark === '↓' ? 'bg-accent text-accent-ink'
+    : 'bg-basil text-bg'
+  const title = move?.from ? `Was ${move.from}` : move ? 'New' : undefined
   return (
-    <div className="card flex flex-col gap-4 p-[22px]">
-      <div className="flex items-center justify-between">
-        <Hint content={explain(dish)}><QuadrantBadge quadrant={action.quadrant} /></Hint>
-        <span className="label num">#{rank}</span>
-      </div>
-      <a href={`#/menu/${action.dish_id}`} className="font-display text-2xl font-semibold leading-tight hover:text-accent">
-        {action.dish_name}
-      </a>
-      <p className="mt-auto flex flex-wrap items-baseline gap-x-1.5">
-        <span className="stat-value whitespace-nowrap">+{poundsRounded(action.impact_pounds)}</span>
-        {perMonth && <span className="whitespace-nowrap text-muted">/ month</span>}
-      </p>
-    </div>
+    <a href={`#/menu/${dish.dish_id}`} title={title}
+       className={`rounded-full px-2.5 py-1 font-mono text-xs hover:underline ${style}`}>
+      {move && move.mark !== 'new' && `${move.mark} `}{dish.dish_name}{move?.mark === 'new' && ' · new'}
+    </a>
   )
 }
 
@@ -73,23 +64,20 @@ function openRecipes() {
   navigate('menu')
 }
 
-function OverviewPage({ dishes, prevDishes, actions, allDishes, range, unchecked = 0 }) {
+function OverviewPage({ dishes, prevDishes, actions, range, unchecked = 0 }) {
   const now = summarise(dishes)
   const hasPrev = prevDishes.length > 0
   const before = hasPrev ? summarise(prevDishes) : null
   const vs = previousLabel(range)
 
   const dishById = Object.fromEntries(dishes.map((d) => [d.dish_id, d]))
-  const top = actions.slice(0, 3)
-
-  const counts = Object.fromEntries(QUADRANT_ORDER.map((q) => [q, 0]))
-  for (const d of dishes) counts[d.quadrant] += 1
-  const prevCounts = Object.fromEntries(QUADRANT_ORDER.map((q) => [q, prevDishes.filter((d) => d.quadrant === q).length]))
-
-  const changes = hasPrev ? changesSince(dishes, prevDishes, allDishes, range) : []
+  const { moves, gone } = hasPrev ? movesSince(dishes, prevDishes) : { moves: {}, gone: 0 }
+  const moved = Object.values(moves).filter((m) => m.mark !== 'new').length
+  const added = Object.values(moves).filter((m) => m.mark === 'new').length
+  const sinceParts = [moved && `${moved} moved`, added && `${added} new`, gone && `${gone} gone`].filter(Boolean)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {unchecked > 0 && (
         <span className="flex items-center gap-2">
           <button type="button" onClick={openRecipes} className="chip chip-accent num">
@@ -99,102 +87,80 @@ function OverviewPage({ dishes, prevDishes, actions, allDishes, range, unchecked
                 content="Recipes estimated by AI and not yet checked. Their costs are estimates until you check them." />
         </span>
       )}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Figure label="Contribution" value={poundsRounded(now.contribution)}>
-          {hasPrev && <Delta value={pctChange(now.contribution, before.contribution)}
-                             format={(v) => `${poundsRounded(Math.abs(now.contribution - before.contribution))} · ${v}%`} />}
-        </Figure>
-        <Figure label="Sales" value={poundsRounded(now.sales)}>
-          {hasPrev && <Delta value={pctChange(now.sales, before.sales)} />}
-        </Figure>
-        <Figure label="Gross margin" value={percent(now.grossMargin)}>
-          {hasPrev && <Delta value={now.grossMargin - before.grossMargin} format={(v) => `${v} pts`} />}
-        </Figure>
-        <Figure label="Dishes sold" value={now.units.toLocaleString('en-GB')}>
-          {hasPrev && <Delta value={pctChange(now.units, before.units)} />}
-        </Figure>
-      </div>
 
-      <section className="space-y-4">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <h2 className="section-title">Top moves</h2>
-            <Hint content={IMPACT_EXPLAINED} label="How impact is worked out" />
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+        <div className="tile tile-tomato min-h-[300px] px-8 py-7">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="tile-label">contribution · {rangeLabel(range).toLowerCase()}</span>
+            {hasPrev && <Delta onTile value={pctChange(now.contribution, before.contribution)}
+                               format={(v) => `${v}% on ${vs.toLowerCase()}`} />}
           </div>
-          {actions.length > 0 && <a href="#/actions" className="link">All {actions.length} actions →</a>}
+          <span className="figure -ml-1 text-[clamp(6rem,14vw,13rem)] leading-[0.8] tracking-[-0.05em]">{short(now.contribution)}</span>
+          <span className="tile-label num">{poundsRounded(now.contribution)} · {dishes.length} dishes</span>
         </div>
-        {top.length === 0 ? (
-          <div className="empty">No actions</div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-3">
-            {top.map((a, i) => (
-              <MoveCard key={a.dish_id} action={a} dish={dishById[a.dish_id]} rank={i + 1} perMonth={isFullMonth(range)} />
-            ))}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="tile tile-mustard">
+            <span className="tile-label">sales</span>
+            <span className="figure text-[clamp(2.5rem,4.5vw,4.25rem)]">{poundsRounded(now.sales)}</span>
+            {hasPrev ? <span><Delta onTile value={pctChange(now.sales, before.sales)} /></span> : <span />}
           </div>
-        )}
+          <div className="tile tile-basil corner-bl">
+            <span className="tile-label">dishes sold</span>
+            <span className="figure text-[clamp(2.5rem,4.5vw,4.25rem)]">{now.units.toLocaleString('en-GB')}</span>
+            {hasPrev ? <span><Delta onTile value={pctChange(now.units, before.units)} /></span> : <span />}
+          </div>
+          <div className="tile tile-outline col-span-2 flex-row items-center">
+            <div className="flex flex-col items-start gap-2">
+              <span className="tile-label">gross margin</span>
+              {hasPrev && <Delta value={now.grossMargin - before.grossMargin} format={(v) => `${v} pts`} />}
+            </div>
+            <span className="figure text-[clamp(3rem,6vw,5.5rem)]">{percent(now.grossMargin)}</span>
+          </div>
+        </div>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
-        <section className="card">
-          <div className="card-header">
-            <h2 className="section-title">Since {vs}</h2>
-            {hasPrev && <span className="count">{changes.length}</span>}
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+        <section className="min-w-0 space-y-4">
+          <div className="flex items-baseline justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <h2 className="section-title text-[2rem]">recommended changes</h2>
+              <Hint content={IMPACT_EXPLAINED} label="How impact is worked out" />
+            </div>
+            {actions.length > 0 && <a href="#/actions" className="link font-mono text-sm font-normal">all {actions.length} →</a>}
           </div>
-          {!hasPrev ? (
-            <p className="card-body text-muted">No earlier data</p>
-          ) : changes.length === 0 ? (
-            <p className="card-body text-muted">No changes</p>
+          {actions.length === 0 ? (
+            <div className="empty">No changes</div>
           ) : (
-            <table className="table">
-              <tbody>
-                {changes.slice(0, 6).map((c) => (
-                  <tr key={c.id}>
-                    <td>
-                      <a href={`#/menu/${c.id}`} className="font-semibold hover:text-accent">{c.name}</a>
-                    </td>
-                    <td className="whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1.5">
-                        {c.from}
-                        <span className="text-muted" aria-label="to">→</span>
-                        {c.toChip ?? <QuadrantBadge quadrant={c.to} />}
-                      </span>
-                    </td>
-                    <td className="w-20 text-right">
-                      {c.units != null && <Delta value={c.units} format={(v) => `${Math.round(v)}%`} />}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <TicketRail actions={actions.slice(0, 3)} categoryOf={(id) => dishById[id]?.category} />
           )}
         </section>
 
-        <section className="card flex flex-col gap-4 px-5 py-[18px]">
-          <div className="flex items-baseline justify-between gap-2">
-            <h2 className="section-title">Menu health</h2>
-            <span className="count">{dishes.length}</span>
-          </div>
-          <div className="flex h-3 gap-0.5 overflow-hidden rounded-full" role="img"
-               aria-label={QUADRANT_ORDER.map((q) => `${counts[q]} ${q}s`).join(', ')}>
-            {QUADRANT_ORDER.map((q) =>
-              counts[q] > 0 ? <div key={q} style={{ flexGrow: counts[q], backgroundColor: quadrantColor(q) }} /> : null
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="section-title text-[2rem]">quadrants</h2>
+            {hasPrev && sinceParts.length > 0 && (
+              <span className="font-mono text-sm">since {vs.toLowerCase()}: {sinceParts.join(' · ')}</span>
             )}
           </div>
-          <ul className="grid grid-cols-2 gap-x-6 gap-y-2.5">
-            {QUADRANT_ORDER.map((q) => {
-              const diff = counts[q] - prevCounts[q]
+          <div className="grid grid-cols-2 gap-2.5">
+            {TILES.map(({ q, corner }) => {
+              const members = dishes.filter((d) => d.quadrant === q)
               return (
-                <li key={q} className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: quadrantColor(q) }} />
-                  <span className="num font-semibold">{counts[q]}</span>
-                  <span className="text-muted">{q}s</span>
-                  {hasPrev && diff !== 0 && (
-                    <span className="num text-xs font-semibold text-muted">{diff > 0 ? `▲${diff}` : `▼${-diff}`}</span>
-                  )}
-                </li>
+                <div key={q} className={`flex flex-col gap-2.5 rounded-[22px] p-4 ${corner}`}
+                     style={{ backgroundColor: QUADRANTS[q].tint }}>
+                  <div className="flex items-baseline justify-between">
+                    <Hint content={QUADRANTS[q].meaning}>
+                      <span className="font-bold" style={{ color: quadrantTextColor(q) }}>{q.toLowerCase()}s</span>
+                    </Hint>
+                    <span className="figure text-[2rem]">{members.length}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {members.map((d) => <DishPill key={d.dish_id} dish={d} move={moves[d.dish_id]} />)}
+                  </div>
+                </div>
               )
             })}
-          </ul>
+          </div>
         </section>
       </div>
     </div>

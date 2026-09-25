@@ -499,10 +499,10 @@ body {
     cursor: pointer;
   }
 
-  /* --- Figure blocks: flat colour tiles with one odd corner ----------------- */
-  /* <div class="block block-tomato corner-tr"> <span class="block-label">…</span>
+  /* --- Figure tiles: flat colour tiles with one odd corner ----------------- */
+  /* <div class="tile tile-tomato corner-tr"> <span class="tile-label">…</span>
      <span class="figure">…</span> </div>. The figure's size is set per use. */
-  .block {
+  .tile {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -512,18 +512,18 @@ body {
     background: var(--surface);
     color: var(--ink);
   }
-  .block-tomato {
+  .tile-tomato {
     background: var(--accent);
     color: var(--accent-ink);
   }
-  .block-mustard {
+  .tile-mustard {
     background: var(--mustard);
   }
-  .block-basil {
+  .tile-basil {
     background: var(--basil);
     color: var(--bg);
   }
-  .block-outline {
+  .tile-outline {
     background: transparent;
     border: 2px solid var(--ink);
   }
@@ -531,7 +531,7 @@ body {
   .corner-tr { border-top-right-radius: 6px; }
   .corner-bl { border-bottom-left-radius: 6px; }
   .corner-br { border-bottom-right-radius: 6px; }
-  .block-label {
+  .tile-label {
     font-family: var(--font-mono);
     font-size: 0.8125rem;
   }
@@ -553,10 +553,10 @@ body {
   }
   .rail-tickets {
     display: flex;
-    gap: 1.25rem;
+    gap: 1rem;
     /* Room above for the tilted tickets' corners, then pulled up onto the rail. */
     margin-top: -8px;
-    padding: 6px 1.125rem 1.5rem;
+    padding: 6px 0.75rem 1.5rem;
     overflow-x: auto;
     scrollbar-width: none;
   }
@@ -566,7 +566,8 @@ body {
   .ticket {
     position: relative;
     display: flex;
-    flex: 0 0 15rem;
+    flex: 1 0 12.5rem;   /* share the rail; scroll only when they can't fit */
+    max-width: 16rem;
     flex-direction: column;
     gap: 0.75rem;
     padding: 1.25rem 1.25rem 1.375rem;
@@ -631,9 +632,10 @@ body {
     font-family: var(--font-display);
     font-weight: 800;
     font-stretch: 75%;
-    font-size: 2.5rem;
+    font-size: 2.25rem;
     letter-spacing: -0.03em;
     line-height: 0.9;
+    white-space: nowrap;
     color: var(--accent);
   }
 
