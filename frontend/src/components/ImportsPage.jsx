@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Card from './Card'
 import ConfirmDialog from './ConfirmDialog'
-import InvoiceReview from './InvoiceReview'
-import MenuReview from './MenuReview'
-import SalesReview from './SalesReview'
-import { getJson, postFile, postJson } from '../api'
+import ImportReview from './ImportReview'
+import UploadButton from './UploadButton'
+import { getJson, postJson } from '../api'
 import { shortDate } from '../format'
 
 const KIND_LABELS = { invoice: 'Invoice', sales: 'Sales', menu: 'Menu' }
@@ -20,9 +19,6 @@ function ImportsPage({ onChanged }) {
   const [undoing, setUndoing] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
-  const invoiceInput = useRef(null)
-  const salesInput = useRef(null)
-  const menuInput = useRef(null)
 
   useEffect(() => {
     let ignore = false
@@ -31,26 +27,6 @@ function ImportsPage({ onChanged }) {
       .catch((err) => { if (!ignore) setError(err.message) })
     return () => { ignore = true }
   }, [loads])
-
-  // kind: 'invoice' (checked against the ingredient list), 'sales' (against the
-  // dishes) or 'menu' (compared with the dishes on the server).
-  const upload = (kind) => (e) => {
-    const file = e.target.files[0]
-    e.target.value = ''   // choosing the same file again still triggers a change
-    if (!file) return
-    setReading(kind)
-    setError(null)
-    setApplied(null)
-    const [route, list] = {
-      invoice: ['/imports/invoice/read', '/ingredients'],
-      sales: ['/imports/sales/read', '/dishes'],
-      menu: ['/imports/menu/read', '/dishes'],
-    }[kind]
-    Promise.all([postFile(route, file), getJson(list)])
-      .then(([r, options]) => setReview({ kind, review: r, options }))
-      .catch((err) => setError(err.message))
-      .finally(() => setReading(null))
-  }
 
   const afterApply = (record) => {
     setReview(null)
@@ -76,35 +52,14 @@ function ImportsPage({ onChanged }) {
       .finally(() => setBusy(false))
   }
 
-  if (review?.kind === 'invoice') {
-    return <InvoiceReview review={review.review} ingredients={review.options}
-                          onApplied={afterApply} onCancel={() => setReview(null)} />
-  }
-  if (review?.kind === 'menu') {
-    return <MenuReview initial={review.review} onApplied={afterApply} onCancel={() => setReview(null)} />
-  }
-  if (review?.kind === 'sales') {
-    return <SalesReview initial={review.review} dishes={review.options}
-                        onApplied={afterApply} onCancel={() => setReview(null)} />
-  }
+  if (review) return <ImportReview upload={review} onApplied={afterApply} onCancel={() => setReview(null)} />
 
+  const upload = { reading, setReading, onError: setError, onRead: (r) => { setApplied(null); setReview(r) } }
   const uploadButtons = (
     <div className="flex flex-wrap gap-2">
-      <input ref={invoiceInput} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="sr-only"
-             onChange={upload('invoice')} tabIndex={-1} aria-hidden="true" />
-      <input ref={salesInput} type="file" accept=".csv" className="sr-only"
-             onChange={upload('sales')} tabIndex={-1} aria-hidden="true" />
-      <input ref={menuInput} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="sr-only"
-             onChange={upload('menu')} tabIndex={-1} aria-hidden="true" />
-      <button type="button" onClick={() => menuInput.current.click()} disabled={reading !== null} className="btn btn-secondary">
-        {reading === 'menu' ? 'Reading menu…' : 'Upload menu'}
-      </button>
-      <button type="button" onClick={() => invoiceInput.current.click()} disabled={reading !== null} className="btn btn-secondary">
-        {reading === 'invoice' ? 'Reading invoice…' : 'Upload invoice'}
-      </button>
-      <button type="button" onClick={() => salesInput.current.click()} disabled={reading !== null} className="btn btn-secondary">
-        {reading === 'sales' ? 'Reading sales…' : 'Upload sales'}
-      </button>
+      <UploadButton kind="menu" label="Upload menu" {...upload} />
+      <UploadButton kind="invoice" label="Upload invoice" {...upload} />
+      <UploadButton kind="sales" label="Upload sales" {...upload} />
     </div>
   )
 
