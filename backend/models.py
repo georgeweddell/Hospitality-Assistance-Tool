@@ -78,6 +78,10 @@ class SupplierAlias(Base):
     ingredient_id = Column(Integer, ForeignKey(Ingredient.id), nullable=True)   # None when ignore is True
     ignore = Column(Boolean, nullable=False, default=False)
 
+class RecipeStatus(enum.Enum):
+    CHECKED = "checked"             # entered, or checked, by the owner
+    AI_UNCHECKED = "ai_unchecked"   # estimated by AI in bulk and saved, not yet checked
+
 class DishType(enum.Enum):
     STARTER = "Starter"
     SIDE = "Side"
@@ -100,6 +104,10 @@ class Dish(Base):
     # Set when a menu import finds the description has changed; cleared when the
     # recipe is next saved. Only a reminder: the dish stays in the analysis.
     recipe_check = Column(Boolean, nullable=False, default=False)
+    # Who the saved recipe comes from (None: no recipe yet). Bulk AI estimates are
+    # saved as AI_UNCHECKED and still count in the analysis; the Recipes table
+    # flags them until the owner saves or confirms them (CHECKED).
+    recipe_status = Column(Enum(RecipeStatus), nullable=True)
     import_id = Column(Integer, ForeignKey(Import.id), nullable=True)   # set if a menu import created it
 
 class MenuPriceSource(enum.Enum):
@@ -131,6 +139,9 @@ class DishIngredient(Base):
     dish_id = Column(Integer, ForeignKey(Dish.id), nullable=False)
     ingredient_id = Column(Integer, ForeignKey(Ingredient.id), nullable=False)
     quantity = Column(Float, nullable=False)
+    # An AI line given in a different unit from the ingredient's (e.g. grams of
+    # egg): the quantity is kept as given, and flagged until the recipe is checked.
+    unit_check = Column(Boolean, nullable=False, default=False)
 
 class SalesRecord(Base):
     __tablename__ = "sales_records"

@@ -240,6 +240,7 @@ class SetupStatusOut(BaseModel):
     # Dishes on the menu still without a recipe, in menu order: the setup
     # page's Recipes step works through them one at a time.
     needs_recipe: list[int] = []
+    unchecked_recipes: int = 0   # AI estimates saved in bulk, not yet checked by the owner
 
 class ResetIn(BaseModel):
     mode: Literal["fresh", "demo"]
@@ -491,3 +492,19 @@ class MenuReviewIn(BaseModel):
     start_date: date
     filename: Optional[str] = None
     file_hash: Optional[str] = None
+
+
+# --- Recipes table -------------------------------------------------------------------
+
+class RecipeRowOut(BaseModel):
+    """One dish in the Recipes table (Setup and the Menu page's Recipes tab)."""
+    dish_id: int
+    name: str
+    category: Optional[DishType] = None
+    menu_price: float
+    status: Literal["none", "checked", "ai_unchecked"]
+    lines: int
+    plate_cost: Optional[float] = None
+    food_cost_percent: Optional[float] = None   # plate cost as a % of the menu price
+    checks: list[Literal["food_cost_high", "food_cost_low", "big_line", "few_ingredients", "left_out", "unit"]] = []
+    recipe_check: bool = False                  # the menu description changed (menu import)

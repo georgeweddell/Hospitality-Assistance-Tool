@@ -30,7 +30,7 @@ from datetime import date, datetime, timedelta
 from sqlalchemy.orm import sessionmaker
 
 from database import Base, engine
-from models import (Dish, DishIngredient, DishType, Ingredient, IngredientPrice, MenuPrice, MenuPriceSource,
+from models import (Dish, DishIngredient, DishType, Ingredient, IngredientPrice, MenuPrice, MenuPriceSource, RecipeStatus,
                     PriceSource, SalesRecord, User)
 from costing import cost_dish
 from benchmarks import sync_benchmarks
@@ -264,7 +264,8 @@ def reset_database(target_engine, with_demo, verbose=False):
     for name, category, price, units_sold, recipe, skipped in DISHES:
         on_from, on_until = MENU_DATES.get(name, (OPENED, None))
         dish = Dish(name=name, category=category, skipped_ingredients=skipped,
-                    on_menu_from=on_from, on_menu_until=on_until)
+                    on_menu_from=on_from, on_menu_until=on_until,
+                    recipe_status=RecipeStatus.CHECKED if recipe else None)   # hand-written recipes
         db.add(dish)
         db.commit()
         for menu_price, price_from in [(price, on_from)] + PRICE_CHANGES.get(name, []):

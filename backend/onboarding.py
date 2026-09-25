@@ -6,7 +6,7 @@ checklist on the Overview until the restaurant has its first results.
 from datetime import date
 
 from costing import best_price
-from models import Dish, DishIngredient, DishType, PriceSource, SalesRecord
+from models import Dish, DishIngredient, DishType, PriceSource, RecipeStatus, SalesRecord
 from schemas import SetupStatusOut
 
 
@@ -33,6 +33,7 @@ def setup_status(db, today=None) -> SetupStatusOut:
         ingredients_with_own_price=own_priced,
         has_sales=db.query(SalesRecord).first() is not None,
         needs_recipe=[d.id for d in sorted(dishes, key=menu_order) if d.id not in with_recipe],
+        unchecked_recipes=sum(1 for d in dishes if d.recipe_status == RecipeStatus.AI_UNCHECKED and d.id in with_recipe),
     )
 
 

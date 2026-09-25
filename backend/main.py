@@ -8,8 +8,8 @@ import schemas
 from fastapi import Depends, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 from database import get_db
-from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, MenuPriceOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn, BenchmarkSyncOut, InvoiceDraft, InvoiceReviewOut, InvoiceApplyIn, ImportOut, SalesReviewIn, SalesReviewOut, SalesApplyIn, MenuApplyIn, MenuReviewOut, MenuReviewIn, MenuDraft
-from models import Dish, DishIngredient, Import, ImportKind, Ingredient, IngredientPrice, MenuPrice, MenuPriceSource, SalesRecord, TillItemAlias
+from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, MenuPriceOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn, BenchmarkSyncOut, InvoiceDraft, InvoiceReviewOut, InvoiceApplyIn, ImportOut, SalesReviewIn, SalesReviewOut, SalesApplyIn, MenuApplyIn, MenuReviewOut, MenuReviewIn, MenuDraft, RecipeRowOut, RecipeConfirm, ConfirmedIngredient
+from models import Dish, DishIngredient, Import, ImportKind, RecipeStatus, Ingredient, IngredientPrice, MenuPrice, MenuPriceSource, SalesRecord, TillItemAlias
 from recipe_ai import estimate_recipe
 from matching import match_recipe_ingredients
 from datetime import date, timedelta
@@ -22,7 +22,8 @@ from seed_demo import backup_database, reset_database
 from benchmarks import sync_benchmarks
 from invoices import ImportProblem, apply_invoice, review_invoice, undo_import
 from invoice_ai import read_invoice
-from menus import apply_menu, review_menu
+from menus import apply_menu, review_menu, on_menu_at
+from recipe_checks import recipe_row
 from menu_ai import read_menu
 from tills import apply_sales, decode, items_needing_hints, read_csv, remembered_mapping, review_sales, undo_sales_import
 from till_ai import propose_columns, suggest_items
@@ -289,6 +290,8 @@ def save_recipe(dish_id: int, confirmed: schemas.RecipeConfirm, db: Session = De
 
     dish.skipped_ingredients = confirmed.skipped_ingredients
     dish.recipe_check = False   # a saved recipe answers any "check recipe" reminder
+    # Saved by the owner, so checked (a bulk AI estimate marks itself unchecked after this).
+    dish.recipe_status = RecipeStatus.CHECKED if confirmed.ingredients else None
 
     db.query(models.DishIngredient).filter(models.DishIngredient.dish_id == dish_id).delete()
 
@@ -308,6 +311,68 @@ def save_recipe(dish_id: int, confirmed: schemas.RecipeConfirm, db: Session = De
         ingredients = recipe,
         cost = cost_out
     )
+
+# --- Recipes table -----------------------------------------------------------------
+
+@app.get("/recipes", response_model=list[RecipeRowOut])
+def list_recipes(db: Session = Depends(get_db)):
+    """Every dish on the menu now, with its recipe status, food cost % and checks (one call for the whole table)."""
+    today = date.today()
+    return [recipe_row(db, d, menu_price_on(db, d.id, today))
+            for d in db.query(Dish).all() if on_menu_at(d, today)]
+
+@app.post("/dishes/{dish_id}/estimate-and-save", response_model=RecipeRowOut)
+def estimate_and_save(dish_id: int, db: Session = Depends(get_db)):
+    """
+    For "Estimate all" in the Recipes table: estimates a recipe with Claude and
+    saves it straight away as an unchecked AI estimate (agreed with George).
+    Saving goes through save_recipe, so the usual checks apply. Lines Claude
+    names that aren't in the ingredient list are left out and listed; a line in
+    a different unit from its ingredient is kept as given and flagged.
+    """
+    dish = db.query(Dish).filter(Dish.id == dish_id).first()
+    if not dish:
+        raise HTTPException(status_code=404, detail="Dish not found")
+    try:
+        draft = estimate_recipe(db, dish.name, dish.category, dish.description)
+    except anthropic.APIConnectionError:
+        raise HTTPException(status_code=503, detail="Couldn't reach the AI recipe service. Check your internet connection and try again.")
+    except anthropic.APIStatusError as e:
+        raise HTTPException(status_code=502, detail=f"The AI recipe service returned an error ({e.status_code}). Try again in a moment.")
+
+    quantities, unit_clash, left_out = {}, set(), []
+    for line in match_recipe_ingredients(db, draft):
+        if line.matched_ingredient_id is None or line.quantity <= 0:
+            left_out.append(line.name)
+            continue
+        # The same ingredient twice (e.g. salt in dough and sauce) becomes one line.
+        quantities[line.matched_ingredient_id] = quantities.get(line.matched_ingredient_id, 0) + line.quantity
+        if not line.units_agree:
+            unit_clash.add(line.matched_ingredient_id)
+    if not quantities:
+        raise HTTPException(status_code=422, detail=f"None of the ingredients Claude suggested for {dish.name} are in your list")
+
+    save_recipe(dish_id, RecipeConfirm(
+        ingredients=[ConfirmedIngredient(ingredient_id=i, quantity=q) for i, q in quantities.items()],
+        skipped_ingredients=left_out), db)
+    dish.recipe_status = RecipeStatus.AI_UNCHECKED
+    for row in db.query(DishIngredient).filter(DishIngredient.dish_id == dish_id).all():
+        row.unit_check = row.ingredient_id in unit_clash
+    db.commit()
+    return recipe_row(db, dish, menu_price_on(db, dish_id))
+
+@app.post("/dishes/{dish_id}/recipe/checked", response_model=RecipeRowOut)
+def mark_recipe_checked(dish_id: int, db: Session = Depends(get_db)):
+    """ "Looks right": the owner has checked an AI estimate without changing it."""
+    dish = db.query(Dish).filter(Dish.id == dish_id).first()
+    if not dish:
+        raise HTTPException(status_code=404, detail="Dish not found")
+    if db.query(DishIngredient).filter(DishIngredient.dish_id == dish_id).count() == 0:
+        raise HTTPException(status_code=422, detail="There's no recipe to check yet")
+    dish.recipe_status = RecipeStatus.CHECKED
+    db.query(DishIngredient).filter(DishIngredient.dish_id == dish_id).update({"unit_check": False})
+    db.commit()
+    return recipe_row(db, dish, menu_price_on(db, dish_id))
 
 @app.post("/dishes/{dish_id}/sales", response_model=SalesRecordOut)
 def save_sales_record(sales: SalesRecordCreate, dish_id: int, db: Session = Depends(get_db)):

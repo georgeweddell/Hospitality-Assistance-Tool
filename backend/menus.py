@@ -193,8 +193,10 @@ def apply_menu(db, data):
             old = dishes.get(item.copy_from)
             if old is not None:   # a returning dish: bring its recipe and till matches across
                 for row in db.query(DishIngredient).filter(DishIngredient.dish_id == old.id).all():
-                    db.add(DishIngredient(dish_id=dish.id, ingredient_id=row.ingredient_id, quantity=row.quantity))
+                    db.add(DishIngredient(dish_id=dish.id, ingredient_id=row.ingredient_id, quantity=row.quantity,
+                                          unit_check=row.unit_check))
                 dish.skipped_ingredients = list(old.skipped_ingredients or [])
+                dish.recipe_status = old.recipe_status
                 db.query(TillItemAlias).filter(TillItemAlias.dish_id == old.id).update({"dish_id": dish.id})
 
     for dish_id in data.take_off:
