@@ -93,7 +93,7 @@ function SetupPage({ status, onChanged }) {
           <div className="flex flex-wrap items-center gap-3">
             <a href="#/ingredients" className="link text-sm">Enter prices by hand</a>
             <UploadButton kind="invoice" label="Upload invoices" primary={!steps.prices.done} {...uploadProps}
-                          onFiles={queue.start} />
+                          onFiles={queue.start} multiple />
             <button type="button" onClick={() => go('recipes')} className={`btn ${steps.prices.done ? 'btn-primary' : 'btn-secondary'}`}>
               {steps.prices.done ? 'Next: Recipes' : 'Skip'}
             </button>

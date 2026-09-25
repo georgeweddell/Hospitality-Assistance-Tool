@@ -8,6 +8,7 @@ import { CATEGORIES } from '../categories'
 import { QUADRANT_ORDER } from '../quadrants'
 import { postJson } from '../api'
 import { navigate } from '../useHashRoute'
+import usePageImport from '../usePageImport'
 import { percent, pounds } from '../format'
 
 // Short labels for the reasons a dish isn't analysed yet.
@@ -112,6 +113,7 @@ function MenuPage({ allDishes, analysed, incomplete, setup, range, onChanged }) 
   const [status, setStatus] = useState(saved.status && saved.status !== 'attention' ? saved.status : 'all')
   const [search, setSearch] = useState('')
   const [adding, setAdding] = useState(false)
+  const menuImport = usePageImport('menu', 'Import menu', onChanged)
 
   const choose = (view) => {
     const next = { category, status, ...view }
@@ -119,6 +121,8 @@ function MenuPage({ allDishes, analysed, incomplete, setup, range, onChanged }) 
     if (view.status !== undefined) setStatus(view.status)
     saveView({ category: next.category, status: next.status })
   }
+
+  if (menuImport.review) return menuImport.review
 
   const analysedById = Object.fromEntries(analysed.map((d) => [d.dish_id, d]))
   const reasonsById = Object.fromEntries(incomplete.map((d) => [d.dish_id, d.reasons]))
@@ -179,10 +183,12 @@ function MenuPage({ allDishes, analysed, incomplete, setup, range, onChanged }) 
             </button>
           ))}
         </nav>
-        {!adding && (
-          <button type="button" onClick={() => setAdding(true)} className="btn btn-primary mb-1.5">+ Add dish</button>
-        )}
+        <div className="mb-1.5 flex gap-2">
+          {menuImport.button}
+          {!adding && <button type="button" onClick={() => setAdding(true)} className="btn btn-primary">+ Add dish</button>}
+        </div>
       </div>
+      {menuImport.error && <p className="alert-error">{menuImport.error}</p>}
 
       {adding && (
         <Card title="New dish">

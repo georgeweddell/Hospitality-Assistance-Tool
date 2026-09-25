@@ -64,7 +64,7 @@ function ImportsPage({ onChanged }) {
   const uploadButtons = (
     <div className="flex flex-wrap gap-2">
       <UploadButton kind="menu" label="Upload menu" {...upload} />
-      <UploadButton kind="invoice" label="Upload invoices" {...upload} onFiles={queue.start} />
+      <UploadButton kind="invoice" label="Upload invoices" {...upload} onFiles={queue.start} multiple />
       <UploadButton kind="sales" label="Upload sales" {...upload} />
     </div>
   )

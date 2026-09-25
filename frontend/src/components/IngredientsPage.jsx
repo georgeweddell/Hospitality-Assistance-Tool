@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Card from './Card'
 import PriceFields from './PriceFields'
 import { getJson, postJson } from '../api'
+import usePageImport from '../usePageImport'
 import { emptyPrice, priceBody, priceProblem } from '../prices'
 import { priceForDisplay, shortDate, sourceLabel } from '../format'
 
@@ -155,7 +156,9 @@ function IngredientsPage({ onChanged }) {
     setLoads((n) => n + 1)
     onChanged()  // prices change dish costs, so the dashboard needs refreshing too
   }
+  const invoiceImport = usePageImport('invoice', 'Import invoices', reload, { multiple: true })
 
+  if (invoiceImport.review) return invoiceImport.review
   if (error) return <p className="alert-error">{error}</p>
   if (!ingredients) return <p className="text-muted">Loading ingredients…</p>
 
@@ -195,8 +198,12 @@ function IngredientsPage({ onChanged }) {
             ))}
           </div>
         </div>
-        {!adding && <button type="button" onClick={() => setAdding(true)} className="btn btn-primary">+ Add ingredient</button>}
+        <div className="flex gap-2">
+          {invoiceImport.button}
+          {!adding && <button type="button" onClick={() => setAdding(true)} className="btn btn-primary">+ Add ingredient</button>}
+        </div>
       </div>
+      {invoiceImport.error && <p className="alert-error">{invoiceImport.error}</p>}
 
       {adding && <AddIngredient onAdded={() => { setAdding(false); reload() }} onCancel={() => setAdding(false)} />}
 
