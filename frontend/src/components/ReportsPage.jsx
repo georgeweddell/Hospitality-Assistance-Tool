@@ -116,13 +116,6 @@ function Report({ report }) {
           {report.findings.map((item, i) => <Item key={i} item={item} n={i + 1} tone="bg-surface" />)}
         </ol>
       </section>
-      <details className="font-mono text-xs text-muted print:hidden">
-        <summary className="cursor-pointer">how it was written · {report.trail.length} steps</summary>
-        <ol className="mt-2 space-y-1">
-          {report.trail.map((s, i) => <li key={i}>{String(i + 1).padStart(2, '0')} {s.label}</li>)}
-        </ol>
-        <p className="mt-2">{report.input_tokens.toLocaleString('en-GB')} tokens in · {report.output_tokens.toLocaleString('en-GB')} out</p>
-      </details>
     </div>
   )
 }
