@@ -481,3 +481,10 @@ class MenuApplyIn(BaseModel):
     start_date: date
     items: list[MenuApplyItem]
     take_off: list[int] = []                  # dishes to take off the menu from start_date
+
+class MenuReviewIn(BaseModel):
+    """Compare a menu Claude has already read again, e.g. for a different start date."""
+    items: list[MenuItemDraft]
+    start_date: date
+    filename: Optional[str] = None
+    file_hash: Optional[str] = None

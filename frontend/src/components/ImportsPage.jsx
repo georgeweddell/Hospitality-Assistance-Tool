@@ -2,25 +2,27 @@ import { useEffect, useRef, useState } from 'react'
 import Card from './Card'
 import ConfirmDialog from './ConfirmDialog'
 import InvoiceReview from './InvoiceReview'
+import MenuReview from './MenuReview'
 import SalesReview from './SalesReview'
 import { getJson, postFile, postJson } from '../api'
 import { shortDate } from '../format'
 
 const KIND_LABELS = { invoice: 'Invoice', sales: 'Sales', menu: 'Menu' }
 
-// Upload an invoice or a till export, check what Claude read, apply it; and
+// Upload an invoice, a till export or a menu, check what Claude read, apply it; and
 // the history of everything imported, with Undo.
 function ImportsPage({ onChanged }) {
   const [imports, setImports] = useState(null)
   const [loads, setLoads] = useState(0)
   const [review, setReview] = useState(null)        // { kind, review, options } while checking a file (options: ingredients or dishes)
-  const [reading, setReading] = useState(null)      // 'invoice' | 'sales' while a file is being read
+  const [reading, setReading] = useState(null)      // 'invoice' | 'sales' | 'menu' while a file is being read
   const [applied, setApplied] = useState(null)
   const [undoing, setUndoing] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const invoiceInput = useRef(null)
   const salesInput = useRef(null)
+  const menuInput = useRef(null)
 
   useEffect(() => {
     let ignore = false
@@ -30,7 +32,8 @@ function ImportsPage({ onChanged }) {
     return () => { ignore = true }
   }, [loads])
 
-  // kind: 'invoice' (checked against the ingredient list) or 'sales' (against the dishes).
+  // kind: 'invoice' (checked against the ingredient list), 'sales' (against the
+  // dishes) or 'menu' (compared with the dishes on the server).
   const upload = (kind) => (e) => {
     const file = e.target.files[0]
     e.target.value = ''   // choosing the same file again still triggers a change
@@ -38,7 +41,11 @@ function ImportsPage({ onChanged }) {
     setReading(kind)
     setError(null)
     setApplied(null)
-    const [route, list] = kind === 'invoice' ? ['/imports/invoice/read', '/ingredients'] : ['/imports/sales/read', '/dishes']
+    const [route, list] = {
+      invoice: ['/imports/invoice/read', '/ingredients'],
+      sales: ['/imports/sales/read', '/dishes'],
+      menu: ['/imports/menu/read', '/dishes'],
+    }[kind]
     Promise.all([postFile(route, file), getJson(list)])
       .then(([r, options]) => setReview({ kind, review: r, options }))
       .catch((err) => setError(err.message))
@@ -73,6 +80,9 @@ function ImportsPage({ onChanged }) {
     return <InvoiceReview review={review.review} ingredients={review.options}
                           onApplied={afterApply} onCancel={() => setReview(null)} />
   }
+  if (review?.kind === 'menu') {
+    return <MenuReview initial={review.review} onApplied={afterApply} onCancel={() => setReview(null)} />
+  }
   if (review?.kind === 'sales') {
     return <SalesReview initial={review.review} dishes={review.options}
                         onApplied={afterApply} onCancel={() => setReview(null)} />
@@ -84,6 +94,11 @@ function ImportsPage({ onChanged }) {
              onChange={upload('invoice')} tabIndex={-1} aria-hidden="true" />
       <input ref={salesInput} type="file" accept=".csv" className="sr-only"
              onChange={upload('sales')} tabIndex={-1} aria-hidden="true" />
+      <input ref={menuInput} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" className="sr-only"
+             onChange={upload('menu')} tabIndex={-1} aria-hidden="true" />
+      <button type="button" onClick={() => menuInput.current.click()} disabled={reading !== null} className="btn btn-secondary">
+        {reading === 'menu' ? 'Reading menu…' : 'Upload menu'}
+      </button>
       <button type="button" onClick={() => invoiceInput.current.click()} disabled={reading !== null} className="btn btn-secondary">
         {reading === 'invoice' ? 'Reading invoice…' : 'Upload invoice'}
       </button>
@@ -100,9 +115,11 @@ function ImportsPage({ onChanged }) {
           {reading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-line border-t-accent" aria-hidden="true" />}
           {applied && (
             <span className="chip chip-accent num">
-              {applied.kind === 'sales'
-                ? `${applied.lines_applied} daily totals saved`
-                : `${applied.lines_applied} prices saved from ${applied.supplier}`}
+              {{
+                sales: `${applied.lines_applied} daily totals saved`,
+                menu: `Menu from ${shortDate(applied.effective_date)} saved`,
+                invoice: `${applied.lines_applied} prices saved from ${applied.supplier}`,
+              }[applied.kind]}
             </span>
           )}
         </span>

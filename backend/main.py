@@ -8,7 +8,7 @@ import schemas
 from fastapi import Depends, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 from database import get_db
-from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, MenuPriceOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn, BenchmarkSyncOut, InvoiceDraft, InvoiceReviewOut, InvoiceApplyIn, ImportOut, SalesReviewIn, SalesReviewOut, SalesApplyIn, MenuApplyIn, MenuReviewOut
+from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, MenuPriceOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn, BenchmarkSyncOut, InvoiceDraft, InvoiceReviewOut, InvoiceApplyIn, ImportOut, SalesReviewIn, SalesReviewOut, SalesApplyIn, MenuApplyIn, MenuReviewOut, MenuReviewIn, MenuDraft
 from models import Dish, DishIngredient, Import, ImportKind, Ingredient, IngredientPrice, MenuPrice, MenuPriceSource, SalesRecord, TillItemAlias
 from recipe_ai import estimate_recipe
 from matching import match_recipe_ingredients
@@ -614,6 +614,11 @@ def read_menu_route(file: UploadFile, start_date: date | None = Form(None), db: 
     except anthropic.APIStatusError as e:
         raise HTTPException(status_code=502, detail=f"The AI service returned an error ({e.status_code}) reading the menu. Try again in a moment.")
     return review_menu(db, draft, start_date or date.today(), filename=file.filename, file_hash=file_hash)
+
+@app.post("/imports/menu/review", response_model=MenuReviewOut)
+def review_menu_route(data: MenuReviewIn, db: Session = Depends(get_db)):
+    """Compares a menu Claude has already read again (e.g. a new start date). No AI call; saves nothing."""
+    return review_menu(db, MenuDraft(items=data.items), data.start_date, data.filename, data.file_hash)
 
 @app.post("/imports/menu/apply", response_model=ImportOut)
 def apply_menu_route(data: MenuApplyIn, db: Session = Depends(get_db)):

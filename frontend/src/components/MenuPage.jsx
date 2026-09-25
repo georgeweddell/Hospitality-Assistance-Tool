@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Card from './Card'
 import DishForm from './DishForm'
+import Hint from './Hint'
 import QuadrantBadge from './QuadrantBadge'
 import { CATEGORIES } from '../categories'
 import { QUADRANT_ORDER } from '../quadrants'
@@ -84,7 +85,16 @@ function DishTable({ dishes, range, analysedById, reasonsById }) {
                 <td className="num text-right">{pounds(dish.menu_price)}</td>
                 <td className="num text-right text-muted">{a ? pounds(a.plate_cost) : '—'}</td>
                 <td className="num text-right">{a ? percent(a.margin_percent) : '—'}</td>
-                <td><Status dish={dish} range={range} analysed={a} reasons={reasonsById[dish.id] ?? []} /></td>
+                <td>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Status dish={dish} range={range} analysed={a} reasons={reasonsById[dish.id] ?? []} />
+                    {dish.recipe_check && (
+                      <Hint content="The menu description changed on a menu import. Check the recipe still matches; saving the recipe clears this.">
+                        <span className="chip chip-warn">Check recipe</span>
+                      </Hint>
+                    )}
+                  </div>
+                </td>
               </tr>
             )
           })}

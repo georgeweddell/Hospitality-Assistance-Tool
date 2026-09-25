@@ -33,7 +33,7 @@ from costing import menu_price_on
 from invoices import ImportProblem, normalise
 from models import (Dish, DishIngredient, Import, ImportKind, ImportStatus, MenuIgnoredItem, MenuPrice,
                     MenuPriceSource, SalesRecord, TillItemAlias)
-from schemas import DishSuggestion, MenuLeavingOut, MenuReviewItem, MenuReviewOut
+from schemas import DishSuggestion, MenuItemDraft, MenuLeavingOut, MenuReviewItem, MenuReviewOut
 
 RENAME_CUTOFF = 0.6   # how alike two names must be (0-1, difflib) to ask "renamed?"
 
@@ -64,7 +64,8 @@ def review_menu(db, draft, start_date, filename=None, file_hash=None):
 
     items = []
     for item in draft.items:
-        review = MenuReviewItem(**item.model_dump(), status="new", action="new")
+        # Only what was read off the menu (an item sent back from an earlier review also has its old status).
+        review = MenuReviewItem(**item.model_dump(include=set(MenuItemDraft.model_fields)), status="new", action="new")
         key = item.name.strip().lower()
 
         if item.kind == "other" or normalise(item.name) in ignored:

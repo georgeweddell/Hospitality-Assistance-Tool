@@ -3,6 +3,7 @@ import Card from './Card'
 import ConfirmDialog from './ConfirmDialog'
 import DishForm from './DishForm'
 import MenuPrices from './MenuPrices'
+import Hint from './Hint'
 import QuadrantBadge from './QuadrantBadge'
 import RecipeEditor from './RecipeEditor'
 import { deleteJson, getJson, putJson } from '../api'
@@ -106,10 +107,16 @@ function DishPage({ dishId, range, analysed, onChanged }) {
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="page-title">{dish.name}</h1>
               {quadrant && <QuadrantBadge quadrant={quadrant} />}
+              {dish.recipe_check && (
+                <Hint content="The menu description changed on a menu import. Check the recipe still matches; saving the recipe clears this.">
+                  <span className="chip chip-warn">Check recipe</span>
+                </Hint>
+              )}
             </div>
             <p className="num mt-2 text-muted">
               {dish.category ?? 'No category'} · {pounds(dish.menu_price)} · {menuDates(dish)}
             </p>
+            {dish.description && <p className="mt-1 text-sm text-muted">{dish.description}</p>}
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={() => setEditing(true)} className="btn btn-secondary">Edit details</button>

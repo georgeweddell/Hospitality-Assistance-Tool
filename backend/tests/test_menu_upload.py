@@ -14,7 +14,7 @@ from fastapi import HTTPException, UploadFile
 import main
 from menu_ai import build_menu_prompt
 from models import DishType
-from schemas import MenuDraft, MenuItemDraft
+from schemas import MenuDraft, MenuItemDraft, MenuReviewIn
 
 PDF = b"%PDF-1.4 a made-up menu"
 
@@ -54,6 +54,16 @@ def test_an_uploaded_menu_is_compared_with_the_stored_dishes(db, add_dish, cost_
     assert [d.name for d in review.leaving] == ["Cannoli"]
     assert review.start_date == date(2026, 10, 1)
     assert (uploads / f"{review.file_hash}.pdf").exists()
+
+
+def test_changing_the_start_date_compares_again_without_claude(db, add_dish, cost_item, uploads, fake_claude):
+    add_dish("Margherita", 11.00, DishType.MAIN, recipe=[(cost_item, 2)])
+    first = main.read_menu_route(upload(), date(2026, 10, 1), db)
+
+    again = main.review_menu_route(MenuReviewIn(items=first.items, start_date=date(2026, 11, 1)), db)
+    assert again.start_date == date(2026, 11, 1)
+    assert [i.status for i in again.items] == [i.status for i in first.items]
+    assert len(fake_claude) == 1   # Claude read it once
 
 
 def test_the_start_date_defaults_to_today(db, uploads, fake_claude):
