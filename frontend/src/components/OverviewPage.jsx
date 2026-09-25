@@ -1,6 +1,12 @@
 import Delta from './Delta'
 import Hint from './Hint'
 import TicketRail from './TicketRail'
+import { PriceRiseList } from './PriceChanges'
+import { usePriceChanges } from '../priceChanges'
+import { useEffect, useState } from 'react'
+import { getJson } from '../api'
+import { rangeQuery } from '../dateRange'
+import { pounds, shortDate } from '../format'
 import { QUADRANTS, quadrantTextColor } from '../quadrants'
 import { percent, poundsRounded } from '../format'
 import { previousLabel, rangeLabel } from '../dateRange'
@@ -64,7 +70,22 @@ function openRecipes() {
   navigate('menu')
 }
 
+// Menu price changes from the start of the period to today (backend: price_changes.py).
+function useMenuPriceChanges(range, reload) {
+  const [changes, setChanges] = useState(null)
+  useEffect(() => {
+    let ignore = false
+    getJson(`/menu-price-changes?${rangeQuery(range)}`)
+      .then((rows) => { if (!ignore) setChanges(rows) })
+      .catch(() => { if (!ignore) setChanges([]) })
+    return () => { ignore = true }
+  }, [range, reload])
+  return changes
+}
+
 function OverviewPage({ dishes, prevDishes, actions, range, unchecked = 0 }) {
+  const priceChanges = usePriceChanges(range, dishes)
+  const menuPrices = useMenuPriceChanges(range, dishes)
   const now = summarise(dishes)
   const hasPrev = prevDishes.length > 0
   const before = hasPrev ? summarise(prevDishes) : null
@@ -166,6 +187,36 @@ function OverviewPage({ dishes, prevDishes, actions, range, unchecked = 0 }) {
           </div>
         </section>
       </div>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <div className="card">
+          <div className="card-header">
+            <h2 className="section-title">ingredient price rises</h2>
+            {priceChanges && <span className="count">{priceChanges.filter((c) => c.is_alert).length}</span>}
+          </div>
+          {priceChanges ? <PriceRiseList changes={priceChanges} /> : <p className="card-body text-muted">Loading…</p>}
+        </div>
+        <div className="card">
+          <div className="card-header">
+            <h2 className="section-title">menu price changes</h2>
+            {menuPrices && <span className="count">{menuPrices.length}</span>}
+          </div>
+          {!menuPrices ? <p className="card-body text-muted">Loading…</p>
+            : menuPrices.length === 0 ? <p className="card-body font-mono text-sm text-muted">none</p>
+            : (
+              <ul>
+                {menuPrices.slice(0, 5).map((c) => (
+                  <li key={`${c.dish_id}-${c.day}`}
+                      className="flex items-baseline justify-between gap-4 border-t-[1.5px] border-dashed border-line-strong px-5 py-3">
+                    <a href={`#/menu/${c.dish_id}`} className="font-bold hover:underline">{c.name}</a>
+                    <span className="num text-sm">{pounds(c.old_price)} → {pounds(c.new_price)}</span>
+                    <span className="num text-xs text-muted">{shortDate(c.day).toLowerCase()}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+        </div>
+      </section>
     </div>
   )
 }

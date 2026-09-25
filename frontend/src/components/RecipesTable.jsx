@@ -192,6 +192,7 @@ function RecipesTable({ onChanged }) {
                 <th className="text-right">Price</th>
                 <th className="text-right">Plate cost</th>
                 <th className="text-right">Food cost</th>
+                <th className="text-right" title="Share of the plate cost from your own prices">Own prices</th>
                 <th>Status</th>
                 <th>Checks</th>
                 <th />
@@ -211,6 +212,7 @@ function RecipesTable({ onChanged }) {
                     <td className="num text-right">{pounds(row.menu_price)}</td>
                     <td className="num text-right text-muted">{row.plate_cost != null ? pounds(row.plate_cost) : '—'}</td>
                     <td className="num text-right">{row.food_cost_percent != null ? percent(row.food_cost_percent, 0) : '—'}</td>
+                    <td className="num text-right">{row.own_share_percent != null ? percent(row.own_share_percent, 0) : '—'}</td>
                     <td>
                       {working ? (
                         <span className="flex items-center gap-2 text-sm text-muted">
@@ -247,7 +249,7 @@ function RecipesTable({ onChanged }) {
                   </tr>,
                   open?.id === row.dish_id && (
                     <tr key={`${row.dish_id}-edit`}>
-                      <td colSpan={7} className="bg-bg">
+                      <td colSpan={8} className="bg-bg">
                         {open.dish
                           ? <RecipeEditor dish={open.dish} ingredients={ingredients} onSaved={saved} />
                           : <p className="text-muted">Loading…</p>}

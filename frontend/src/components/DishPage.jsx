@@ -7,6 +7,7 @@ import Hint from './Hint'
 import RecipeEditor from './RecipeEditor'
 import Stamp from './Stamp'
 import { Ticket } from './TicketRail'
+import { percentMove, priceMove, usePriceChanges } from '../priceChanges'
 import { explain } from '../actionText'
 import { deleteJson, getJson, putJson } from '../api'
 import { navigate } from '../useHashRoute'
@@ -33,6 +34,7 @@ function Stat({ label, value, sub, tone }) {
 // `action` is this dish's recommended change for the period, if it has one;
 // `actionRank` is its place in the ranked list.
 function DishPage({ dishId, range, analysed, action, actionRank, onChanged }) {
+  const priceChanges = usePriceChanges(range, dishId)
   const [dish, setDish] = useState(null)
   const [ingredients, setIngredients] = useState(null)
   const [error, setError] = useState(null)
@@ -99,6 +101,11 @@ function DishPage({ dishId, range, analysed, action, actionRank, onChanged }) {
 
   const quadrant = analysed?.quadrant
   const costed = dish.lines.length > 0
+  // The share of the plate cost from the restaurant's own prices (backend: own_prices.py does the same).
+  const lineTotal = dish.lines.reduce((s, l) => s + l.line_cost, 0)
+  const ownTotal = dish.lines.filter((l) => l.price_source !== 'benchmark').reduce((s, l) => s + l.line_cost, 0)
+  const ownShare = lineTotal > 0 ? Math.round((ownTotal / lineTotal) * 100) : null
+  const hits = (priceChanges ?? []).filter((c) => c.dishes.some((d) => d.dish_id === dish.id))
   const current = dish.prices.find((p) => p.effective_date <= new Date().toISOString().slice(0, 10))
   const earlier = current && dish.prices[dish.prices.indexOf(current) + 1]
 
@@ -137,11 +144,26 @@ function DishPage({ dishId, range, analysed, action, actionRank, onChanged }) {
               sub={action?.target_price != null
                 ? `target ${pounds(action.target_price)} · +${pounds(action.margin_gap)}`
                 : current && earlier ? `from ${shortDate(current.effective_date)} · was ${pounds(earlier.price)}` : ''} />
-        <Stat label="plate cost" value={costed ? pounds(dish.cost.plate_cost) : '—'} tone="tile-outline" />
+        <Stat label="plate cost" value={costed ? pounds(dish.cost.plate_cost) : '—'} tone="tile-outline"
+              sub={ownShare != null ? `${ownShare}% own prices` : ''} />
         <Stat label="margin" value={costed ? pounds(dish.cost.margin_pounds) : '—'} tone="tile-basil"
               sub={costed ? `${percent(dish.cost.margin_percent)} gp` : ''} />
         <Stat label={`sold · ${rangeLabel(range).toLowerCase()}`} value={dish.units_sold} tone="tile-tomato corner-tl" />
       </div>
+
+      {hits.length > 0 && (
+        <ul className="flex flex-wrap gap-2">
+          {hits.map((c) => {
+            const perPlate = c.dishes.find((d) => d.dish_id === dish.id).per_plate
+            return (
+              <li key={`${c.ingredient_id}-${c.day}`} title={`from ${shortDate(c.day)}`}
+                  className={`chip px-3 py-1.5 text-[0.8125rem] ${c.is_alert ? 'chip-accent' : 'chip-muted'}`}>
+                {c.change_percent > 0 ? '▲' : '▼'} {c.name} {priceMove(c)} ({percentMove(c)}) · {perPlate > 0 ? '+' : '−'}{pounds(Math.abs(perPlate))} a plate
+              </li>
+            )
+          })}
+        </ul>
+      )}
 
       <div className={`grid items-start gap-8 ${action || dish.prices.length > 1 ? 'lg:grid-cols-[minmax(0,1fr)_300px]' : ''}`}>
         <RecipeEditor key={loads} dish={dish} ingredients={ingredients} onSaved={reload} />

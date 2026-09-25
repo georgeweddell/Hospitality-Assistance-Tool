@@ -1,3 +1,4 @@
+import { percentMove, priceMove, usePriceChanges } from '../priceChanges'
 import { useEffect, useState } from 'react'
 import Card from './Card'
 import PriceFields from './PriceFields'
@@ -135,7 +136,8 @@ function AddIngredient({ onAdded, onCancel }) {
   )
 }
 
-function IngredientsPage({ onChanged }) {
+// ownCostShare: % of the menu's recipe cost on the restaurant's own prices (setup status).
+function IngredientsPage({ onChanged, ownCostShare }) {
   const [ingredients, setIngredients] = useState(null)
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
@@ -157,6 +159,12 @@ function IngredientsPage({ onChanged }) {
     onChanged()  // prices change dish costs, so the dashboard needs refreshing too
   }
   const invoiceImport = usePageImport('invoice', 'Import invoices', reload, { multiple: true })
+  // The latest price change per ingredient (latest month), for the chip beside its price.
+  const priceChanges = usePriceChanges(null, loads)
+  const changeById = {}
+  for (const c of priceChanges ?? []) {
+    if (!changeById[c.ingredient_id] || c.day > changeById[c.ingredient_id].day) changeById[c.ingredient_id] = c
+  }
 
   if (invoiceImport.review) return invoiceImport.review
   if (error) return <p className="alert-error">{error}</p>
@@ -189,6 +197,12 @@ function IngredientsPage({ onChanged }) {
           </div>
           <span className="tile-label">ingredients in use · the rest on benchmark</span>
         </div>
+        {ownCostShare != null && (
+          <div className="flex flex-col gap-2">
+            <span className="tile-label">of recipe cost</span>
+            <span className="figure text-[4.5rem]">{Math.round(ownCostShare)}%</span>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -239,6 +253,12 @@ function IngredientsPage({ onChanged }) {
                   <tr key={ing.id} onClick={() => setOpenId(open ? null : ing.id)} className="row-link" aria-expanded={open}>
                     <td className="truncate font-semibold">{ing.name}</td>
                     <td className="num whitespace-nowrap text-right">
+                      {changeById[ing.id] && (
+                        <span title={`${priceMove(changeById[ing.id])} from ${shortDate(changeById[ing.id].day)}`}
+                              className={`chip mr-2 ${changeById[ing.id].is_alert ? 'chip-accent' : 'chip-muted'}`}>
+                          {changeById[ing.id].change_percent > 0 ? '▲' : '▼'} {percentMove(changeById[ing.id]).slice(1)}
+                        </span>
+                      )}
                       {ing.price_per_unit != null ? priceForDisplay(ing.price_per_unit, ing.unit) : '—'}
                     </td>
                     <td>

@@ -151,7 +151,7 @@ function App() {
       </div>
     )
   } else if (page === 'ingredients') {
-    content = <IngredientsPage onChanged={refresh} />
+    content = <IngredientsPage onChanged={refresh} ownCostShare={data?.setup?.own_cost_share} />
   } else if (page === 'imports') {
     content = <ImportsPage onChanged={refresh} />
   } else if (page === 'settings') {
