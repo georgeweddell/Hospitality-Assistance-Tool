@@ -322,6 +322,10 @@ body {
     padding: 2px;
     overflow-x: auto;
     overflow-y: hidden;
+    scrollbar-width: none;   /* scrolls by swipe or trackpad; no grey bar under the pills */
+  }
+  .tabs::-webkit-scrollbar {
+    display: none;
   }
   .tab {
     display: inline-flex;

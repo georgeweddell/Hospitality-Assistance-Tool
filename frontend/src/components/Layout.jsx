@@ -1,13 +1,14 @@
-// App shell: sidebar navigation on desktop, a top bar with tabs on small screens.
+// App shell: one header row (wordmark, nav pills, the period picker, settings)
+// above the page. Nav labels are lowercase, like the page titles.
 
 const NAV = [
-  { page: 'overview', label: 'Overview', icon: 'M4 5h6v6H4zM14 5h6v6h-6zM4 15h6v4H4zM14 15h6v4h-6z' },
-  { page: 'actions', label: 'Actions', icon: 'M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2' },
-  { page: 'menu', label: 'Menu', icon: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01' },
-  { page: 'ingredients', label: 'Ingredients', icon: 'M5 11h14l-1.5 8h-11zM8 11V8a4 4 0 0 1 8 0v3' },
-  { page: 'sales', label: 'Sales', icon: 'M4 20h16M7 16v-5M12 16V6M17 16v-8' },
-  { page: 'imports', label: 'Imports', icon: 'M12 15V4M7 9l5-5 5 5M4 15v5h16v-5' },
-  { page: 'analysis', label: 'Insights', icon: 'M4 4v16h16M8 14l3-3 3 2 5-6' },
+  { page: 'overview', label: 'overview' },
+  { page: 'actions', label: 'actions' },
+  { page: 'menu', label: 'menu' },
+  { page: 'ingredients', label: 'ingredients' },
+  { page: 'sales', label: 'sales' },
+  { page: 'imports', label: 'imports' },
+  { page: 'analysis', label: 'insights' },
 ]
 const SETTINGS = {
   page: 'settings', label: 'Settings',
@@ -23,75 +24,45 @@ function NavIcon({ path }) {
   )
 }
 
-function NavLink({ item, active, badge, compact }) {
-  const base = compact
-    ? 'flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2'
-    : 'flex items-center gap-3 rounded-[10px] px-3 py-2.5'
-  const state = active
-    ? 'bg-accent-soft font-semibold text-accent-hover'
-    : 'font-medium text-muted hover:bg-surface hover:text-ink'
-  return (
-    <a href={`#/${item.page}`} className={`${base} ${state}`} aria-current={active ? 'page' : undefined}>
-      <NavIcon path={item.icon} />
-      {item.label}
-      {badge > 0 && <span className="count count-warn ml-auto">{badge}</span>}
-    </a>
-  )
-}
-
-// The Docket mark: an order ticket, the slip that runs every kitchen.
+// The wordmark: "docket" with a tomato full stop.
 function Brand() {
   return (
-    <a href="#/overview" className="flex items-center gap-3 px-1.5 text-ink" aria-label="Docket home">
-      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true">
-        <path d="M7 3h16v24l-4-3-4 3-4-3-4 3z" fill="var(--accent)" />
-        <path d="M11 10h8M11 15h8" stroke="var(--surface)" strokeWidth="2" strokeLinecap="round" />
-      </svg>
-      <span className="font-display text-[26px] font-bold tracking-tight">Docket</span>
+    <a href="#/overview" className="shrink-0 text-[34px] font-extrabold leading-none tracking-[-0.04em] text-ink"
+       aria-label="Docket home">
+      docket<span className="text-accent">.</span>
     </a>
   )
 }
 
 function Layout({ page, title, toolbar, badges = {}, children }) {
+  const onSettings = page === 'settings'
   return (
-    <div className="min-h-screen bg-bg text-ink lg:flex">
-      {/* Desktop sidebar */}
-      <aside className="hidden w-[232px] shrink-0 border-r border-line lg:block">
-        <div className="sticky top-0 flex h-screen flex-col gap-8 px-[18px] py-7">
-          <Brand />
-          <nav className="flex flex-col gap-1" aria-label="Main">
-            {NAV.map((item) => (
-              <NavLink key={item.page} item={item} active={page === item.page} badge={badges[item.page]} />
-            ))}
-          </nav>
-          <div className="mt-auto">
-            <NavLink item={SETTINGS} active={page === 'settings'} />
-          </div>
-        </div>
-      </aside>
-
-      {/* Mobile top bar */}
-      <header className="border-b border-line lg:hidden">
-        <div className="px-4 pt-4">
-          <Brand />
-        </div>
-        <nav className="flex gap-1 overflow-x-auto px-3 py-3" aria-label="Main">
-          {[...NAV, SETTINGS].map((item) => (
-            <NavLink key={item.page} item={item} active={page === item.page} badge={badges[item.page]} compact />
+    <div className="min-h-screen bg-bg text-ink">
+      {/* One row on wide screens; below xl the nav drops to its own row and scrolls sideways. */}
+      <header className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-7 gap-y-4 px-4 pt-5 sm:px-10 lg:pt-7">
+        <Brand />
+        <nav className="tabs order-last w-full xl:order-none xl:w-auto" aria-label="Main">
+          {NAV.map((item) => (
+            <a key={item.page} href={`#/${item.page}`} className="tab"
+               aria-current={page === item.page ? 'page' : undefined}>
+              {item.label}
+              {badges[item.page] > 0 && <span className="count count-warn">{badges[item.page]}</span>}
+            </a>
           ))}
         </nav>
+        <div className="ml-auto flex items-center gap-2.5">
+          {toolbar}
+          <a href={`#/${SETTINGS.page}`} aria-label={SETTINGS.label} title={SETTINGS.label}
+             aria-current={onSettings ? 'page' : undefined}
+             className={`flex h-11 w-11 items-center justify-center rounded-full border-[1.5px] border-ink ${onSettings ? 'bg-ink text-bg' : 'hover:bg-surface'}`}>
+            <NavIcon path={SETTINGS.icon} />
+          </a>
+        </div>
       </header>
 
-      <main className="min-w-0 flex-1">
-        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-10 lg:py-8">
-          {(title || toolbar) && (
-            <div className="mb-7 flex flex-wrap items-start justify-between gap-4">
-              {title ? <h1 className="page-title">{title}</h1> : <span />}
-              {toolbar}
-            </div>
-          )}
-          {children}
-        </div>
+      <main className="mx-auto max-w-7xl px-4 py-7 sm:px-10 lg:py-9">
+        {title && <h1 className="page-title mb-8">{title}</h1>}
+        {children}
       </main>
     </div>
   )
