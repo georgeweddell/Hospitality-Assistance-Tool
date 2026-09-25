@@ -3,7 +3,7 @@ import Hint from './Hint'
 import QuadrantBadge from './QuadrantBadge'
 import TicketRail from './TicketRail'
 import { percent, pounds, poundsRounded } from '../format'
-import { IMPACT_EXPLAINED, VERB, explain } from '../actionText'
+import { IMPACT_EXPLAINED, VERB, explain, proposal } from '../actionText'
 
 const FILTERS = ['Plowhorse', 'Puzzle', 'Dog']
 const ON_RAIL = 5
@@ -53,7 +53,7 @@ function ActionList({ actions, dishes }) {
             <span className="count">{rest.length}</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="table min-w-[640px]">
+            <table className="table min-w-[820px]">
               <thead>
                 <tr>
                   <th className="w-10">#</th>
@@ -61,6 +61,7 @@ function ActionList({ actions, dishes }) {
                   <th className="w-36">Quadrant</th>
                   <th className="w-24 text-right">Margin</th>
                   <th className="w-32 text-right">Share of sales</th>
+                  <th className="w-48">Change</th>
                   <th className="w-44 text-right">Impact</th>
                 </tr>
               </thead>
@@ -76,6 +77,13 @@ function ActionList({ actions, dishes }) {
                       <td><Hint content={explain(dish)}><QuadrantBadge quadrant={item.quadrant} /></Hint></td>
                       <td className="num text-right">{dish ? pounds(dish.margin_pounds) : '—'}</td>
                       <td className="num text-right">{dish ? percent(dish.menu_mix_percent) : '—'}</td>
+                      <td>
+                        {proposal(item) ? (
+                          <Hint content={proposal(item).hint}>
+                            <span className="chip num bg-ink text-bg">{proposal(item).text}</span>
+                          </Hint>
+                        ) : '—'}
+                      </td>
                       <td className="text-right">
                         <div className="figure text-[1.75rem] text-accent">+{poundsRounded(item.impact_pounds)}</div>
                         <div className="progress ml-auto mt-1.5 w-28">

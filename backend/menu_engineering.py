@@ -1,6 +1,7 @@
+import math
 from datetime import date
 from models import SalesRecord, Dish, DishIngredient, DishType, QuadrantType
-from costing import average_menu_price, cost_dish
+from costing import average_menu_price, cost_dish, menu_price_on
 from schemas import DishClassificationOut, ActionItemOut, IncompleteDishOut
 
 # Every analysis runs over a date range, start to end inclusive.
@@ -243,12 +244,39 @@ def classify_all_dishes(db, start: date, end: date) -> list[DishClassificationOu
 
     return results
 
-def build_action_list(db, start: date, end: date) -> list[ActionItemOut]:
+def proposed_change(db, c, dish_units: int, threshold_units: float, start: date, end: date, today=None) -> dict:
+    """
+    What to actually change, from the same lines as the impact (the formulas are unchanged).
+
+    Plowhorse / Dog: the margin gap per plate at TODAY's price (the price the owner
+    would change), and the price that closes it: target = today's price + gap, which
+    is plate cost + the category's average margin. Example: Margherita £11.50, plate
+    cost £1.46, mains average margin £10.94 -> gap £10.94 - (£11.50 - £1.46) = £0.90,
+    target £12.40. A dish already at or above the line at today's price (e.g. repriced
+    since the period) gets no target. Prices include VAT, like every price here.
+
+    Puzzle: the extra plates over the period to reach the popularity line, rounded
+    up to whole plates, and the same per day.
+    """
+    if c.quadrant == QuadrantType.PUZZLE:
+        extra = math.ceil(threshold_units - dish_units)
+        days = (end - start).days + 1
+        return {"extra_units": extra, "extra_per_day": round(extra / days, 2)}
+
+    current = menu_price_on(db, c.dish_id, today)
+    gap = c.profitability_threshold - (current - c.plate_cost)
+    if gap <= 0:
+        return {"current_price": current}
+    return {"current_price": current, "margin_gap": round(gap, 2), "target_price": round(current + gap, 2)}
+
+
+def build_action_list(db, start: date, end: date, today=None) -> list[ActionItemOut]:
     """
     Turns quadrant classifications for the range into a ranked action list with £ impact.
 
     Cutting a Dog assumes its covers transfer to a category-average dish
-    rather than being lost entirely.
+    rather than being lost entirely. `today` (default: today) is the day whose
+    menu prices the proposed changes start from; tests set it.
     """
     actions = []
     if not range_has_sales(db, start, end):
@@ -291,6 +319,7 @@ def build_action_list(db, start: date, end: date) -> list[ActionItemOut]:
                 quadrant=c.quadrant,
                 action=action,
                 impact_pounds=round(impact, 2),
+                **proposed_change(db, c, dish_units, (c.popularity_threshold / 100) * category_units, start, end, today),
             ))
 
     actions.sort(key=lambda a: a.impact_pounds, reverse=True)

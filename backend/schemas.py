@@ -197,12 +197,24 @@ class DishClassificationOut(BaseModel):
     quadrant: QuadrantType
     skipped_ingredients: list[str] = []
 
+class ReportIn(BaseModel):
+    """Starting a report: an optional focus or question from the owner."""
+    focus: Optional[str] = Field(default=None, max_length=500)
+
 class ActionItemOut(BaseModel):
     dish_id: int
     dish_name: str
     quadrant: QuadrantType
     action: str
     impact_pounds: float
+    # The concrete change (menu_engineering.proposed_change). Plowhorse and Dog:
+    # the margin gap per plate at today's price, and the price that closes it.
+    # Puzzle: the extra plates over the period to reach the popularity line.
+    current_price: Optional[float] = None
+    margin_gap: Optional[float] = None       # £ per plate: a price rise, or a plate-cost cut
+    target_price: Optional[float] = None     # current_price + margin_gap
+    extra_units: Optional[int] = None
+    extra_per_day: Optional[float] = None
 
 class IncompleteDishOut(BaseModel):
     dish_id: int

@@ -1,5 +1,5 @@
 import Stamp from './Stamp'
-import { VERB } from '../actionText'
+import { VERB, proposal } from '../actionText'
 import { poundsRounded } from '../format'
 
 // Recommended changes as order tickets hanging off a rail. Each ticket is a
@@ -10,6 +10,7 @@ const STAMP_TILTS = [-4, 3, -2, 2, -3]
 
 // `href`: where the ticket goes; its dish, unless shown on that dish's own page.
 export function Ticket({ action, category, number, tilt = 0, stampTilt = -3, href = `#/menu/${action.dish_id}` }) {
+  const change = proposal(action)
   return (
     <a href={href} className="ticket" style={{ '--tilt': `${tilt}deg` }}>
       <span className="ticket-clip" aria-hidden="true" />
@@ -19,6 +20,7 @@ export function Ticket({ action, category, number, tilt = 0, stampTilt = -3, hre
       </span>
       <span className="ticket-name">{action.dish_name}</span>
       <Stamp quadrant={action.quadrant} tilt={stampTilt} />
+      {change && <span className="ticket-change" title={change.hint}>{change.text}</span>}
       <span className="ticket-foot">
         <span>{VERB[action.quadrant]?.toLowerCase()}</span>
         <span className="ticket-impact">+{poundsRounded(action.impact_pounds)}</span>

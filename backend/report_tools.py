@@ -57,7 +57,7 @@ class Fact:
     id: str
     label: str      # what it is, e.g. "Margherita margin per plate"
     value: float | str
-    unit: str       # '£', '%', 'change %' (signed), 'pts', 'count', '£/kg', '£/l', '£ each', 'date' or 'text'
+    unit: str       # '£', '%', 'change %' (signed), 'pts', 'count', 'a day', '£/kg', '£/l', '£ each', 'date' or 'text'
 
 
 def format_value(value, unit) -> str:
@@ -73,6 +73,8 @@ def format_value(value, unit) -> str:
         return f'{value:+.1f} pts'
     if unit == 'count':
         return f'{value:,.0f}'
+    if unit == 'a day':
+        return f'{value:.1f} a day'
     if unit in ('£/kg', '£/l'):
         return f'£{value:,.2f}/{unit[2:]}'
     if unit == '£ each':
@@ -197,6 +199,16 @@ def actions(ctx: ReportContext, category: str | None = None) -> str:
         d = by_id[a.dish_id]
         lines.append(f'{rank}. {a.dish_name} ({d.category.value}, {q}): {VERB[q]}. '
                      + f.add(f'{a.dish_name} impact', a.impact_pounds, '£'))
+        # The concrete change (menu_engineering.proposed_change)
+        if a.target_price is not None:
+            lines.append('   ' + f.add(f'{a.dish_name} price today', a.current_price, '£') + '; '
+                         + f.add(f'{a.dish_name} target price (plate cost + the category average margin)', a.target_price, '£')
+                         + '; ' + f.add(f'{a.dish_name} margin gap per plate (a price rise or a cost cut)', a.margin_gap, '£'))
+        elif a.current_price is not None:
+            lines.append("   Already at or above the margin line at today's price (repriced since the period).")
+        if a.extra_units is not None:
+            lines.append('   ' + f.add(f'{a.dish_name} extra plates over the period to reach the popularity line', a.extra_units, 'count')
+                         + '; ' + f.add(f'{a.dish_name} extra plates a day', a.extra_per_day, 'a day'))
     if len(ranked) > 8:
         lines.append(f'...and {len(ranked) - 8} smaller ones.')
     lines.append('Impact: Plowhorse = margin brought up to the category average; Puzzle = sales brought up to '

@@ -2,6 +2,28 @@
 // Only short labels appear on screen; explanations are shown on demand (Hint).
 import { percent, pounds } from './format'
 
+// The concrete change on an action (backend: menu_engineering.proposed_change):
+//   { text: '£11.50 → £12.40', hint: why }  for a price (Plowhorse, Dog)
+//   { text: '+91 plates · 2.9 a day', hint } for sales (Puzzle)
+// null when there's nothing to show (e.g. already repriced past the line).
+export function proposal(action) {
+  if (action.target_price != null) {
+    return {
+      text: `${pounds(action.current_price)} → ${pounds(action.target_price)}`,
+      hint: `The price that brings its margin up to the category average: plate cost + average margin. ` +
+        `Or cut the plate cost by ${pounds(action.margin_gap)}. Starts from today's price, including VAT.`,
+    }
+  }
+  if (action.extra_units != null) {
+    const perDay = action.extra_per_day.toFixed(1)
+    return {
+      text: `+${action.extra_units} plates · ${perDay} a day`,
+      hint: `Extra plates over the period to reach its category's popularity line, about ${perDay} a day.`,
+    }
+  }
+  return null
+}
+
 // Short verb for each action, used as the Actions filter labels.
 export const VERB = { Plowhorse: 'Reprice', Puzzle: 'Promote', Dog: 'Review' }
 

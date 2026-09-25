@@ -637,6 +637,17 @@ body {
     letter-spacing: -0.03em;
     line-height: 0.9;
   }
+  /* The concrete change, e.g. "£11.50 → £12.40": the thing to actually do. */
+  .ticket-change {
+    align-self: flex-start;
+    padding: 0.25rem 0.625rem;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--bg);
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.35;
+  }
   .ticket-foot {
     display: flex;
     align-items: baseline;

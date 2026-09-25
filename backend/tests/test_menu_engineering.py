@@ -22,6 +22,8 @@ Profitability threshold (units-weighted avg margin)
     Dog        10% <  17.5%  and  £4  <  £7.60  -> neither
 """
 
+from datetime import date
+
 import pytest
 
 from menu_engineering import build_action_list, classify_all_dishes, list_incomplete_dishes
@@ -123,6 +125,42 @@ def test_action_list_impacts_and_ranking(db, four_mains):
         ("Puzzle", 90.00),
         ("Dog", 36.00),
     ]
+
+
+# --- The concrete change on each action (proposed_change) -------------------
+#
+# Same worked example, prices unchanged since September (so today's = September's):
+#   Plowhorse £7:  margin £5, line £7.60 -> gap £2.60 per plate -> target £9.60
+#   Dog £6:        margin £4, line £7.60 -> gap £3.60 per plate -> target £9.60
+#   Puzzle:        17.5 plates to reach the line, sold 10 -> 7.5, rounded up to 8;
+#                  over September's 30 days, 8 / 30 = 0.27 a day
+
+def test_each_action_says_what_to_change(db, four_mains):
+    actions = {a.dish_name: a for a in build_action_list(db, *SEPTEMBER)}
+
+    plowhorse, dog, puzzle = actions["Plowhorse"], actions["Dog"], actions["Puzzle"]
+    assert (plowhorse.current_price, plowhorse.margin_gap, plowhorse.target_price) == (7.00, 2.60, 9.60)
+    assert (dog.current_price, dog.margin_gap, dog.target_price) == (6.00, 3.60, 9.60)
+    assert (puzzle.extra_units, puzzle.extra_per_day) == (8, 0.27)
+    assert puzzle.target_price is None
+
+
+def test_a_target_starts_from_todays_price(db, four_mains, add_menu_price):
+    # The Plowhorse went up to £8.00 after September: the gap is now £7.60 - (£8 - £2) = £1.60.
+    # The September impact is unchanged (it's about the period); the target uses today's price.
+    add_menu_price(four_mains["Plowhorse"], 8.00, date(2026, 10, 1))
+    plowhorse = next(a for a in build_action_list(db, *SEPTEMBER, today=date(2026, 10, 15))
+                     if a.dish_name == "Plowhorse")
+
+    assert plowhorse.impact_pounds == 104.00
+    assert (plowhorse.current_price, plowhorse.margin_gap, plowhorse.target_price) == (8.00, 1.60, 9.60)
+
+
+def test_a_dish_already_repriced_past_the_line_gets_no_target(db, four_mains, add_menu_price):
+    add_menu_price(four_mains["Plowhorse"], 10.00, date(2026, 10, 1))   # margin £8 >= £7.60
+    plowhorse = next(a for a in build_action_list(db, *SEPTEMBER, today=date(2026, 10, 15))
+                     if a.dish_name == "Plowhorse")
+    assert (plowhorse.current_price, plowhorse.target_price) == (10.00, None)
 
 
 def test_stars_get_no_action(db, four_mains):

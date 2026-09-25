@@ -134,7 +134,9 @@ function DishPage({ dishId, range, analysed, action, actionRank, onChanged }) {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Stat label="menu price" value={pounds(dish.menu_price)} tone="tile-mustard corner-tr"
-              sub={current && earlier ? `from ${shortDate(current.effective_date)} · was ${pounds(earlier.price)}` : ''} />
+              sub={action?.target_price != null
+                ? `target ${pounds(action.target_price)} · +${pounds(action.margin_gap)}`
+                : current && earlier ? `from ${shortDate(current.effective_date)} · was ${pounds(earlier.price)}` : ''} />
         <Stat label="plate cost" value={costed ? pounds(dish.cost.plate_cost) : '—'} tone="tile-outline" />
         <Stat label="margin" value={costed ? pounds(dish.cost.margin_pounds) : '—'} tone="tile-basil"
               sub={costed ? `${percent(dish.cost.margin_percent)} gp` : ''} />
