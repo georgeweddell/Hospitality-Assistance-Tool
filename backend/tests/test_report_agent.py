@@ -98,6 +98,11 @@ def test_a_dish_name_with_a_digit_is_allowed():
     assert check_report(raw, {'f1'}, ['Pizza 12in'])[1] == []
 
 
+def test_an_item_citing_more_than_four_facts_is_rejected():
+    _, problems = check_report(good_report(facts=('f1', 'f2', 'f3', 'f4', 'f5')), {'f1', 'f2', 'f3', 'f4', 'f5'}, [])
+    assert problems and 'at most 4' in problems[0]
+
+
 def test_an_item_citing_no_facts_is_rejected():
     raw = good_report()
     raw['findings'][0]['facts'] = []

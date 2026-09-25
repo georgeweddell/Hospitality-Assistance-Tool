@@ -48,6 +48,10 @@ def test_facts_are_numbered_in_order_and_formatted_by_code():
     assert format_value(-168.4, '£') == '-£168'
     assert format_value(14.44, 'change %') == '+14.4%'     # a change carries its sign; a share doesn't
     assert format_value(14.44, '%') == '14.4%'
+    # A pair is one fact: before -> after, or plates with their daily rate
+    assert format_value([7.4, 8.2], '£/kg') == '£7.40 → £8.20/kg'
+    assert format_value([11.5, 12.4], '£') == '£11.50 → £12.40'
+    assert format_value([91, 2.94], 'plates') == '+91 plates · 2.9 a day'
 
 
 def test_period_summary_against_the_previous_month(db, menu):
@@ -56,8 +60,8 @@ def test_period_summary_against_the_previous_month(db, menu):
     f = facts_by_label(ctx)
 
     # September: contribution 30 x £8 + 10 x £10 = £340; sales 30 x £10 + 10 x £12 = £420
-    assert f['Contribution (margin x units, all analysed dishes)'] == 340
-    assert f['Sales (menu price x units, incl. VAT)'] == 420
+    assert f['Contribution'] == 340
+    assert f['Sales'] == 420
     assert f['Gross margin'] == pytest.approx(80.95, abs=0.01)          # 340 / 420
     # August: 20 x £8 + 10 x £10 = £260, so +30.77%; GP 260 / 320 = 81.25%, so -0.30 pts
     assert f['Contribution, previous period'] == 260
@@ -71,13 +75,13 @@ def test_dish_detail_finds_a_dish_by_name_whatever_the_case(db, menu):
     f = facts_by_label(ctx)
 
     assert text.startswith('Margherita (Main).')
-    assert f['Margherita margin per plate'] == 8.00
-    assert f['Margherita units sold'] == 30
-    assert f['Margherita units sold, previous period'] == 20
+    assert f['Margherita: margin per plate'] == 8.00
+    assert f['Margherita: plates sold'] == 30
+    assert f['Margherita: plates sold, August 2026'] == 20
     # 30 of the 40 mains sold = 75%
-    assert f["Margherita share of its category's units"] == 75.0
+    assert f['Margherita: share of mains'] == 75.0
     # September's weeks run from the 1st: the last, 29-30 Sep, is only 2 days and says so
-    assert 'Margherita units 29 Sep to 30 Sep (only 2 days)' in f
+    assert 'Margherita: plates 29 Sep to 30 Sep (only 2 days)' in f
 
 
 def test_an_unknown_dish_comes_back_as_a_message_not_an_error(db, menu):
@@ -95,12 +99,12 @@ def test_a_price_rise_shows_its_effect_on_each_dish_and_the_period(db, menu, cos
     f = facts_by_label(ctx)
 
     name = 'Test cost unit'
-    assert (f[f'{name} price before'], f[f'{name} price after']) == (1.00, 1.50)
-    assert f[f'{name} price change'] == 50.0
+    assert f[f'{name}: price'] == [1.00, 1.50]         # one fact, shown as "£1.00 each → £1.50 each"
+    assert f[f'{name}: price change'] == 50.0
     # Each dish uses 2, so +£1.00 per plate
-    assert f[f'Margherita plate cost change from {name}'] == 1.00
+    assert f['Margherita: plate cost change'] == 1.00
     # 30 + 10 = 40 plates sold in September x £1.00 = £40 less contribution
-    assert f[f'{name}: effect on contribution over the period'] == -40.00
+    assert f[f'{name}: effect on contribution'] == -40.00
 
 
 def test_a_price_before_the_period_is_not_a_change(db, menu, cost_item, add_price):
@@ -114,9 +118,22 @@ def test_sales_by_weekday_averages_the_days_that_traded(db, menu):
     run_tool(ctx, 'sales_pattern', {'by': 'weekday'})
     f = facts_by_label(ctx)
     # Monday 7 Sep: 30 x £10 = £300. Saturday 12 Sep: 10 x £12 = £120.
-    assert f['Average Monday sales'] == 300
-    assert f['Average Saturday sales'] == 120
-    assert 'Average Tuesday sales' not in f       # no trading Tuesdays
+    assert f['Monday: average sales'] == 300
+    assert f['Saturday: average sales'] == 120
+    assert 'Tuesday: average sales' not in f       # no trading Tuesdays
+    # August's only trading day was Monday 3 Aug: 20 x £10 + 10 x £12 = £320, so Monday fell to £300: -6.25%
+    assert f['Monday: change'] == pytest.approx(-6.25)
+    assert 'Saturday: change' not in f             # no Saturday in August to compare with
+
+
+def test_weekdays_against_weekends_by_dish(db, menu):
+    ctx = ReportContext(db, *SEPTEMBER, today=TODAY)
+    run_tool(ctx, 'sales_pattern', {'by': 'weekday_by_dish'})
+    f = facts_by_label(ctx)
+    # Two trading days: Monday 7 Sep (weekday) and Saturday 12 Sep (weekend), one of each.
+    # Margherita sold 30 on the Monday and none on the Saturday; Diavola the opposite, 10.
+    assert f['Margherita: plates a day'] == [30.0, 0.0]
+    assert f['Diavola: plates a day'] == [0.0, 10.0]
 
 
 def test_data_gaps_lists_dishes_left_out_of_the_analysis(db, menu, add_dish):
@@ -138,4 +155,4 @@ def test_every_tool_is_described_for_the_api():
     definitions = {d['name']: d for d in tool_definitions()}
     assert set(definitions) == {'period_summary', 'actions', 'dish_detail', 'price_changes', 'sales_pattern', 'data_gaps'}
     assert definitions['dish_detail']['input_schema']['required'] == ['dish']
-    assert definitions['sales_pattern']['input_schema']['properties']['by']['enum'] == ['weekday', 'category', 'dish']
+    assert definitions['sales_pattern']['input_schema']['properties']['by']['enum'] == ['weekday', 'weekday_by_dish', 'category', 'dish']

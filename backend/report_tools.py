@@ -55,13 +55,25 @@ def describe(start: date, end: date) -> str:
 @dataclass
 class Fact:
     id: str
-    label: str      # what it is, e.g. "Margherita margin per plate"
-    value: float | str
-    unit: str       # '£', '%', 'change %' (signed), 'pts', 'count', 'a day', '£/kg', '£/l', '£ each', 'date' or 'text'
+    label: str      # short, what it is, e.g. "Margherita: margin per plate"
+    value: float | str | list
+    unit: str       # '£', '%', 'change %' (signed), 'pts', 'count', 'a day', '£/kg', '£/l', '£ each',
+                    # 'plates' ([extra, per day]), 'weekday split' ([Mon-Thu, Fri-Sun] a day), 'date' or 'text'
+    note: str = ''  # how it's worked out, shown on hover; kept out of the label so the chip stays short
+    # A [before, after] pair in a money unit is one fact shown as "£7.40 → £8.20/kg".
 
 
 def format_value(value, unit) -> str:
     """How a fact appears on the page. The only place report numbers are formatted."""
+    if isinstance(value, (list, tuple)):
+        a, b = value
+        if unit == 'plates':
+            return f'+{a:,.0f} plates · {b:.1f} a day'
+        if unit == 'weekday split':
+            return f'{a:.1f} Mon–Thu · {b:.1f} Fri–Sun a day'
+        if unit in ('£/kg', '£/l'):
+            return f'£{a:,.2f} → £{b:,.2f}/{unit[2:]}'
+        return f'{format_value(a, unit)} → {format_value(b, unit)}'
     if unit == '£':
         sign = '-' if value < 0 else ''
         return f'{sign}£{abs(value):,.0f}' if abs(value) >= 100 else f'{sign}£{abs(value):,.2f}'
@@ -87,13 +99,15 @@ class Facts:
     """Every number found during one report, numbered in the order found."""
     items: dict = field(default_factory=dict)
 
-    def add(self, label, value, unit) -> str:
-        """Stores a fact and returns '[f7] label: value', the line Claude sees."""
+    def add(self, label, value, unit, note='') -> str:
+        """Stores a fact and returns '[f7] label: value (note)', the line Claude sees."""
         fact_id = f'f{len(self.items) + 1}'
         if isinstance(value, float):
             value = round(value, 2)
-        self.items[fact_id] = Fact(fact_id, label, value, unit)
-        return f'[{fact_id}] {label}: {format_value(value, unit)}'
+        if isinstance(value, (list, tuple)):
+            value = [round(v, 2) for v in value]
+        self.items[fact_id] = Fact(fact_id, label, value, unit, note)
+        return f'[{fact_id}] {label}: {format_value(value, unit)}' + (f' ({note})' if note else '')
 
     def as_list(self) -> list[dict]:
         return [vars(f) for f in self.items.values()]
@@ -163,8 +177,8 @@ def period_summary(ctx: ReportContext) -> str:
     if not ctx.now:
         return lines[0] + ' No sales recorded in this period, so there is nothing to analyse.'
     lines += [
-        f.add('Contribution (margin x units, all analysed dishes)', now['contribution'], '£'),
-        f.add('Sales (menu price x units, incl. VAT)', now['sales'], '£'),
+        f.add('Contribution', now['contribution'], '£', note='margin x plates sold, all analysed dishes'),
+        f.add('Sales', now['sales'], '£', note='menu price x plates sold, including VAT'),
         f.add('Gross margin', now['gp'], '%'),
         f.add('Dishes sold', now['units'], 'count'),
         f.add('Dishes analysed', len(ctx.now), 'count'),
@@ -181,7 +195,7 @@ def period_summary(ctx: ReportContext) -> str:
         lines.append('No sales in the previous period, so no comparison.')
     excluded = list_incomplete_dishes(ctx.db, ctx.start, ctx.end)
     if excluded:
-        lines.append(f.add('Dishes on the menu but not analysed (see data_gaps)', len(excluded), 'count'))
+        lines.append(f.add('Dishes not analysed', len(excluded), 'count', note='on the menu, but see data_gaps'))
     return '\n'.join(lines)
 
 
@@ -193,22 +207,25 @@ def actions(ctx: ReportContext, category: str | None = None) -> str:
               if category is None or by_id[a.dish_id].category.value.lower() == category.lower()]
     if not ranked:
         return 'No recommended changes' + (f' for {category}' if category else '') + '.'
-    lines = [f.add('Total impact of all these changes', sum(a.impact_pounds for a in ranked), '£')]
+    lines = [f.add('All changes: impact', sum(a.impact_pounds for a in ranked), '£',
+                   note='the change in contribution over the period if every one is made')]
     for rank, a in enumerate(ranked[:8], start=1):
         q = a.quadrant.value
         d = by_id[a.dish_id]
+        category = d.category.value.lower()
         lines.append(f'{rank}. {a.dish_name} ({d.category.value}, {q}): {VERB[q]}. '
-                     + f.add(f'{a.dish_name} impact', a.impact_pounds, '£'))
+                     + f.add(f'{a.dish_name}: impact', a.impact_pounds, '£', note='change in contribution over the period'))
         # The concrete change (menu_engineering.proposed_change)
         if a.target_price is not None:
-            lines.append('   ' + f.add(f'{a.dish_name} price today', a.current_price, '£') + '; '
-                         + f.add(f'{a.dish_name} target price (plate cost + the category average margin)', a.target_price, '£')
-                         + '; ' + f.add(f'{a.dish_name} margin gap per plate (a price rise or a cost cut)', a.margin_gap, '£'))
+            lines.append('   ' + f.add(f'{a.dish_name}: price now → target', [a.current_price, a.target_price], '£',
+                                       note=f'target = plate cost + the {category} average margin')
+                         + '; ' + f.add(f'{a.dish_name}: margin gap per plate', a.margin_gap, '£',
+                                        note='closed by raising the price or cutting the plate cost'))
         elif a.current_price is not None:
             lines.append("   Already at or above the margin line at today's price (repriced since the period).")
         if a.extra_units is not None:
-            lines.append('   ' + f.add(f'{a.dish_name} extra plates over the period to reach the popularity line', a.extra_units, 'count')
-                         + '; ' + f.add(f'{a.dish_name} extra plates a day', a.extra_per_day, 'a day'))
+            lines.append('   ' + f.add(f'{a.dish_name}: extra plates to reach the line', [a.extra_units, a.extra_per_day],
+                                       'plates', note=f'over the period, to reach the {category} popularity line'))
     if len(ranked) > 8:
         lines.append(f'...and {len(ranked) - 8} smaller ones.')
     lines.append('Impact: Plowhorse = margin brought up to the category average; Puzzle = sales brought up to '
@@ -246,6 +263,7 @@ def dish_detail(ctx: ReportContext, dish: str) -> str:
     if not found:
         return f'No dish called "{dish}".' + (f' Did you mean: {", ".join(suggestions)}?' if suggestions else '')
     name = found.name
+    plural = f'{found.category.value.lower()}s' if found.category else 'dishes'
     now = next((d for d in ctx.now if d.dish_id == found.id), None)
     before = next((d for d in ctx.prev if d.dish_id == found.id), None)
     lines = [f'{name} ({found.category.value if found.category else "no category"}).']
@@ -258,23 +276,24 @@ def dish_detail(ctx: ReportContext, dish: str) -> str:
               ', same as before' if before else ', new this period'
         lines += [
             f'Quadrant: {now.quadrant.value}{was}.',
-            f.add(f'{name} menu price (average charged this period)', now.menu_price, '£'),
-            f.add(f'{name} plate cost', now.plate_cost, '£'),
-            f.add(f'{name} margin per plate', now.margin_pounds, '£'),
-            f.add(f'{name} gross margin', now.margin_percent, '%'),
-            f.add(f'{name} units sold', now.units_sold, 'count'),
-            f.add(f'{name} share of its category\'s units', now.menu_mix_percent, '%'),
-            f.add(f'{found.category.value} popularity line (70% of an equal share)', now.popularity_threshold, '%'),
-            f.add(f'{found.category.value} average margin per plate (the profitability line)',
-                  now.profitability_threshold, '£'),
+            f.add(f'{name}: menu price', now.menu_price, '£', note='average charged over the period'),
+            f.add(f'{name}: plate cost', now.plate_cost, '£'),
+            f.add(f'{name}: margin per plate', now.margin_pounds, '£'),
+            f.add(f'{name}: gross margin', now.margin_percent, '%'),
+            f.add(f'{name}: plates sold', now.units_sold, 'count'),
+            f.add(f'{name}: share of {plural}', now.menu_mix_percent, '%', note=f'of all {plural} sold'),
+            f.add(f'{plural.capitalize()}: popularity line', now.popularity_threshold, '%',
+                  note='70% of an equal share'),
+            f.add(f'{plural.capitalize()}: average margin per plate', now.profitability_threshold, '£',
+                  note='the profitability line'),
         ]
         if before:
-            lines.append(f.add(f'{name} units sold, previous period', before.units_sold, 'count'))
+            lines.append(f.add(f'{name}: plates sold, {describe(ctx.prev_start, ctx.prev_end)}', before.units_sold, 'count'))
 
     prices = menu_prices(ctx.db, found.id)
     if len(prices) > 1:
         lines.append('Menu price history:')
-        lines += ['  ' + f.add(f'{name} price from {p.effective_date:%d %b %Y}', p.price, '£') for p in prices]
+        lines += ['  ' + f.add(f'{name}: price from {p.effective_date:%d %b %Y}', p.price, '£') for p in prices]
 
     recipe = []
     for row in ctx.db.query(DishIngredient).filter(DishIngredient.dish_id == found.id):
@@ -286,7 +305,7 @@ def dish_detail(ctx: ReportContext, dish: str) -> str:
         lines.append('Most expensive recipe lines:')
         for cost, ingredient, quantity, price in sorted(recipe, key=lambda r: -r[0])[:5]:
             lines.append(f'  {ingredient.name}, {quantity_display(quantity, ingredient.unit)} '
-                         f'({price.source.value} price): ' + f.add(f'{name}: {ingredient.name} cost per plate', cost, '£'))
+                         f'({price.source.value} price): ' + f.add(f'{name}: {ingredient.name}', cost, '£', note='cost per plate'))
 
     per_day = spread_units(ctx.db, found.id, ctx.start, ctx.end)
     if per_day:
@@ -297,7 +316,7 @@ def dish_detail(ctx: ReportContext, dish: str) -> str:
             units = sum(u for day, u in per_day.items() if week_start <= day <= week_end)
             days = (week_end - week_start).days + 1
             short = f' (only {days} days)' if days < 7 else ''   # so a short last week isn't read as a fall
-            lines.append('  ' + f.add(f'{name} units {week_start:%d %b} to {week_end:%d %b}{short}', units, 'count'))
+            lines.append('  ' + f.add(f'{name}: plates {week_start:%d %b} to {week_end:%d %b}{short}', units, 'count'))
             week_start = week_end + timedelta(days=1)
     return '\n'.join(lines)
 
@@ -341,12 +360,12 @@ def price_changes(ctx: ReportContext) -> str:
         new_v, _ = price_display(new.price_per_unit, ingredient.unit)
         lines.append(f'{ingredient.name}, from {day:%d %b %Y} ({new.source.value}'
                      + (f', {new.supplier}' if new.supplier else '') + '):')
-        lines.append('  ' + f.add(f'{ingredient.name} price before', old_v, unit))
-        lines.append('  ' + f.add(f'{ingredient.name} price after', new_v, unit))
-        lines.append('  ' + f.add(f'{ingredient.name} price change', pct_change(new_v, old_v), 'change %'))
+        lines.append('  ' + f.add(f'{ingredient.name}: price', [old_v, new_v], unit, note=f'from {day:%d %b %Y}'))
+        lines.append('  ' + f.add(f'{ingredient.name}: price change', pct_change(new_v, old_v), 'change %'))
         for dish, per_plate in sorted(effects, key=lambda e: -abs(e[1]))[:4]:
-            lines.append('  ' + f.add(f'{dish.name} plate cost change from {ingredient.name}', per_plate, '£'))
-        lines.append('  ' + f.add(f'{ingredient.name}: effect on contribution over the period', -period_effect, '£'))
+            lines.append('  ' + f.add(f'{dish.name}: plate cost change', per_plate, '£', note=f'from the {ingredient.name} price'))
+        lines.append('  ' + f.add(f'{ingredient.name}: effect on contribution', -period_effect, '£',
+                                  note="over the period, at this period's sales"))
     return '\n'.join(lines)
 
 
@@ -358,37 +377,100 @@ def sales_pattern(ctx: ReportContext, by: str) -> str:
         return 'No sales recorded in this period.'
 
     if by == 'weekday':
-        totals, counts = defaultdict(float), defaultdict(int)
-        for d in summary.days:
-            if d.sales > 0:
-                totals[d.day.weekday()] += d.sales
-                counts[d.day.weekday()] += 1
-        lines = ['Average sales per trading day, by weekday:']
+        now = weekday_averages(summary)
+        before = weekday_averages(sales_summary(ctx.db, ctx.prev_start, ctx.prev_end))
+        lines = [f'Average sales per trading day, by weekday (change against {describe(ctx.prev_start, ctx.prev_end)}):']
         for w in range(7):
-            if counts[w]:
-                lines.append(f'  {WEEKDAYS[w]} ({counts[w]} days): ' + f.add(f'Average {WEEKDAYS[w]} sales', totals[w] / counts[w], '£'))
+            if w in now:
+                line = f'  {WEEKDAYS[w]}: ' + f.add(f'{WEEKDAYS[w]}: average sales', now[w], '£', note='per trading day')
+                if before.get(w):
+                    line += '; ' + f.add(f'{WEEKDAYS[w]}: change', pct_change(now[w], before[w]), 'change %',
+                                         note=f'against {describe(ctx.prev_start, ctx.prev_end)}')
+                lines.append(line)
+        for label, days in (('Mon–Thu', range(4)), ('Fri–Sun', range(4, 7))):
+            avg_now = group_average(summary, days)
+            if avg_now is not None:
+                line = f'  {label}: ' + f.add(f'{label}: average sales a day', avg_now, '£')
+                avg_before = group_average(sales_summary(ctx.db, ctx.prev_start, ctx.prev_end), days)
+                if avg_before:
+                    line += '; ' + f.add(f'{label}: change', pct_change(avg_now, avg_before), 'change %',
+                                         note=f'against {describe(ctx.prev_start, ctx.prev_end)}')
+                lines.append(line)
         return '\n'.join(lines)
+
+    if by == 'weekday_by_dish':
+        return weekday_by_dish(ctx, summary)
 
     if by == 'category':
         lines = ['Sales by category:']
         for c in summary.categories:
             label = c.category.value if c.category else 'No category'
-            lines.append(f'  {label}: ' + f.add(f'{label} sales', c.sales, '£') + '; '
-                         + f.add(f'{label} share of sales', c.sales / summary.total_sales * 100, '%') + '; '
-                         + f.add(f'{label} units', c.units, 'count'))
+            lines.append(f'  {label}: ' + f.add(f'{label}: sales', c.sales, '£') + '; '
+                         + f.add(f'{label}: share of sales', c.sales / summary.total_sales * 100, '%') + '; '
+                         + f.add(f'{label}: plates sold', c.units, 'count'))
         return '\n'.join(lines)
 
     if by == 'dish':
         ranked = sorted(summary.dishes, key=lambda d: -d.units)
         lines = ['Best sellers by units:']
-        lines += [f'  {d.name}: ' + f.add(f'{d.name} units', d.units, 'count') + '; ' + f.add(f'{d.name} sales', d.sales, '£')
+        lines += [f'  {d.name}: ' + f.add(f'{d.name}: plates sold', d.units, 'count') + '; ' + f.add(f'{d.name}: sales', d.sales, '£')
                   for d in ranked[:5]]
         lines.append('Lowest sellers by units:')
-        lines += [f'  {d.name}: ' + f.add(f'{d.name} units', d.units, 'count') + '; ' + f.add(f'{d.name} sales', d.sales, '£')
+        lines += [f'  {d.name}: ' + f.add(f'{d.name}: plates sold', d.units, 'count') + '; ' + f.add(f'{d.name}: sales', d.sales, '£')
                   for d in ranked[-5:][::-1]]
         return '\n'.join(lines)
 
-    return f'Unknown breakdown "{by}". Use weekday, category or dish.'
+    return f'Unknown breakdown "{by}". Use weekday, weekday_by_dish, category or dish.'
+
+
+def weekday_averages(summary) -> dict:
+    """Average sales per trading day (a day with any sales), by weekday number (Monday = 0)."""
+    totals, counts = defaultdict(float), defaultdict(int)
+    for d in summary.days:
+        if d.sales > 0:
+            totals[d.day.weekday()] += d.sales
+            counts[d.day.weekday()] += 1
+    return {w: totals[w] / counts[w] for w in counts}
+
+
+def group_average(summary, weekdays) -> float | None:
+    """Average sales per trading day across a group of weekdays (e.g. Monday to Thursday)."""
+    days = [d.sales for d in summary.days if d.sales > 0 and d.day.weekday() in weekdays]
+    return sum(days) / len(days) if days else None
+
+
+def weekday_by_dish(ctx: ReportContext, summary) -> str:
+    """
+    Each dish's plates per trading day, Monday to Thursday against Friday to Sunday:
+    what carries the quiet days, and what only sells at the weekend.
+    """
+    f = ctx.facts
+    trading = [d.day for d in summary.days if d.sales > 0]
+    weekday_days = [d for d in trading if d.weekday() < 4]
+    weekend_days = [d for d in trading if d.weekday() >= 4]
+    if not weekday_days or not weekend_days:
+        return 'Not enough trading days on both weekdays and weekends to compare.'
+
+    rows = []
+    for c in ctx.now:
+        per_day = spread_units(ctx.db, c.dish_id, ctx.start, ctx.end)
+        weekday = sum(per_day.get(d, 0) for d in weekday_days) / len(weekday_days)
+        weekend = sum(per_day.get(d, 0) for d in weekend_days) / len(weekend_days)
+        rows.append((c.dish_name, c.category.value, c.quadrant.value, weekday, weekend))
+
+    def fact(name, category, quadrant, weekday, weekend):
+        return (f'  {name} ({category}, {quadrant}): '
+                + f.add(f'{name}: plates a day', [weekday, weekend], 'weekday split', note='Mon–Thu against Fri–Sun'))
+
+    lines = [f'Plates per trading day, Monday to Thursday ({len(weekday_days)} days) against Friday to Sunday '
+             f'({len(weekend_days)} days).', 'Most plates on weekdays:']
+    lines += [fact(*r) for r in sorted(rows, key=lambda r: -r[3])[:5]]
+    ratio = lambda r: r[4] / r[3] if r[3] else float('inf')
+    lines.append('Most weekend-heavy (weekend plates a day for each weekday plate):')
+    lines += [fact(*r) for r in sorted(rows, key=ratio, reverse=True)[:4]]
+    lines.append('Holds up best on weekdays:')
+    lines += [fact(*r) for r in sorted(rows, key=ratio)[:4]]
+    return '\n'.join(lines)
 
 
 def data_gaps(ctx: ReportContext) -> str:
@@ -399,17 +481,18 @@ def data_gaps(ctx: ReportContext) -> str:
         lines.append(f'Not analysed: {i.dish_name} ({"; ".join(i.reasons)}).')
     status = setup_status(ctx.db, today=ctx.today)
     if status.unchecked_recipes:
-        lines.append(f.add('Recipes estimated by AI and not yet checked by the owner', status.unchecked_recipes, 'count'))
+        lines.append(f.add('Unchecked AI recipes', status.unchecked_recipes, 'count', note='estimated by AI, not yet checked'))
     summary = sales_summary(ctx.db, ctx.start, ctx.end)
     empty = [d.day for d in summary.days if d.sales == 0]
     if empty:
-        lines.append(f.add('Days in the period with no sales recorded', len(empty), 'count')
+        lines.append(f.add('Days without sales', len(empty), 'count', note='in the period')
                      + f' ({", ".join(d.strftime("%d %b") for d in empty[:10])}' + (', ...' if len(empty) > 10 else '') + ')')
     if status.ingredients_in_use:
         benchmark = status.ingredients_in_use - status.ingredients_with_own_price
-        lines.append(f.add('Ingredients in recipes still costed on benchmark prices (not the restaurant\'s own)', benchmark, 'count'))
-        lines.append(f.add('Share of ingredients in recipes on the restaurant\'s own prices',
-                           status.ingredients_with_own_price / status.ingredients_in_use * 100, '%'))
+        lines.append(f.add('Ingredients on benchmark prices', benchmark, 'count',
+                           note="in current recipes; not yet from the restaurant's own invoices"))
+        lines.append(f.add('Ingredients on own prices', status.ingredients_with_own_price / status.ingredients_in_use * 100,
+                           '%', note='share of the ingredients in current recipes'))
     return '\n'.join(lines) if lines else 'No gaps: every dish is analysed, recipes are checked and every day has sales.'
 
 
@@ -426,8 +509,10 @@ TOOLS = {
                     {'dish': {'type': 'string', 'description': 'The dish name, as on the menu'}}),
     'price_changes': (price_changes, 'Ingredient price changes since the period began and their £ effect '
                                      'on the dishes using them.', {}),
-    'sales_pattern': (sales_pattern, 'Sales broken down by weekday, by category, or best and worst sellers.',
-                      {'by': {'type': 'string', 'enum': ['weekday', 'category', 'dish']}}),
+    'sales_pattern': (sales_pattern, 'Sales broken down by weekday (with the change against the previous period), '
+                                     'by dish on weekdays against weekends (weekday_by_dish), by category, or best '
+                                     'and worst sellers.',
+                      {'by': {'type': 'string', 'enum': ['weekday', 'weekday_by_dish', 'category', 'dish']}}),
     'data_gaps': (data_gaps, 'What is missing or uncertain in the data: dishes not analysed, unchecked AI recipes, '
                              'days without sales, ingredients still on benchmark prices.', {}),
 }

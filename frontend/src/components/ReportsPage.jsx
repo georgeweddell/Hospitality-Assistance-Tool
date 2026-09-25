@@ -41,10 +41,11 @@ function periodOf(report) {
   return rangeLabel({ from: report.period_start, to: report.period_end })
 }
 
-// A cited fact: the number (formatted by code) over what it is.
+// A cited fact: the number (formatted by code) over what it is; how it's worked out on hover.
 function FactChip({ fact }) {
   return (
-    <span className="flex min-w-0 flex-col gap-0.5 rounded-2xl border-[1.5px] border-ink bg-surface px-3 py-2">
+    <span className="flex min-w-0 flex-col gap-0.5 rounded-2xl border-[1.5px] border-ink bg-surface px-3 py-2"
+          title={fact.note || undefined}>
       <span className="figure text-[1.5rem]">{fact.display}</span>
       <span className="font-mono text-[0.6875rem] leading-snug text-muted">{fact.label}</span>
     </span>

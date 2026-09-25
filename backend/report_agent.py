@@ -51,7 +51,14 @@ The numbers rule, which is checked by code: never write a number, digit, price o
 title or detail. Instead cite the ids of the facts that support each item (e.g. ["f7", "f13"]); the \
 page shows those numbers next to your words. Write "rose", "fell", "the biggest", "about a third" \
 style words only when a cited fact shows it. Only use facts the tools returned. Cite the two to four \
-facts that matter most for each item, not every related one. Dish names are fine as they are.
+facts that matter most for each item (four at most, checked by code), and only facts that directly back \
+that item's words: never a loosely related fact to fill the space. If no fact backs an item, leave the \
+item out. Dish names are fine as they are.
+
+Write to the owner about their restaurant. Next steps are things to do in the restaurant (on the menu, \
+the pass, the specials board, with suppliers or staff), never requests for more data or analysis, and \
+never mention the tools, the app or this report. Only mention a gap in the data as a finding, in plain \
+words, when it changes how the figures should be read (e.g. most costs are still estimates).
 
 Only claim what the data shows. It has no information on how customers would react to a price change, \
 why a dish sells, or what competitors charge, so don't say a change will or won't affect demand: say \
@@ -79,7 +86,7 @@ def client():
 class ReportItem(BaseModel):
     title: str = Field(min_length=1)
     detail: str = Field(min_length=1)
-    facts: list[str] = Field(min_length=1)   # fact ids, e.g. ["f7", "f13"]
+    facts: list[str] = Field(min_length=1, max_length=4)   # fact ids, e.g. ["f7", "f13"]: the ones that matter most
 
 
 class ReportDraft(BaseModel):
@@ -96,7 +103,7 @@ WRITE_REPORT = {
             section: {'type': 'array', 'maxItems': limit, 'items': {
                 'type': 'object',
                 'properties': {'title': {'type': 'string'}, 'detail': {'type': 'string'},
-                               'facts': {'type': 'array', 'items': {'type': 'string'}}},
+                               'facts': {'type': 'array', 'items': {'type': 'string'}, 'minItems': 1, 'maxItems': 4}},
                 'required': ['title', 'detail', 'facts']}}
             for section, limit in (('next_steps', 5), ('findings', 6))
         },
@@ -144,7 +151,8 @@ def trail_label(name: str, tool_input: dict) -> str:
     if name == 'actions':
         return f'Ranking changes for {tool_input["category"].lower()}s' if tool_input.get('category') else 'Ranking changes'
     if name == 'sales_pattern':
-        return f'Sales by {tool_input.get("by", "?")}'
+        by = tool_input.get('by', '?')
+        return 'Sales by dish, weekdays against weekends' if by == 'weekday_by_dish' else f'Sales by {by}'
     return {'period_summary': 'Reading the headline figures', 'price_changes': 'Checking ingredient prices',
             'data_gaps': 'Checking for gaps in the data', 'write_report': 'Writing the report'}.get(name, name)
 
