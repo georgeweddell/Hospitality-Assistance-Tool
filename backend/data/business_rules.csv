@@ -1,0 +1,24 @@
+# Rules of thumb for the business checks (suggestions.py). STARTING VALUES, TO BE
+# REVIEWED BY GEORGE: common UK trade rules of thumb, not researched benchmarks.
+# Edit a number here and the checks use it; no code changes needed.
+#   rule:  which check (see suggestions.py)
+#   type:  restaurant type (pizzeria, gastropub, cafe, indian, other), or "all"
+#          for every type; a row for the restaurant's own type beats "all"
+#   low, high: the band; a check fires outside it (either may be blank)
+#   note:  what it is and where the number comes from
+rule,type,low,high,note
+food_cost_percent,pizzeria,20,28,"Food cost % of sales ex-VAT. Pizza costs little to make: rule of thumb 20-28%."
+food_cost_percent,gastropub,26,32,"Food cost % of sales ex-VAT. Rule of thumb for pub food 26-32%."
+food_cost_percent,cafe,22,30,"Food cost % of sales ex-VAT. Rule of thumb for cafes 22-30%."
+food_cost_percent,indian,24,32,"Food cost % of sales ex-VAT. Rule of thumb 24-32%."
+food_cost_percent,all,25,32,"Food cost % of sales ex-VAT. General UK restaurant rule of thumb 25-32%."
+desserts_per_main,pizzeria,0.35,,"Desserts sold for each main. Rule of thumb: at least about one table in three orders dessert."
+desserts_per_main,all,0.30,,"Desserts sold for each main."
+starters_per_main,pizzeria,0.50,,"Starters sold for each main. Sharing starters: about one for every two mains."
+starters_per_main,all,0.40,,"Starters sold for each main."
+sides_per_main,all,0.40,,"Sides sold for each main."
+midweek_share,all,0.70,,"Monday-Thursday sales a day as a share of Friday-Sunday sales a day."
+dishes_per_category,all,,10,"Most dishes in one category before a menu gets hard to read and to prep."
+dog_share,all,,0.34,"Share of a category's dishes that are Dogs (low margin, few sales)."
+ingredient_share,all,,0.25,"Share of the whole food cost going on one ingredient: above this, one supplier price moves the whole menu."
+own_price_share,all,50,,"Share of recipe cost on the restaurant's own prices (invoices, supplier lists, typed in); below this, margins are mostly estimates."

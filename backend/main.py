@@ -29,6 +29,7 @@ from menu_ai import read_menu
 from tills import apply_sales, decode, items_needing_hints, read_csv, remembered_mapping, review_sales, undo_sales_import
 from till_ai import propose_columns, suggest_items
 from price_changes import find_menu_price_changes, find_price_changes
+from suggestions import RESTAURANT_TYPES, Checks, restaurant_type
 import report_agent
 from models import Report, ReportStatus
 from database import SessionLocal
@@ -742,6 +743,33 @@ def get_menu_price_changes(start: date | None = Query(None, alias="from"), end: 
     """Menu price changes from the start of the period to today, newest first."""
     start, end = resolve_range(db, start, end)
     return [vars(c) for c in find_menu_price_changes(db, start, date.today())]
+
+
+# --- Business checks (suggestions.py) and the restaurant's type ------------------------
+
+@app.get("/suggestions")
+def get_suggestions(start: date | None = Query(None, alias="from"), end: date | None = Query(None, alias="to"),
+                    db: Session = Depends(get_db)):
+    """Every business check for the period: fired ones first, each with its figures and rule of thumb."""
+    start, end = resolve_range(db, start, end)
+    checks = [c.out() for c in Checks(db, start, end).all()]
+    return sorted(checks, key=lambda c: not c['fires'])
+
+
+@app.get("/settings/business")
+def get_business(db: Session = Depends(get_db)):
+    return {"restaurant_type": restaurant_type(db), "types": RESTAURANT_TYPES}
+
+
+@app.put("/settings/business")
+def put_business(data: schemas.BusinessIn, db: Session = Depends(get_db)):
+    profile = db.query(models.BusinessProfile).first()
+    if profile is None:
+        profile = models.BusinessProfile()
+        db.add(profile)
+    profile.restaurant_type = data.restaurant_type
+    db.commit()
+    return {"restaurant_type": profile.restaurant_type, "types": RESTAURANT_TYPES}
 
 
 # --- Reports (the report agent, report_agent.py) --------------------------------------

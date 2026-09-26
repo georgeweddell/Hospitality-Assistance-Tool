@@ -30,7 +30,7 @@ from datetime import date, datetime, timedelta
 from sqlalchemy.orm import sessionmaker
 
 from database import Base, engine
-from models import (Dish, DishIngredient, DishType, Ingredient, IngredientPrice, MenuPrice, MenuPriceSource, RecipeStatus,
+from models import (BusinessProfile, Dish, DishIngredient, DishType, Ingredient, IngredientPrice, MenuPrice, MenuPriceSource, RecipeStatus,
                     PriceSource, SalesRecord, User)
 from costing import cost_dish
 from benchmarks import sync_benchmarks
@@ -255,6 +255,7 @@ def reset_database(target_engine, with_demo, verbose=False):
         db.close()
         return {"ingredients": len(ingredients), "dishes": 0}
 
+    db.add(BusinessProfile(restaurant_type='pizzeria'))   # the business checks' rules of thumb
     for name, price, invoice_date in INVOICE_PRICES:
         db.add(IngredientPrice(ingredient_id=ingredients[name].id, price_per_unit=price,
                                source=PriceSource.INVOICE, supplier=DEMO_SUPPLIER,

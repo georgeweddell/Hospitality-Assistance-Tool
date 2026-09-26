@@ -225,6 +225,9 @@ class MenuPriceChangeOut(BaseModel):
     old_price: float
     new_price: float
 
+class BusinessIn(BaseModel):
+    restaurant_type: Literal["pizzeria", "gastropub", "cafe", "indian", "other"]
+
 class ReportIn(BaseModel):
     """Starting a report: an optional focus or question from the owner."""
     focus: Optional[str] = Field(default=None, max_length=500)

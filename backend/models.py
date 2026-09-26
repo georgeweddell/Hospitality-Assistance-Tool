@@ -203,3 +203,11 @@ class Report(Base):
     error = Column(String, nullable=True)
     input_tokens = Column(Integer, nullable=False, default=0)
     output_tokens = Column(Integer, nullable=False, default=0)
+
+
+class BusinessProfile(Base):
+    # About the restaurant itself: one row. The business checks (suggestions.py)
+    # use its type to pick their rules of thumb; no row means "other".
+    __tablename__ = "business_profile"
+    id = Column(Integer, primary_key=True)
+    restaurant_type = Column(String, nullable=False, default="other")   # pizzeria / gastropub / cafe / indian / other
