@@ -92,6 +92,8 @@ def format_value(value, unit) -> str:
         return f'{value:.1f} a day'
     if unit == 'x':
         return f'{value:.2f}×'
+    if unit == 'per main':
+        return f'{value:.2f} per main'
     if unit in ('£/kg', '£/l'):
         return f'£{value:,.2f}/{unit[2:]}'
     if unit == '£ each':
@@ -503,6 +505,28 @@ def data_gaps(ctx: ReportContext) -> str:
     return '\n'.join(lines) if lines else 'No gaps: every dish is analysed, recipes are checked and every day has sales.'
 
 
+def business_checks(ctx: ReportContext) -> str:
+    """
+    The business checks (suggestions.py) that fire, with their figures as facts:
+    rules of thumb worked out by code. Claude may choose and word them; it
+    doesn't invent others.
+    """
+    from suggestions import Checks   # here, not at the top: suggestions.py imports this file
+    f = ctx.facts
+    checks = Checks(ctx.db, ctx.start, ctx.end, today=ctx.today).all()
+    firing = [c for c in checks if c.fires]
+    if not firing:
+        return 'Every business check passes.'
+    lines = [f'Business checks that fire ({len(firing)} of {len(checks)}), each against a rule of thumb:']
+    for c in firing:
+        lines.append(f'{c.title}: {c.action} (rule of thumb: {c.rule_of_thumb}).')
+        lines += ['  ' + f.add(fig.label, fig.value, fig.unit) for fig in c.figures[:4]]
+    passing = [c.title.lower() for c in checks if not c.fires]
+    if passing:
+        lines.append('Passing: ' + ', '.join(passing) + '.')
+    return '\n'.join(lines)
+
+
 # --- The registry the agent uses ----------------------------------------------------
 
 TOOLS = {
@@ -520,6 +544,9 @@ TOOLS = {
                                      'by dish on weekdays against weekends (weekday_by_dish), by category, or best '
                                      'and worst sellers.',
                       {'by': {'type': 'string', 'enum': ['weekday', 'weekday_by_dish', 'category', 'dish']}}),
+    'business_checks': (business_checks, 'Plain business checks against rules of thumb for this kind of restaurant: '
+                                         'food cost, desserts/starters/sides per main, midweek trade, menu size, '
+                                         'price anchoring, reliance on one ingredient, cost basis, rises not passed on.', {}),
     'data_gaps': (data_gaps, 'What is missing or uncertain in the data: dishes not analysed, unchecked AI recipes, '
                              'days without sales, ingredients still on benchmark prices.', {}),
 }

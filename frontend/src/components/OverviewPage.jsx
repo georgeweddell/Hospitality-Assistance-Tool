@@ -3,6 +3,7 @@ import Hint from './Hint'
 import TicketRail from './TicketRail'
 import { PriceRiseList } from './PriceChanges'
 import { usePriceChanges } from '../priceChanges'
+import { useSuggestions } from '../suggestions'
 import { useEffect, useState } from 'react'
 import { getJson } from '../api'
 import { rangeQuery } from '../dateRange'
@@ -86,6 +87,8 @@ function useMenuPriceChanges(range, reload) {
 function OverviewPage({ dishes, prevDishes, actions, range, unchecked = 0 }) {
   const priceChanges = usePriceChanges(range, dishes)
   const menuPrices = useMenuPriceChanges(range, dishes)
+  const checks = useSuggestions(range, dishes)
+  const firing = checks ? checks.filter((c) => c.fires).length : 0
   const now = summarise(dishes)
   const hasPrev = prevDishes.length > 0
   const before = hasPrev ? summarise(prevDishes) : null
@@ -109,7 +112,14 @@ function OverviewPage({ dishes, prevDishes, actions, range, unchecked = 0 }) {
                   content="Recipes estimated by AI and not yet checked. Their costs are estimates until you check them." />
           </span>
         ) : <span />}
-        <a href="#/reports" className="btn btn-primary">Generate report</a>
+        <span className="flex flex-wrap items-center gap-4">
+          {firing > 0 && (
+            <a href="#/analysis" className="link font-mono text-sm font-normal">
+              {firing} business check{firing === 1 ? '' : 's'} to look at →
+            </a>
+          )}
+          <a href="#/reports" className="btn btn-primary">Generate report</a>
+        </span>
       </div>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">

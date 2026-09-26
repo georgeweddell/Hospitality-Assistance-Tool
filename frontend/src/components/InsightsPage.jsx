@@ -4,6 +4,8 @@ import Delta from './Delta'
 import Hint from './Hint'
 import QuadrantBadge from './QuadrantBadge'
 import QuadrantChart from './QuadrantChart'
+import BusinessChecks from './BusinessChecks'
+import { useSuggestions } from '../suggestions'
 import { CATEGORIES } from '../categories'
 import { IMPACT_EXPLAINED, VERB, explain } from '../actionText'
 import { pctChange, summarise } from '../figures'
@@ -49,6 +51,7 @@ const DishLink = ({ id, name }) => (
 )
 
 function InsightsPage({ dishes, prevDishes, actions, range }) {
+  const checks = useSuggestions(range, dishes)
   const present = CATEGORIES.filter((c) => dishes.some((d) => d.category === c))
   const [chosen, setChosen] = useState(loadCategory)
   const category = present.includes(chosen) ? chosen : null   // null: all categories
@@ -160,6 +163,10 @@ function InsightsPage({ dishes, prevDishes, actions, range }) {
         <Figure label="Dishes sold" value={now.units.toLocaleString('en-GB')}>
           {compare && <Delta value={pctChange(now.units, before.units)} />}
         </Figure>
+      </div>
+
+      <div id="business-checks" className="pt-4">
+        {checks ? <BusinessChecks checks={checks} /> : <p className="text-muted">Loading checks…</p>}
       </div>
     </div>
   )

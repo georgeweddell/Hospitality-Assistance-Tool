@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Card from './Card'
 import ConfirmDialog from './ConfirmDialog'
 import Hint from './Hint'
-import { postJson } from '../api'
+import { getJson, postJson, putJson } from '../api'
 import { navigate } from '../useHashRoute'
 
 const OPTIONS = [
@@ -23,6 +23,40 @@ const OPTIONS = [
     confirmBody: 'Everything currently entered will be replaced. The current database is backed up first.',
   },
 ]
+
+const TYPE_LABELS = { pizzeria: 'Pizzeria', gastropub: 'Gastropub', cafe: 'Café', indian: 'Indian', other: 'Other' }
+
+// The restaurant's type: picks the rules of thumb the business checks use
+// (backend/data/business_rules.csv).
+function RestaurantType({ onChanged }) {
+  const [business, setBusiness] = useState(null)
+  const [error, setError] = useState(null)
+  useEffect(() => {
+    getJson('/settings/business').then(setBusiness).catch((err) => setError(err.message))
+  }, [])
+  const choose = (restaurantType) =>
+    putJson('/settings/business', { restaurant_type: restaurantType })
+      .then((b) => { setBusiness(b); onChanged() })
+      .catch((err) => setError(err.message))
+
+  return (
+    <Card title="Restaurant" flush>
+      <div className="flex flex-wrap items-center gap-4 border-t border-line px-5 py-4">
+        <span className="flex grow items-center gap-2 font-semibold">
+          Type of restaurant
+          <Hint label="About the type" content="Picks the rules of thumb the business checks on Insights are judged against, such as the usual food cost for this kind of restaurant." />
+        </span>
+        {error && <span className="text-sm text-danger">{error}</span>}
+        {business && (
+          <select value={business.restaurant_type} onChange={(e) => choose(e.target.value)}
+                  className="input input-pill w-auto" aria-label="Type of restaurant">
+            {business.types.map((t) => <option key={t} value={t}>{TYPE_LABELS[t] ?? t}</option>)}
+          </select>
+        )}
+      </div>
+    </Card>
+  )
+}
 
 function SettingsPage({ onReset, onChanged }) {
   const [asking, setAsking] = useState(null)   // the option waiting for confirmation
@@ -65,6 +99,7 @@ function SettingsPage({ onReset, onChanged }) {
 
   return (
     <div className="max-w-2xl space-y-5">
+      <RestaurantType onChanged={onChanged} />
       <Card title="Benchmark prices" flush>
         <div className="flex flex-wrap items-center gap-4 border-t border-line px-5 py-4">
           <span className="flex grow items-center gap-2 font-semibold">

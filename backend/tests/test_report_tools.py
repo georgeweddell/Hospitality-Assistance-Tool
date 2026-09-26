@@ -163,6 +163,7 @@ def test_mistakes_in_a_tool_call_come_back_as_messages(db, menu):
 
 def test_every_tool_is_described_for_the_api():
     definitions = {d['name']: d for d in tool_definitions()}
-    assert set(definitions) == {'period_summary', 'actions', 'dish_detail', 'price_changes', 'sales_pattern', 'data_gaps'}
+    assert set(definitions) == {'period_summary', 'actions', 'dish_detail', 'price_changes', 'sales_pattern',
+                                'business_checks', 'data_gaps'}
     assert definitions['dish_detail']['input_schema']['required'] == ['dish']
     assert definitions['sales_pattern']['input_schema']['properties']['by']['enum'] == ['weekday', 'weekday_by_dish', 'category', 'dish']

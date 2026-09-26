@@ -154,7 +154,8 @@ def trail_label(name: str, tool_input: dict) -> str:
         by = tool_input.get('by', '?')
         return 'Sales by dish, weekdays against weekends' if by == 'weekday_by_dish' else f'Sales by {by}'
     return {'period_summary': 'Reading the headline figures', 'price_changes': 'Checking ingredient prices',
-            'data_gaps': 'Checking for gaps in the data', 'write_report': 'Writing the report'}.get(name, name)
+            'data_gaps': 'Checking for gaps in the data', 'business_checks': 'Running the business checks',
+            'write_report': 'Writing the report'}.get(name, name)
 
 
 def as_dict(block) -> dict | None:
