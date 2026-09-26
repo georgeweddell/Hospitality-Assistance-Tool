@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import Card from './Card'
 import ConfirmDialog from './ConfirmDialog'
 import Hint from './Hint'
-import { getJson, postJson, putJson } from '../api'
+import { getJson, postJson, putJson, signOut } from '../api'
 import { navigate } from '../useHashRoute'
 
 const OPTIONS = [
@@ -58,7 +58,27 @@ function RestaurantType({ onChanged }) {
   )
 }
 
-function SettingsPage({ onReset, onChanged }) {
+// The signed-in account, and signing out.
+function AccountCard({ account }) {
+  const guest = account?.kind === 'guest'
+  return (
+    <Card title="Account" flush>
+      <div className="flex flex-wrap items-center gap-4 border-t border-line px-5 py-4">
+        <span className="flex grow flex-col gap-1">
+          <span className="font-semibold">{guest ? 'Demo account' : account?.email}</span>
+          {guest && (
+            <span className="num text-sm text-muted">
+              {account.ai_calls_left} AI calls · {account.reports_left} report{account.reports_left === 1 ? '' : 's'} left
+            </span>
+          )}
+        </span>
+        <button type="button" onClick={signOut} className="btn btn-secondary">Sign out</button>
+      </div>
+    </Card>
+  )
+}
+
+function SettingsPage({ onReset, onChanged, account }) {
   const [asking, setAsking] = useState(null)   // the option waiting for confirmation
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -99,6 +119,7 @@ function SettingsPage({ onReset, onChanged }) {
 
   return (
     <div className="max-w-2xl space-y-5">
+      <AccountCard account={account} />
       <RestaurantType onChanged={onChanged} />
       <Card title="Benchmark prices" flush>
         <div className="flex flex-wrap items-center gap-4 border-t border-line px-5 py-4">

@@ -39,7 +39,9 @@ Step 2 works (dish page with recipe editor and AI draft), and step 5 works at me
 - `backend/` holds the FastAPI app. The files are flat, with no sub-packages.
   - `main.py`: every API route.
   - `models.py`: SQLAlchemy tables. `schemas.py`: Pydantic request/response models.
-  - `database.py`: the engine, `get_db`, and a stub `get_current_user` (placeholder for auth).
+  - `auth.py` (step 10, agreed with George 26 Sep 2026): logins and **one database per account**. Accounts are in `auth.db` (`Account`: email, bcrypt `password_hash`, `kind` owner/guest, guest `expires_at` and AI counts; ids never reused). Login returns a JWT (PyJWT, HS256, 7 days, signed with `SECRET_KEY` from `.env`; the app won't start without it) sent as `Authorization: Bearer`. `get_account` checks it (401 otherwise). Each account's data is `accounts/<id>/menu.db`, with `uploads/` and `backups/` beside it (`engine_for` caches one engine per account and creates missing tables on first open). Owners sign up with `INVITE_CODE` and have no AI limit; **Try the demo** makes a guest with its own copy of the demo pizzeria, deleted after 7 days (expired guests are cleared on the next demo), limited to `GUEST_AI_CALLS` / `GUEST_REPORTS` (`use_ai`, applied as route dependencies `count_ai_call` / `count_report` on every route that calls Claude). Routes: `POST /auth/signup`, `/auth/login`, `/auth/demo`, `GET /auth/me`.
+  - `database.py`: `get_db` depends on `auth.get_account` and yields a session on **the logged-in account's own database**, so the 46 routes that use it are protected and isolated without any query changing. Uploads, backups and report jobs find the account from the session (`main.uploads_dir`, `main.job_key`). The shared `menu.db` engine / `SessionLocal` remain only for `seed_demo.py` and the one-off scripts.
+  - `create_account.py`: creates an owner account from the command line (asks for the password), optionally copying an existing database in: `create_account.py you@example.com --from-db menu.db` (copies `uploads/` too).
   - `costing.py`: costing engine (`cost_dish`), and `best_price`, which chooses which dated ingredient price to use. Menu prices are dated too (`MenuPrice`; `Dish` has no price column): `menu_price_on` gives the price on a day, and `average_menu_price` gives the price analysis uses for a range, the price charged each day weighted by that day's units (a multi-day total spanning a change is split evenly over its days; no sales → the price on the range's last day). `cost_dish(db, id, menu_price=None)` defaults to today's price; `get_category_stats` passes the range's average.
   - Changing `models.py` needs the database rebuilt (`seed_demo.py`), because there's no migration tool yet (Alembic is needed before deployment). Restart the backend afterwards, because `--reload` can leave it running a half-updated copy.
   - `menu_engineering.py`: classification, action list, incomplete-dish detection, all for a date range (`start`, `end`). The rules for which sales and dishes count are in the comment at the top of the file. `get_category_stats` costs each dish and counts its units **once per category**; the helpers and `classify_dish` read from it. Don't reintroduce per-dish recalculation of category totals, which made the dashboard about 6× slower.
@@ -68,8 +70,9 @@ Step 2 works (dish page with recipe editor and AI draft), and step 5 works at me
   - `seed_demo.py`: wipes and rebuilds `menu.db` with realistic demo data (June–August 2026 of daily sales at a small UK pizzeria, hand-written recipes; June's days add up to the original June totals). It backs up the old database to `menu.backup-<timestamp>.db` first. `reset_database(engine, with_demo)` is the shared function: `with_demo=False` is "start fresh" (benchmark ingredients only). It takes the engine as a parameter so tests run it on the in-memory database. Run as a script, or use Settings in the app.
   - `seed_recipes.py`: re-estimates every dish's recipe with the real API and auto-accepts matches. It overwrites the hand-written demo recipes, so it's for AI testing only.
   - `ai_test_v1.py`, `ai_test_v2.py`, `dish_check.py`, `match_check.py`, `costing_check.py`, `ingredient_list.py`: one-off scripts written during development. They are **not** pytest tests. Don't name scripts `test_*.py`, or pytest will run them.
+  - `tests/test_auth.py`: logins, tokens, invite, isolation between accounts, the demo and its clean-up, the guest allowance, per-account report jobs; each test gets an in-memory `auth.db` and a temporary accounts folder. (FastAPI's `TestClient` doesn't work with these httpx/starlette versions, so routes are called directly, as in every other test.)
   - `tests/`: pytest tests. `conftest.py` gives every test a fresh in-memory database. Tests never read or write `menu.db` data (importing `main` runs `create_all`, which only creates missing tables). `pytest.ini` sets the test path.
-  - The SQLite database is `backend/menu.db` (git-ignored). The API key lives in `backend/.env` (git-ignored).
+  - Each account's data is `backend/accounts/<id>/menu.db`, accounts are in `backend/auth.db`, and `backend/menu.db` is what `seed_demo.py` builds (all git-ignored). `backend/.env` (git-ignored) holds `ANTHROPIC_API_KEY`, `SECRET_KEY` (signs login tokens), `INVITE_CODE` (for sign-up), `GUEST_AI_CALLS` and `GUEST_REPORTS`.
   - The Python virtual environment is at `backend/venv/`.
   - Use `backend/venv/Scripts/python.exe`, not the system Python.
 - `frontend/` holds the React app.
@@ -93,7 +96,7 @@ Step 2 works (dish page with recipe editor and AI draft), and step 5 works at me
   - **Guided setup** (`#/setup`, `SetupPage.jsx`): a row of numbered step tiles, menu → your prices (optional) → recipes → sales → results (prices first, so invoice ingredients are there for recipes); the open step is ink, done steps basil, the rest outlined. An upload step is one big colour tile (its figure, its upload button, the by-hand route as a small link), with Next (or Skip, for prices) underneath. Each step reuses an existing screen: the menu/invoice/sales review via `ImportReview.jsx`, and the Recipes table. Progress comes from the data (setup status), never a stored wizard position, so leaving and returning just works. Start fresh opens it; until the required steps are done the Overview shows `SetupChecklist.jsx` with Continue setup (step logic and `firstUnfinished` in `src/setup.js`). Settings (`SettingsPage.jsx`, the gear at the end of the header) has Start fresh and Load demo data.
   - Uploads share `src/imports.js` (`UPLOADS`, `readUpload`), `components/UploadButton.jsx` and `components/ImportReview.jsx` between the Imports and Setup pages. Invoices can be picked several at once: `src/useUploadQueue.js` reviews them one after another (the next file is read while the current one is checked; Cancel skips one; an unreadable file shows its error with Skip), shown by `components/QueueReview.jsx`. Menus and till exports stay one file at a time.
   - Components live in `src/components/`. Quadrant colours live in `src/quadrants.js`, menu categories in `src/categories.js`, and number and unit formatting in `src/format.js` (prices are shown as £/kg, £/l or each).
-  - All API calls go through `src/api.js`, using the `getJson` / `postJson` / `putJson` / `deleteJson` helpers (and `postFile` for uploads). Don't call `fetch` directly from components.
+  - All API calls go through `src/api.js`, using the `getJson` / `postJson` / `putJson` / `deleteJson` helpers (and `postFile` for uploads). Don't call `fetch` directly from components. `api.js` keeps the login token (localStorage), adds it to every call, and on a 401 forgets it and fires `SIGNED_OUT`; `App.jsx` then shows `components/LoginPage.jsx` (sign in / create account with the invite code / Try the demo). A guest sees a "guest · N AI left" chip in the header; Settings has an Account card with Sign out.
   - The backend URL comes from `VITE_API_URL`, defaulting to `http://localhost:8000`.
 
 ### Starting the app
@@ -105,6 +108,13 @@ Backend (http://localhost:8000, API docs at http://localhost:8000/docs):
 ```powershell
 cd backend
 .\venv\Scripts\python.exe -m uvicorn main:app --reload
+```
+
+The first time after step 10 (logins), create your own account, copying in your existing data:
+
+```powershell
+cd backend
+.\venv\Scripts\python.exe create_account.py you@example.com --from-db menu.db
 ```
 
 Always start the backend from inside `backend/`. The database path is relative (`sqlite:///./menu.db`), so starting it from anywhere else silently creates a new, empty database.
@@ -175,7 +185,7 @@ Done: tests for costing and menu engineering (`backend/tests/`), and the fronten
 7. ~~**AI imports**~~ Done (planned with George 24 Sep 2026, see "Step 7 plan" below): (a) menu price history, (b) invoice import, (c) till import, (d) menu import, (e) guided setup.
 8. ~~**Monthly routine:**~~ Done (25 Sep 2026): price-rise alerts, "% of cost from your own data" per dish and for the menu, and ingredient and menu price changes on the Overview (see `price_changes.py` and `own_prices.py`).
 9. ~~**Business-wide suggestions:**~~ Done (25 Sep 2026): `suggestions.py`, nine plain checks against rules of thumb in `data/business_rules.csv` (STARTING VALUES for George to review), shown on Insights, counted on the Overview, and a `business_checks` tool for the report agent (Claude chooses and words them; it doesn't invent them).
-10. **Authentication:** JWT login with per-user data isolation. **Use plan mode and get approval before starting.** It touches every query, and it's required before deployment because the app spends API credit.
+10. ~~**Authentication:**~~ Done (26 Sep 2026, planned in plan mode and approved): logins with one database per account, invite-code sign-up, Try the demo guests with a small AI allowance (see `auth.py`). Before deploying: an httpOnly cookie instead of localStorage for the token, a login-attempt limit, and Alembic for schema changes across account databases.
 11. **Deployment**, so the app is reachable by a public link.
 12. **README write-up:** what the app does, how it works, which parts George wrote, and how Claude Code was used.
 

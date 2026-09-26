@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getJson } from './api'
+import { SIGNED_OUT, getJson, getToken } from './api'
 import useHashRoute from './useHashRoute'
 import { presets, previousRange, rangeQuery } from './dateRange'
 import Layout from './components/Layout'
@@ -16,6 +16,7 @@ import SetupPage from './components/SetupPage'
 import SetupChecklist from './components/SetupChecklist'
 import { setupComplete } from './setup'
 import RangePicker from './components/RangePicker'
+import LoginPage from './components/LoginPage'
 import ReportsPage from './components/ReportsPage'
 
 const TITLES = {
@@ -61,7 +62,8 @@ function NoSales() {
   )
 }
 
-function App() {
+// The app once signed in: loads the shared data and picks the page.
+function Workspace({ account }) {
   const { page, id } = useHashRoute()
   const [lastSale, setLastSale] = useState(undefined)   // undefined = not loaded yet
   const [range, setRange] = useState(loadRange)
@@ -155,7 +157,7 @@ function App() {
   } else if (page === 'imports') {
     content = <ImportsPage onChanged={refresh} />
   } else if (page === 'settings') {
-    content = <SettingsPage onReset={afterReset} onChanged={refresh} />
+    content = <SettingsPage onReset={afterReset} onChanged={refresh} account={account} />
   } else if (page === 'reports') {
     content = <ReportsPage id={id} range={range} />
   } else if (!data) {
@@ -217,6 +219,7 @@ function App() {
 
   return (
     <Layout
+      account={account}
       page={page}
       title={page === 'menu' && id ? null : TITLES[page]}
       toolbar={picker}
@@ -225,6 +228,30 @@ function App() {
       {content}
     </Layout>
   )
+}
+
+// The login page until this browser has a token; then the workspace, with the
+// account (for the guest chip and Settings). Signing out, or any request
+// answered 401, comes back here (api.js SIGNED_OUT).
+function App() {
+  const [signedIn, setSignedIn] = useState(() => Boolean(getToken()))
+  const [account, setAccount] = useState(null)
+
+  useEffect(() => {
+    const onSignedOut = () => { setSignedIn(false); setAccount(null) }
+    window.addEventListener(SIGNED_OUT, onSignedOut)
+    return () => window.removeEventListener(SIGNED_OUT, onSignedOut)
+  }, [])
+
+  useEffect(() => {
+    if (!signedIn) return
+    let ignore = false
+    getJson('/auth/me').then((a) => { if (!ignore) setAccount(a) }).catch(() => {})
+    return () => { ignore = true }
+  }, [signedIn])
+
+  if (!signedIn) return <LoginPage onSignedIn={(a) => { setAccount(a); setSignedIn(true) }} />
+  return <Workspace account={account} />
 }
 
 export default App

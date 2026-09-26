@@ -34,7 +34,8 @@ function Brand() {
   )
 }
 
-function Layout({ page, title, toolbar, badges = {}, children }) {
+// account: the signed-in account (auth/me); a guest sees how much AI is left.
+function Layout({ page, title, toolbar, account, badges = {}, children }) {
   const onSettings = page === 'settings'
   return (
     <div className="min-h-screen bg-bg text-ink">
@@ -51,6 +52,11 @@ function Layout({ page, title, toolbar, badges = {}, children }) {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-2.5">
+          {account?.kind === 'guest' && (
+            <a href="#/settings" className="chip chip-warn num" title="Demo account">
+              guest · {account.ai_calls_left} AI left
+            </a>
+          )}
           {toolbar}
           <a href={`#/${SETTINGS.page}`} aria-label={SETTINGS.label} title={SETTINGS.label}
              aria-current={onSettings ? 'page' : undefined}
