@@ -222,12 +222,16 @@ def month_total(name, june_units, month):
     return round(june_units * factor)
 
 
-def backup_database(path="menu.db"):
-    """Copy the database aside before it's wiped. Returns the backup's name (None if no database yet)."""
+def backup_database(path="menu.db", backup_dir="."):
+    """
+    Copy the database aside before it's wiped, into backup_dir (an account's
+    backups folder, or beside menu.db). Returns the backup's name (None if no database yet).
+    """
     if not os.path.exists(path):
         return None
+    os.makedirs(backup_dir, exist_ok=True)
     backup = f"menu.backup-{datetime.now():%Y%m%d-%H%M%S}.db"
-    shutil.copy(path, backup)
+    shutil.copy(path, os.path.join(backup_dir, backup))
     return backup
 
 

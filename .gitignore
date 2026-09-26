@@ -17,3 +17,7 @@ backend/menu*.db
 frontend/node_modules/
 # personal files kept next to the project
 Claude outputs/
+
+# accounts (step 10): the login database and one folder per account
+backend/auth.db
+backend/accounts/

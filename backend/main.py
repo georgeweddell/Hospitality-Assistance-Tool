@@ -28,18 +28,25 @@ from sales_report import sales_summary
 from menu_ai import read_menu
 from tills import apply_sales, decode, items_needing_hints, read_csv, remembered_mapping, review_sales, undo_sales_import
 from till_ai import propose_columns, suggest_items
+import auth
+from auth import Account, get_account
+from datetime import datetime
+from sqlalchemy.orm import sessionmaker
 from price_changes import find_menu_price_changes, find_price_changes
 from suggestions import RESTAURANT_TYPES, Checks, restaurant_type
 import report_agent
 from models import Report, ReportStatus
 from database import SessionLocal
 import threading
+import os
 import re
 import hashlib
 from pathlib import Path
 
 
-Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine)   # the shared menu.db, for seed_demo.py and scripts
+auth.secret()        # refuse to start without SECRET_KEY: logins can't be signed without it
+auth.init_auth()     # the accounts database, auth.db
 
 app = FastAPI()
 
@@ -53,6 +60,69 @@ app.add_middleware(
 @app.get("/")
 def read_root():
     return {"message":"Hello World"}
+
+
+# --- Accounts (auth.py) ---------------------------------------------------------------
+# These don't use get_db, so they work without a login token.
+
+def token_out(account: Account) -> dict:
+    return {"token": auth.make_token(account), "account": account_out(account)}
+
+
+def account_out(account: Account) -> dict:
+    calls, reports = auth.guest_limits()
+    guest = account.kind == "guest"
+    return {"email": account.email, "kind": account.kind,
+            "ai_calls_left": max(0, calls - account.ai_calls_used) if guest else None,
+            "reports_left": max(0, reports - account.reports_used) if guest else None}
+
+
+@app.post("/auth/signup")
+def signup(data: schemas.SignupIn):
+    """A new owner account, with the invite code from .env; its database starts with the benchmark ingredients."""
+    invite = os.getenv("INVITE_CODE")
+    if not invite or data.invite_code.strip() != invite:
+        raise HTTPException(status_code=403, detail="That invite code isn't right")
+    email = data.email.strip().lower()
+    if "@" not in email:
+        raise HTTPException(status_code=422, detail="Enter an email address")
+    with auth.AuthSession() as session:
+        if session.query(Account).filter(Account.email == email).first():
+            raise HTTPException(status_code=409, detail="There's already an account for that email")
+        account = Account(email=email, password_hash=auth.hash_password(data.password), kind="owner")
+        session.add(account)
+        session.commit()
+    reset_database(auth.engine_for(account.id), with_demo=False)
+    return token_out(account)
+
+
+@app.post("/auth/login")
+def login(data: schemas.LoginIn):
+    with auth.AuthSession() as session:
+        account = session.query(Account).filter(Account.email == data.email.strip().lower()).first()
+    if account is None or not auth.check_password(data.password, account.password_hash):
+        raise HTTPException(status_code=401, detail="Email or password is wrong")
+    return token_out(account)
+
+
+@app.post("/auth/demo")
+def try_demo():
+    """
+    A private guest account with its own fresh copy of the demo pizzeria, gone
+    after auth.GUEST_DAYS; a small AI allowance. Expired guests are cleared first.
+    """
+    auth.remove_expired_guests()
+    with auth.AuthSession() as session:
+        account = Account(kind="guest", expires_at=datetime.now() + timedelta(days=auth.GUEST_DAYS))
+        session.add(account)
+        session.commit()
+    reset_database(auth.engine_for(account.id), with_demo=True)
+    return token_out(account)
+
+
+@app.get("/auth/me")
+def me(account: Account = Depends(get_account)):
+    return account_out(account)
 
 def ingredient_out(db, ingredient, used_in=0):
     """An ingredient with the price costing currently uses for it."""
@@ -259,7 +329,17 @@ def get_dish_cost(dish_id: int, db: Session = Depends(get_db)):
         margin_percent=margin_percent
     )
 
-@app.post("/dishes/{dish_id}/estimate-recipe", response_model=list[MatchedIngredientDraft])
+def count_ai_call(account: Account = Depends(get_account)):
+    """Counts one AI call against a guest's allowance (owners aren't limited): auth.use_ai."""
+    auth.use_ai(account)
+
+
+def count_report(account: Account = Depends(get_account)):
+    auth.use_ai(account, report=True)
+
+
+@app.post("/dishes/{dish_id}/estimate-recipe", response_model=list[MatchedIngredientDraft],
+          dependencies=[Depends(count_ai_call)])
 def estimate_recipe_route(dish_id: int, db: Session = Depends(get_db)):
     dish = db.query(Dish).filter(Dish.id == dish_id).first()
     if not dish:
@@ -328,7 +408,7 @@ def list_recipes(db: Session = Depends(get_db)):
     return [recipe_row(db, d, menu_price_on(db, d.id, today))
             for d in db.query(Dish).all() if on_menu_at(d, today)]
 
-@app.post("/dishes/{dish_id}/estimate-and-save", response_model=RecipeRowOut)
+@app.post("/dishes/{dish_id}/estimate-and-save", response_model=RecipeRowOut, dependencies=[Depends(count_ai_call)])
 def estimate_and_save(dish_id: int, db: Session = Depends(get_db)):
     """
     For "Estimate all" in the Recipes table: estimates a recipe with Claude and
@@ -524,16 +604,20 @@ def get_setup_status(db: Session = Depends(get_db)):
     return setup_status(db)
 
 @app.post("/setup/reset")
-def reset(request: ResetIn):
+def reset(request: ResetIn, db: Session = Depends(get_db)):
     """
-    Wipes the database and rebuilds it: "fresh" = benchmark ingredients only,
-    "demo" = the demo pizzeria. The current database is backed up first.
+    Wipes this account's database and rebuilds it: "fresh" = benchmark
+    ingredients only, "demo" = the demo pizzeria. It's backed up first, into a
+    backups folder beside it.
     """
     if request.confirm != "reset":
         raise HTTPException(status_code=422, detail='Send confirm: "reset" to wipe the database')
 
-    backup = backup_database()
-    result = reset_database(engine, with_demo=request.mode == "demo")
+    account_engine = db.get_bind()
+    db.close()
+    path = Path(account_engine.url.database)
+    backup = backup_database(str(path), backup_dir=str(path.parent / "backups"))
+    result = reset_database(account_engine, with_demo=request.mode == "demo")
     return {"mode": request.mode, "backup": backup, **result}
 
 @app.post("/setup/benchmarks", response_model=BenchmarkSyncOut)
@@ -550,9 +634,19 @@ def update_benchmarks(db: Session = Depends(get_db)):
 def list_imports(db: Session = Depends(get_db)):
     return db.query(Import).order_by(Import.created_at.desc(), Import.id.desc()).all()
 
-# Uploaded files are kept here (git-ignored), named by their SHA-256 hash, so
-# the same file uploaded twice is stored once and can be recognised.
+# Uploaded files are kept (git-ignored) in an uploads folder beside the
+# account's database, named by their SHA-256 hash, so the same file uploaded
+# twice is stored once and can be recognised. UPLOAD_DIR is for a database
+# that isn't a file (the tests' in-memory one).
 UPLOAD_DIR = Path(__file__).parent / "uploads"
+
+
+def uploads_dir(db) -> Path:
+    """This account's uploads folder: beside its database file."""
+    database = db.get_bind().url.database if db is not None else None
+    if not database or database == ":memory:":
+        return UPLOAD_DIR
+    return Path(database).parent / "uploads"
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 # Extension -> (media type, how the file's first bytes must start)
 UPLOAD_TYPES = {
@@ -563,7 +657,7 @@ UPLOAD_TYPES = {
     ".webp": ("image/webp", [b"RIFF"]),
 }
 
-def read_upload(file):
+def read_upload(file, db=None):
     """Checks an uploaded document and keeps a copy. Returns (content, media type, hash)."""
     extension = Path(file.filename or "").suffix.lower()
     if extension not in UPLOAD_TYPES:
@@ -575,21 +669,22 @@ def read_upload(file):
     if not any(content.startswith(s) for s in signatures):
         raise HTTPException(status_code=422, detail=f"That file isn't a readable {extension[1:].upper()}")
 
-    return content, media_type, save_upload(content, extension)
+    return content, media_type, save_upload(content, extension, db)
 
-def save_upload(content, extension):
+def save_upload(content, extension, db=None):
     """Keeps a copy of an uploaded file, named by its SHA-256 hash. Returns the hash."""
     file_hash = hashlib.sha256(content).hexdigest()
-    UPLOAD_DIR.mkdir(exist_ok=True)
-    saved = UPLOAD_DIR / f"{file_hash}{extension}"
+    folder = uploads_dir(db)
+    folder.mkdir(parents=True, exist_ok=True)
+    saved = folder / f"{file_hash}{extension}"
     if not saved.exists():
         saved.write_bytes(content)
     return file_hash
 
-@app.post("/imports/invoice/read", response_model=InvoiceReviewOut)
+@app.post("/imports/invoice/read", response_model=InvoiceReviewOut, dependencies=[Depends(count_ai_call)])
 def read_invoice_route(file: UploadFile, db: Session = Depends(get_db)):
     """Claude reads an uploaded invoice; code then matches and checks it. Saves nothing but the file."""
-    content, media_type, file_hash = read_upload(file)
+    content, media_type, file_hash = read_upload(file, db)
     try:
         draft = read_invoice(db, content, media_type)
     except anthropic.APIConnectionError:
@@ -610,18 +705,18 @@ def apply_invoice_route(data: InvoiceApplyIn, db: Session = Depends(get_db)):
     except ImportProblem as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-def load_upload(file_hash, extension):
+def load_upload(file_hash, extension, db=None):
     """The text of a file uploaded earlier, found by its hash."""
     # The hash comes from the browser and becomes part of a file path, so it
     # must be exactly a SHA-256 hex string (no "../" tricks).
     if not re.fullmatch(r"[0-9a-f]{64}", file_hash or ""):
         raise HTTPException(status_code=422, detail="Unknown file")
-    path = UPLOAD_DIR / f"{file_hash}{extension}"
+    path = uploads_dir(db) / f"{file_hash}{extension}"
     if not path.exists():
         raise HTTPException(status_code=422, detail="That upload has gone. Upload the file again.")
     return decode(path.read_bytes())
 
-@app.post("/imports/sales/read", response_model=SalesReviewOut)
+@app.post("/imports/sales/read", response_model=SalesReviewOut, dependencies=[Depends(count_ai_call)])
 def read_sales_route(file: UploadFile, db: Session = Depends(get_db)):
     """
     Reads an uploaded till export. Claude proposes the columns (unless this
@@ -641,7 +736,7 @@ def read_sales_route(file: UploadFile, db: Session = Depends(get_db)):
         raise HTTPException(status_code=422, detail="That file isn't a readable CSV")
     if len(header) < 3 or not rows:
         raise HTTPException(status_code=422, detail="That doesn't look like a sales export (it needs date, item and quantity columns)")
-    file_hash = save_upload(content, ".csv")
+    file_hash = save_upload(content, ".csv", db)
 
     mapping, hints, ai_unavailable = remembered_mapping(db, header), None, False
     try:
@@ -664,7 +759,7 @@ def read_sales_route(file: UploadFile, db: Session = Depends(get_db)):
 @app.post("/imports/sales/review", response_model=SalesReviewOut)
 def review_sales_route(data: SalesReviewIn, db: Session = Depends(get_db)):
     """Reads an uploaded till export with the chosen columns and matches it. Saves nothing."""
-    text = load_upload(data.file_hash, ".csv")
+    text = load_upload(data.file_hash, ".csv", db)
     try:
         return review_sales(db, text, data.file_hash, data.filename, data.mapping, data.choices)
     except ImportProblem as e:
@@ -672,19 +767,19 @@ def review_sales_route(data: SalesReviewIn, db: Session = Depends(get_db)):
 
 @app.post("/imports/sales/apply", response_model=ImportOut)
 def apply_sales_route(data: SalesApplyIn, db: Session = Depends(get_db)):
-    text = load_upload(data.file_hash, ".csv")
+    text = load_upload(data.file_hash, ".csv", db)
     try:
         return apply_sales(db, text, data)
     except ImportProblem as e:
         raise HTTPException(status_code=422, detail=str(e))
 
-@app.post("/imports/menu/read", response_model=MenuReviewOut)
+@app.post("/imports/menu/read", response_model=MenuReviewOut, dependencies=[Depends(count_ai_call)])
 def read_menu_route(file: UploadFile, start_date: date | None = Form(None), db: Session = Depends(get_db)):
     """
     Claude reads an uploaded menu; code compares it with the stored dishes.
     start_date: when the new menu starts (default today). Saves nothing but the file.
     """
-    content, media_type, file_hash = read_upload(file)
+    content, media_type, file_hash = read_upload(file, db)
     try:
         draft = read_menu(db, content, media_type)
     except anthropic.APIConnectionError:
@@ -774,15 +869,20 @@ def put_business(data: schemas.BusinessIn, db: Session = Depends(get_db)):
 
 # --- Reports (the report agent, report_agent.py) --------------------------------------
 
-# Reports being written right now: report id -> its background thread.
-REPORT_JOBS: dict[int, threading.Thread] = {}
+# Reports being written right now: (the account's database, report id) -> its
+# background thread. Report ids repeat across accounts, so the database is part of the key.
+REPORT_JOBS: dict[tuple[str, int], threading.Thread] = {}
+
+
+def job_key(db, report_id: int) -> tuple[str, int]:
+    return str(db.get_bind().url), report_id
 
 
 def still_running(report: Report, db) -> bool:
     """A report marked running whose thread has gone (e.g. the server restarted) is marked failed."""
     if report.status != ReportStatus.RUNNING:
         return False
-    job = REPORT_JOBS.get(report.id)
+    job = REPORT_JOBS.get(job_key(db, report.id))
     if job is None or not job.is_alive():
         report.status = ReportStatus.FAILED
         report.error = report.error or 'Interrupted before it finished. Generate it again.'
@@ -791,7 +891,7 @@ def still_running(report: Report, db) -> bool:
     return True
 
 
-@app.post("/reports")
+@app.post("/reports", dependencies=[Depends(count_report)])
 def start_report(request: schemas.ReportIn | None = None,
                  start: date | None = Query(None, alias="from"), end: date | None = Query(None, alias="to"),
                  db: Session = Depends(get_db)):
@@ -812,8 +912,8 @@ def start_report(request: schemas.ReportIn | None = None,
     db.add(report)
     db.commit()
     job = threading.Thread(target=report_agent.run_report_job,
-                           args=(report.id, SessionLocal, report_agent.client()), daemon=True)
-    REPORT_JOBS[report.id] = job
+                           args=(report.id, sessionmaker(bind=db.get_bind()), report_agent.client()), daemon=True)
+    REPORT_JOBS[job_key(db, report.id)] = job
     job.start()
     return report_agent.report_out(report)
 
