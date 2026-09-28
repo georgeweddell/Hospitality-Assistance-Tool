@@ -21,6 +21,8 @@ services:
         value: "1"
       - key: DEMO_ENABLED     # no public Try the demo (George, 28 Sep 2026)
         value: "0"
+      - key: API_DOCS         # no public API documentation pages (George, 28 Sep 2026)
+        value: "0"
       - key: SECRET_KEY       # signs logins: a new random value, made by Render
         generateValue: true
       - key: ANTHROPIC_API_KEY

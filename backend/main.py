@@ -50,7 +50,11 @@ migrate.upgrade(engine)   # the shared menu.db (seed_demo.py, scripts; what new 
 auth.secret()        # refuse to start without SECRET_KEY: logins can't be signed without it
 auth.init_auth()     # the accounts database, auth.db
 
-app = FastAPI()
+# The API documentation pages (/docs, /redoc, /openapi.json): on the laptop;
+# off on the live site (API_DOCS=0, George's choice, 28 Sep 2026).
+API_DOCS = os.getenv("API_DOCS", "1") != "0"
+app = FastAPI(docs_url="/docs" if API_DOCS else None, redoc_url="/redoc" if API_DOCS else None,
+              openapi_url="/openapi.json" if API_DOCS else None)
 
 # Only needed when the page and the API are on different addresses (the laptop:
 # 5173 and 8000). On the live site one server serves both, so no other origin is

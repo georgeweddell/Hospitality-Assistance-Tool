@@ -10,7 +10,7 @@ The live site is one Render **web service** built from the `Dockerfile`: it serv
    - `ANTHROPIC_API_KEY`: from console.anthropic.com. Consider a separate key just for the live site, so you can revoke it on its own.
    - `INVITE_CODE`: any phrase; you need it to create your account. Anyone with it can sign up, so share it only with people you mean to.
 
-   `SECRET_KEY` is made by Render (a new random value, not your laptop's). `DATA_DIR`, `COOKIE_SECURE` and `DEMO_ENABLED` come from `render.yaml`.
+   `SECRET_KEY` is made by Render (a new random value, not your laptop's). `DATA_DIR`, `COOKIE_SECURE`, `DEMO_ENABLED` and `API_DOCS` come from `render.yaml`.
 4. **Apply.** The first build takes a few minutes. The **Logs** tab shows it; the last lines should include `account databases up to date` and `Uvicorn running`.
 5. **Spend limit:** in the Anthropic console, set a monthly limit on the key.
 
