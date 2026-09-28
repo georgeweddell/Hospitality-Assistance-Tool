@@ -1,91 +1,141 @@
-# Menu & Margin Engine
+# Docket
 
-A full-stack web application that turns a restaurant's menu into a costed, ranked set of actions — built as a portfolio project for Solutions Engineer / Implementation Engineer / Forward Deployed Engineer roles, and inspired by hands-on experience line-cooking at a Neapolitan pizzeria.
+**A menu and margin engine for small independent UK restaurants.** A restaurant brings the data it already has (a menu PDF or photo, supplier invoices, a till export). Docket builds a live model of the menu: what each dish costs to make, what it earns, and how that changes as prices and sales move. Then it says what to change, in pounds.
+
+*Docket* is the kitchen word for an order ticket.
+
+> **Live demo:** *link to follow (deployment is set up; see [docs/deploy.md](docs/deploy.md))*
+
+I built it as a portfolio project for Forward Deployed Engineer and Solutions Engineer roles. It was inspired by my own time line-cooking in a Neapolitan pizzeria. The aim was one complete journey that works from start to finish: messy real-world input, AI that reads it, code that does the maths, and a person who checks both.
+
+---
 
 ## What it does
 
-1. **Add a menu** — dish name, menu price, category (starter / side / main / dessert).
-2. **AI-estimated recipes** — Claude (Anthropic API) proposes ingredients and quantities for a dish from its name alone, grounded against the business's real ingredient stock list so it proposes ingredients the kitchen actually has.
-3. **Human-in-the-loop confirmation** — the AI's draft is matched against the ingredient table (exact match, then fuzzy suggestions), and the operator reviews and confirms before anything is saved. The AI proposes; the human verifies.
-4. **Costing** — each confirmed recipe is costed against an editable ingredient price table (seeded with realistic UK wholesale prices), producing plate cost, gross margin (£), and gross margin (% of menu price) per dish.
-5. **Sales mix** — units sold per dish, per period.
-6. **Menu engineering** — each dish is classified into one of four quadrants based on popularity (menu-mix %) and profitability (contribution margin), calculated per category:
-   - **Star** — popular and profitable → protect and feature.
-   - **Plowhorse** — popular, under-earning → reprice or re-engineer.
-   - **Puzzle** — profitable, overlooked → promote and reposition.
-   - **Dog** — neither → cut or rework.
-7. **Ranked action list** — every non-Star dish gets a recommended action with an estimated £ impact, ranked highest-impact first.
+1. **Bring your data, in whatever form it's in.**
+   - **Menu:** a PDF or photo of the menu becomes a list of dishes, prices and categories. Drinks, add-ons and meal deals are recognised and left out.
+   - **Recipes:** Claude estimates each dish's ingredients and quantities from its name and menu description, using only ingredients the restaurant actually stocks.
+   - **Supplier invoices:** Claude reads a PDF or photo. Code works out the pack maths (12 × 1 kg at £30 → £2.50/kg), flags totals that don't add up, and spots new ingredients.
+   - **Till exports:** Claude maps the columns of any CSV export and matches renamed till items to dishes ("Garlic Bread" → Garlic Pizza Bread).
+2. **Check before anything is saved.** Every AI step ends in an editable review screen. Nothing the AI reads is trusted until a person confirms it.
+3. **See where the money is.** For any date range, every dish gets a plate cost, a margin and a **menu-engineering** quadrant (Kasavana-Smith):
+   | | Sells well | Sells poorly |
+   |---|---|---|
+   | **High margin** | ⭐ Star: keep it | 🧩 Puzzle: promote it |
+   | **Low margin** | 🐴 Plowhorse: reprice or rework it | 🐶 Dog: rework or cut it |
+4. **Get a ranked list of changes, in £.** For example: "Margherita: £11.50 → £12.40, +£657 a month". Each figure is the *change* in contribution the move would make, so the list can be ranked.
+5. **Keep it up to date.**
+   - **Price-rise alerts:** when a new invoice raises an ingredient's price, the dishes that use it are shown.
+   - **Business suggestions:** checks against trade rules of thumb (food cost %, desserts per main, midweek trade, over-reliance on one ingredient, and more).
+   - **AI report:** Claude investigates the data with read-only tools and writes next steps. Every number in the report comes from code, not from Claude.
 
-## Why this design
+## How it works
 
-- **AI handles the hard-to-scale part (recipe estimation); humans verify it.** The ingredient table doesn't need to anticipate every dish in advance — the AI bridges an arbitrary dish name to the ingredient set, and the operator corrects the draft using real kitchen knowledge before it's trusted.
-- **Prompt grounding, not post-hoc matching.** Early versions let the AI freely name ingredients and tried to reconcile that against the stock list afterward with fuzzy string matching — which silently dropped ingredients whose AI-generated name didn't closely match the table (e.g. "wheat flour" vs. "00 flour"), producing badly wrong margins. The fix: the ingredient table is fetched fresh on every estimate and included in the prompt itself, so the model is asked to use the business's actual vocabulary from the start.
-- **Unit normalisation at data-entry time.** All quantities are stored in a fixed base unit (gram / ml / each), so the costing engine never has to convert units — it just multiplies. This eliminates an entire class of silent unit-mismatch bugs from the costing logic itself (though see *Known limitations* below).
-- **Classification is category-relative.** A dessert and a main don't compete for the same share of covers, so popularity and profitability thresholds are calculated within each menu category, not across the whole menu.
-- **Margin vs. markup.** Gross margin is expressed as a percentage of *menu price*, not of cost — the industry-standard definition, and an easy distinction to get wrong.
+```
+ menu PDF · invoice · till CSV          React + Vite (review screens, dashboard)
+            │                                        │  one address, httpOnly login cookie
+            ▼                                        ▼
+   Claude reads it ──► Pydantic-validated draft ──► FastAPI ──► SQLAlchemy ──► SQLite
+   (Sonnet 5 / Haiku)   shown for a person to edit     │        one database per account
+                                                       ▼
+                               costing · menu engineering · checks   (plain Python, tested)
+```
 
-## Stack
+**The rule the whole app follows: AI reads messy input; code does every calculation.**
 
-- **Backend:** FastAPI (Python), SQLAlchemy ORM, Pydantic v2, SQLite
-- **Frontend:** React (Vite) — *in progress*
-- **AI:** Anthropic API (`claude.messages.parse()` with structured output)
-- **Matching:** `difflib` for fuzzy ingredient matching (fallback for anything outside the AI's grounded suggestions)
+- **AI output is never trusted raw.** It's validated against a schema (Pydantic) and shown as an editable draft. The one exception is bulk "Estimate all" recipes: they're saved, but marked **AI · unchecked** until a person confirms them.
+- **The recipe prompt is grounded in the live ingredient list.** An early version let Claude name ingredients freely and matched the names afterwards. "Wheat flour" didn't match "00 flour", the ingredient was silently dropped, and the margin came out badly wrong. Now the restaurant's actual stock list is part of every prompt.
+- **In the report, Claude writes no digits.** It cites fact ids ("f7", "f13"). The page shows the numbers code worked out, and code rejects any report that breaks the rule.
+- **Units are made consistent at entry.** Every quantity is stored in grams, millilitres or "each", so the costing engine only ever multiplies and never converts.
+- **Every £ in the action list is a change, not a level.** For a Plowhorse or a Dog, the impact is (category's weighted-average margin − the dish's margin) × units sold.
+- **Analysis is always for a date range.** Only sales wholly inside it count, and only dishes on the menu for the whole range are analysed. A dish taken out of the analysis also comes out of the averages, or every other dish's quadrant would shift.
+- **Every number records where it came from** (which invoice or benchmark, and its date). Price history is kept, never overwritten, and imports can be undone.
 
-## Project status
+**Stack:** Python, FastAPI, SQLAlchemy, Pydantic v2, SQLite, Alembic · React, Vite, Tailwind CSS v4, Recharts · Anthropic SDK (Claude Sonnet 5 for invoices, menus and the report agent; Haiku for recipes and till mapping) · pytest (291 tests) · Docker and Render for deployment.
 
-| Phase | Description | Status |
-|---|---|---|
-| 0 | Frontend/backend skeleton, CORS | ✅ Complete |
-| 1 | Data models, ingredient seed table, CRUD | ✅ Complete |
-| 2 | Costing engine (plate cost, margin £/%) | ✅ Complete |
-| 3 | AI recipe estimation, ingredient matching | ✅ Complete |
-| 4 | Sales mix, menu engineering classification, ranked action list | ✅ Complete |
-| 5 | React dashboard (scatter plot, dish cards, action list UI) | 🔜 Next |
-| 6 | Auth (JWT, per-user data isolation) | Planned |
+**Accounts:** each restaurant's data is its own SQLite file, opened only through one function (`get_db`) for the logged-in account. No query can leak data between accounts, even if someone forgets a filter. Logins use a signed token in an httpOnly cookie, with limits on login attempts. Schema changes reach every account's database through Alembic migrations.
 
-## Getting started
+## Who built what
 
-**Backend**
+**I wrote the core logic myself**, typing it by hand, with help on the code from Claude in chat:
+- the **costing engine** (plate cost and margin);
+- the **menu-engineering classification** (the quadrant thresholds, and the formulas for the £ impact of Dog, Plowhorse and Puzzle changes);
+- the **recipe-estimation prompt**, and the **fuzzy matching** that links the AI's ingredient names to the ingredient table;
+- the **validation on saving a recipe**.
+
+I wrote the first working version the same way (July 2026): the data models, the costing, AI recipe estimation with matching, menu engineering with the ranked action list, and a first React dashboard.
+
+**Claude Code built most of what came after, under my direction:**
+- the AI imports (menu, invoice, till);
+- the report agent;
+- the "deli counter" redesign;
+- logins with one database per account;
+- the deployment work;
+- most of the tests.
+
+Around 86 of the project's 100 commits are co-authored with it.
+
+## How I used Claude Code
+
+How the work was set up:
+
+- **A written brief it reads every session.** [`CLAUDE.md`](CLAUDE.md) holds the rules: the design decisions above, what counts as core logic (it may **propose** changes there, never just make them), the UI rules, and how to work. Detail lives in [`docs/`](docs/), read when needed.
+- **Plan first for anything bigger than a small fix.** Larger steps (logins, deployment) were designed in plan mode and approved before any code was written. Decisions, and my reasons, are recorded with dates in [`docs/decisions.md`](docs/decisions.md).
+- **Tests after every backend change.** They use small examples you can check by hand, with the working in comments. All must pass before a commit.
+- **Check it in the browser.** UI changes were checked in the running app, not assumed to work.
+- **Kitchen knowledge as the check.** Outputs were checked against what a pizzeria actually spends and sells.
+- **Small commits,** one per logical step, made only when I asked.
+
+## Running it locally
+
+You'll need Python 3.13, Node 24 and an Anthropic API key.
+
 ```bash
+# backend: http://localhost:8000 (API docs at /docs)
 cd backend
 python -m venv venv
-venv\Scripts\activate        # Windows
+venv\Scripts\activate                 # Windows; on macOS/Linux: source venv/bin/activate
 pip install -r requirements.txt
-# create a .env file with ANTHROPIC_API_KEY=your_key_here
-python seed_demo.py          # build a realistic demo database (backs up any existing one)
-uvicorn main:app --reload    # runs on http://localhost:8000
+# backend/.env: ANTHROPIC_API_KEY=..., SECRET_KEY=<any long random text>, INVITE_CODE=<any phrase>
+python seed_demo.py                   # builds the demo pizzeria (menu.db)
+uvicorn main:app --reload
 ```
 
-**Frontend**
 ```bash
+# frontend: http://localhost:5173
 cd frontend
 npm install
-npm run dev                  # runs on http://localhost:5173
+npm run dev
 ```
 
-API docs (Swagger UI) available at `http://localhost:8000/docs` once the backend is running.
+Open http://localhost:5173 and choose **Try the demo** (a private copy of the demo pizzeria), or create an account with your invite code. [`docs/demo.md`](docs/demo.md) is a five-minute walkthrough using the sample files in `backend/samples/`.
 
-## Key API routes
+**Tests:** `cd backend` then `python -m pytest`.
 
-| Method | Route | Description |
-|---|---|---|
-| `GET` / `POST` | `/ingredients` | List / create ingredients |
-| `GET` / `POST` | `/dishes` | List / create dishes |
-| `GET` | `/dishes/{id}/cost` | Plate cost and margin for a dish |
-| `POST` | `/dishes/{id}/estimate-recipe` | AI-proposed recipe draft (not saved) |
-| `POST` | `/dishes/{id}/recipe` | Save a confirmed recipe |
-| `GET` / `POST` | `/dishes/{id}/sales` | List / record sales for a dish |
-| `GET` | `/dishes/classifications` | Star/Plowhorse/Puzzle/Dog for every dish |
-| `GET` | `/dishes/action-list` | Ranked actions with £ impact |
+**Deploying:** [`docs/deploy.md`](docs/deploy.md) (Render: a Docker image, with a persistent disk for account data).
+
+## Project layout
+
+- `backend/`
+  - `main.py`: every route.
+  - `costing.py`, `menu_engineering.py`: the core logic.
+  - `*_ai.py`: Claude calls.
+  - `invoices.py`, `menus.py`, `tills.py`: import review and saving.
+  - `suggestions.py`: the business checks.
+  - `report_agent.py`, `report_tools.py`: the AI report.
+  - `auth.py`: accounts.
+  - `migrate.py`: schema changes.
+  - `tests/`.
+- `frontend/src/`
+  - `App.jsx`: the login gate and page choice.
+  - `api.js`: every API call.
+  - `index.css`: the design system.
+  - `components/`: one file per page and piece.
+- `docs/`: architecture, decisions, the demo script and deployment.
 
 ## Known limitations
 
-- **No unit-mismatch check between AI-proposed and matched ingredients.** If the AI proposes a gram quantity that matches an ingredient priced per-item (or vice versa), the cost calculation will be wrong without any error being raised. Caught once during development (bread priced per loaf, consumed by the gram); not yet guarded against systematically. Planned for Phase 5/6, alongside surfacing it as a confirmation warning in the UI.
-- **Auth is stubbed, not implemented.** All data currently belongs to a single seeded dev user; per-user isolation is a Phase 6 goal.
-- **Ingredient prices are estimates**, not verified against current wholesale pricing.
-
-## Roadmap (out of scope for v1)
-
-- Review intelligence — clustering public reviews into operational themes.
-- Demand & rota forecasting from weather/events/seasonality.
-- LLM-generated narrative summaries of the action list.
+- **VAT:** margins use VAT-inclusive menu prices; the trade usually reports gross profit ex-VAT. It's an open decision, because changing it changes the costing engine.
+- **Starting values:** the business-check rules of thumb are sensible first figures, not researched benchmarks, and the benchmark ingredient prices are estimates. A restaurant's own invoices replace them.
+- **Tested on tidy data:** menu import has been tested on clean menus, not yet on really messy ones.
+- **One server:** it's built to run as a single server process (login limits and running reports live in memory), which suits a single-restaurant tool.

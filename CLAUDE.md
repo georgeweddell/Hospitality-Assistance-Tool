@@ -103,7 +103,7 @@ George wrote these and must be able to explain them. **Propose and explain; don'
 1–10 done (detail in `docs/decisions.md`): price history · menu editor · ingredients · sales and date ranges · setup and reset · benchmark list · AI imports (menu, invoice, till, guided setup) · monthly routine (price-rise alerts, own-price share) · business checks · logins (one database per account, invite code, Try the demo). Also done: the "deli counter" redesign and the report agent.
 
 11. **Deployment** on Render: built (28 Sep 2026): httpOnly login cookie, login-attempt limits, `DEMO_ENABLED` switch (off live), Alembic migrations, one server for page and API, `DATA_DIR` on a persistent disk, `Dockerfile` + `render.yaml`. **George to deploy** (`docs/deploy.md`).
-12. **README write-up:** what the app does, how it works, which parts George wrote, how Claude Code was used.
+12. ~~**README write-up**~~ Done (28 Sep 2026): `README.md`. The live link goes in once George has deployed.
 
 **Out of scope:** review analysis, demand/rota forecasting, menu-gap analysis, scraping supplier sites, live integrations beyond one Square sandbox.
 
