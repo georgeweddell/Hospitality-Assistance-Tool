@@ -49,7 +49,7 @@ cd backend
 ```
 
 - Always start the backend from inside `backend/` and use `backend\venv\Scripts\python.exe`, not the system Python.
-- Restart the backend after changing `models.py` or adding routes (`--reload` can leave it half-updated). Adding a **table** is picked up automatically for every account; changing a **column** needs Alembic (not set up yet; needed before deployment).
+- Restart the backend after changing `models.py` or adding routes (`--reload` can leave it half-updated). **Any schema change (a new table or column) needs an Alembic migration:** change `models.py`, then from `backend/` run `.\venv\Scripts\alembic.exe revision --autogenerate -m "what changed"`, read the new file in `migrations/versions/`, restart the backend, and commit it. It compares the models with `backend/menu.db`, so write the migration before restarting. Each account catches up when it's next opened (`migrate.py`).
 - If new Tailwind classes don't apply, restart the frontend dev server.
 - One-off scripts are never named `test_*.py` (pytest would run them).
 

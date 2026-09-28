@@ -205,13 +205,12 @@ def account_folder(account_id: int) -> Path:
 
 
 def engine_for(account_id: int):
-    """The account's database engine, opened once and kept; new tables are created on first open."""
+    """The account's database engine, opened once and kept; its schema is brought up to date on first open."""
     if account_id not in _engines:
-        from database import Base   # here, not at the top: database.py imports this file
-        import models  # noqa: F401  (registers every table on Base)
+        import migrate   # here, not at the top: migrate imports database.py, which imports this file
         engine = create_engine(f"sqlite:///{account_folder(account_id) / 'menu.db'}",
                                connect_args={'check_same_thread': False})
-        Base.metadata.create_all(bind=engine)
+        migrate.upgrade(engine)          # new tables and columns, via Alembic migrations
         _engines[account_id] = engine
     return _engines[account_id]
 

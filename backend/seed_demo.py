@@ -246,8 +246,10 @@ def reset_database(target_engine, with_demo, verbose=False):
 
     Takes the engine as a parameter so tests can run it on a throwaway database.
     """
+    import migrate   # here: migrate imports database.py
     Base.metadata.drop_all(bind=target_engine)
     Base.metadata.create_all(bind=target_engine)
+    migrate.mark_up_to_date(target_engine)   # built from today's models: no migration left to run
     db = sessionmaker(bind=target_engine)()
 
     db.add(User(email="dev@example.com"))

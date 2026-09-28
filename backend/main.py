@@ -29,6 +29,7 @@ from menu_ai import read_menu
 from tills import apply_sales, decode, items_needing_hints, read_csv, remembered_mapping, review_sales, undo_sales_import
 from till_ai import propose_columns, suggest_items
 import auth
+import migrate
 from auth import Account, get_account
 from datetime import datetime
 from sqlalchemy.orm import sessionmaker
@@ -44,7 +45,7 @@ import hashlib
 from pathlib import Path
 
 
-Base.metadata.create_all(bind=engine)   # the shared menu.db, for seed_demo.py and scripts
+migrate.upgrade(engine)   # the shared menu.db (seed_demo.py, scripts; what new migrations are compared with)
 auth.secret()        # refuse to start without SECRET_KEY: logins can't be signed without it
 auth.init_auth()     # the accounts database, auth.db
 
