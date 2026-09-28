@@ -33,6 +33,9 @@ def accounts(tmp_path, monkeypatch):
     monkeypatch.setenv('INVITE_CODE', INVITE)
     monkeypatch.setenv('GUEST_AI_CALLS', '2')
     monkeypatch.setenv('GUEST_REPORTS', '1')
+    monkeypatch.delenv('DEMO_ENABLED', raising=False)
+    monkeypatch.setattr(auth, 'WRONG_PASSWORDS', auth.Limiter(5, 15 * 60))    # fresh limits for every test
+    monkeypatch.setattr(auth, 'ATTEMPTS', auth.Limiter(30, 15 * 60))
     auth.init_auth()
     yield
     for account_id in list(auth._engines):
@@ -226,3 +229,59 @@ def test_signing_out_clears_the_cookie():
     response = Response()
     main.logout(response)
     assert cookie_from(response).startswith('docket_session=""') and 'Max-Age=0' in cookie_from(response)
+
+
+# --- Limits on attempts and the demo switch (step 11) -------------------------------------
+
+def test_a_limiter_forgets_events_older_than_its_window():
+    limiter = auth.Limiter(2, 60)            # at most 2 events a minute
+    limiter.add('x', now=0)
+    limiter.add('x', now=10)
+    assert limiter.full('x', now=20)         # 2 in the last minute
+    assert not limiter.full('x', now=61)     # the one at 0 is over a minute old: 1 left
+    assert not limiter.full('y', now=20)     # each key counts on its own
+
+
+def test_five_wrong_passwords_lock_that_email_for_a_while():
+    signup()
+    for _ in range(5):
+        with pytest.raises(HTTPException) as e:
+            login('owner@example.com', 'wrong-one')
+        assert e.value.status_code == 401
+    with pytest.raises(HTTPException) as e:
+        login('owner@example.com', 'kitchen123')          # the 6th try is refused, even the right password
+    assert (e.value.status_code, e.value.detail) == (429, auth.TOO_MANY)
+    signup('other@example.com')
+    assert login('other@example.com', 'kitchen123')       # another email is unaffected
+
+
+def test_the_right_password_resets_the_count():
+    signup()
+    for _ in range(4):
+        with pytest.raises(HTTPException):
+            login('owner@example.com', 'wrong-one')
+    login('owner@example.com', 'kitchen123')               # 4 wrong, then right: the count starts again
+    for _ in range(4):
+        with pytest.raises(HTTPException):
+            login('owner@example.com', 'wrong-one')
+    assert login('owner@example.com', 'kitchen123')        # 4 more wrong is still under 5
+
+
+def test_too_many_attempts_from_one_address_are_refused(monkeypatch):
+    monkeypatch.setattr(auth, 'ATTEMPTS', auth.Limiter(3, 15 * 60))    # 3 instead of 30, to keep it short
+    for i in range(3):
+        with pytest.raises(HTTPException) as e:
+            signup(f'{i}@example.com', invite='guess')                 # guessing the invite code
+        assert e.value.status_code == 403
+    with pytest.raises(HTTPException) as e:
+        signup('3@example.com')                                        # the 4th is refused, right code or not
+    assert e.value.status_code == 429
+
+
+def test_the_demo_can_be_switched_off(monkeypatch):
+    assert main.auth_config() == {'demo': True}           # on by default (the laptop)
+    monkeypatch.setenv('DEMO_ENABLED', '0')               # the live site
+    assert main.auth_config() == {'demo': False}
+    with pytest.raises(HTTPException) as e:
+        demo()
+    assert e.value.status_code == 404

@@ -25,6 +25,8 @@ GUEST_DAYS, with a small AI allowance: GUEST_AI_CALLS and GUEST_REPORTS).
 
 import os
 import shutil
+import time
+from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -143,6 +145,52 @@ def get_account(authorization: str | None = Header(None),
     if account is None or (account.expires_at and account.expires_at < datetime.now()):
         raise HTTPException(status_code=401, detail='Please sign in')
     return account
+
+
+# --- Limits on login attempts (step 11) -----------------------------------------------------
+# Kept in memory, so a restart clears them: fine for one server (the live site
+# runs exactly one). Signing up counts too, so the invite code can't be guessed.
+
+class Limiter:
+    """At most `most` events for a key (an email, an IP address) in the last `window` seconds."""
+
+    def __init__(self, most: int, window: float):
+        self.most, self.window = most, window
+        self.events = defaultdict(deque)     # key -> times of recent events, oldest first
+
+    def recent(self, key, now: float) -> deque:
+        times = self.events[key]
+        while times and times[0] <= now - self.window:
+            times.popleft()
+        return times
+
+    def full(self, key, now: float | None = None) -> bool:
+        now = time.time() if now is None else now
+        return len(self.recent(key, now)) >= self.most
+
+    def add(self, key, now: float | None = None):
+        now = time.time() if now is None else now
+        self.recent(key, now).append(now)
+
+    def clear(self, key):
+        self.events.pop(key, None)
+
+
+WRONG_PASSWORDS = Limiter(5, 15 * 60)    # per email: 5 wrong passwords in 15 minutes
+ATTEMPTS = Limiter(30, 15 * 60)          # per IP address: 30 logins or sign-ups in 15 minutes
+TOO_MANY = 'Too many attempts. Try again in a few minutes'
+
+
+def check_attempt(ip: str, email: str | None = None):
+    """Refuses (429) when this address, or this email, has tried too often lately; else counts the attempt."""
+    if ATTEMPTS.full(ip) or (email is not None and WRONG_PASSWORDS.full(email)):
+        raise HTTPException(status_code=429, detail=TOO_MANY)
+    ATTEMPTS.add(ip)
+
+
+def demo_enabled() -> bool:
+    """Try the demo is on unless DEMO_ENABLED=0 (the live site: George's choice, 28 Sep 2026)."""
+    return os.getenv('DEMO_ENABLED', '1') != '0'
 
 
 # --- One database per account -----------------------------------------------------------

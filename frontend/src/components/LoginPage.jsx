@@ -1,8 +1,9 @@
-import { useState } from 'react'
-import { postJson } from '../api'
+import { useEffect, useState } from 'react'
+import { getJson, postJson } from '../api'
 
 // Signing in (backend: auth.py): sign in, create an account with the invite
-// code, or try the demo (a private guest copy of the demo pizzeria).
+// code, or try the demo (a private guest copy of the demo pizzeria). The demo
+// button shows only when the server has it on (off on the live site: DEMO_ENABLED).
 function LoginPage({ onSignedIn }) {
   const [mode, setMode] = useState('signin')   // signin | signup
   const [email, setEmail] = useState('')
@@ -10,6 +11,11 @@ function LoginPage({ onSignedIn }) {
   const [invite, setInvite] = useState('')
   const [busy, setBusy] = useState(null)       // 'form' | 'demo' while waiting
   const [error, setError] = useState(null)
+  const [demo, setDemo] = useState(false)
+
+  useEffect(() => {
+    getJson('/auth/config').then((c) => setDemo(c.demo)).catch(() => {})
+  }, [])
 
   const done = (result) => {
     window.location.hash = '#/overview'
@@ -70,9 +76,11 @@ function LoginPage({ onSignedIn }) {
           </button>
         </form>
 
-        <button type="button" onClick={tryDemo} disabled={busy !== null} className="btn btn-primary w-full py-4 text-sm">
-          {busy === 'demo' ? 'Setting up the demo…' : 'Try the demo'}
-        </button>
+        {demo && (
+          <button type="button" onClick={tryDemo} disabled={busy !== null} className="btn btn-primary w-full py-4 text-sm">
+            {busy === 'demo' ? 'Setting up the demo…' : 'Try the demo'}
+          </button>
+        )}
       </div>
     </div>
   )

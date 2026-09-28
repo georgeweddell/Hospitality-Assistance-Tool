@@ -5,7 +5,7 @@ from costing import cost_dish, best_price, menu_price_on, menu_prices
 from database import Base, engine
 import models
 import schemas
-from fastapi import Depends, Form, HTTPException, Query, Response, UploadFile
+from fastapi import Depends, Form, HTTPException, Query, Request, Response, UploadFile
 from sqlalchemy.orm import Session
 from database import get_db
 from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, MenuPriceOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn, BenchmarkSyncOut, InvoiceDraft, InvoiceReviewOut, InvoiceApplyIn, ImportOut, SalesReviewIn, SalesReviewOut, SalesApplyIn, MenuApplyIn, MenuReviewOut, MenuReviewIn, MenuDraft, RecipeRowOut, RecipeConfirm, ConfirmedIngredient, SalesSummaryOut
@@ -75,6 +75,17 @@ def signed_in(response: Response, account: Account) -> dict:
     return {"account": account_out(account)}
 
 
+def client_ip(request: Request | None) -> str:
+    """The visitor's address (behind Render's proxy, uvicorn's --proxy-headers makes this the real one)."""
+    return request.client.host if request is not None and request.client else "unknown"
+
+
+@app.get("/auth/config")
+def auth_config():
+    """What the login page offers: whether Try the demo is on."""
+    return {"demo": auth.demo_enabled()}
+
+
 def account_out(account: Account) -> dict:
     calls, reports = auth.guest_limits()
     guest = account.kind == "guest"
@@ -84,8 +95,9 @@ def account_out(account: Account) -> dict:
 
 
 @app.post("/auth/signup")
-def signup(data: schemas.SignupIn, response: Response):
+def signup(data: schemas.SignupIn, response: Response, request: Request = None):
     """A new owner account, with the invite code from .env; its database starts with the benchmark ingredients."""
+    auth.check_attempt(client_ip(request))
     invite = os.getenv("INVITE_CODE")
     if not invite or data.invite_code.strip() != invite:
         raise HTTPException(status_code=403, detail="That invite code isn't right")
@@ -103,11 +115,16 @@ def signup(data: schemas.SignupIn, response: Response):
 
 
 @app.post("/auth/login")
-def login(data: schemas.LoginIn, response: Response):
+def login(data: schemas.LoginIn, response: Response, request: Request = None):
+    """Signs in. Too many wrong passwords for one email, or attempts from one address, are refused for a while."""
+    email = data.email.strip().lower()
+    auth.check_attempt(client_ip(request), email)
     with auth.AuthSession() as session:
-        account = session.query(Account).filter(Account.email == data.email.strip().lower()).first()
+        account = session.query(Account).filter(Account.email == email).first()
     if account is None or not auth.check_password(data.password, account.password_hash):
+        auth.WRONG_PASSWORDS.add(email)
         raise HTTPException(status_code=401, detail="Email or password is wrong")
+    auth.WRONG_PASSWORDS.clear(email)
     return signed_in(response, account)
 
 
@@ -116,7 +133,10 @@ def try_demo(response: Response):
     """
     A private guest account with its own fresh copy of the demo pizzeria, gone
     after auth.GUEST_DAYS; a small AI allowance. Expired guests are cleared first.
+    Off (404) when DEMO_ENABLED=0.
     """
+    if not auth.demo_enabled():
+        raise HTTPException(status_code=404, detail="The demo isn't available here")
     auth.remove_expired_guests()
     with auth.AuthSession() as session:
         account = Account(kind="guest", expires_at=datetime.now() + timedelta(days=auth.GUEST_DAYS))
