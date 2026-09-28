@@ -1,0 +1,78 @@
+# Docket: plans and decisions (history)
+
+Moved out of CLAUDE.md on 28 Sep 2026. The agreed plans for each piece of work, George's decisions with their dates, and what was learned building them. The current rules they produced are in CLAUDE.md and docs/architecture.md.
+
+## Roadmap, with the detail of each step
+
+Done: tests for costing and menu engineering (`backend/tests/`), and the frontend redesign (pages, summary, action list). New tests should keep to small hand-checkable examples, with the working in comments.
+
+1. ~~**Price history and sources.**~~ Done. `IngredientPrice` holds one row per price seen (source, supplier, date). `costing.best_price` picks the price: the restaurant's own most recent, else the most recent benchmark, ignoring future-dated prices. Routes: `GET/POST /ingredients/{id}/prices`. Next small follow-up: show each dish's "% of cost from your own data".
+**Principle: build the manual editors first, then the AI imports on top.** Every import ends in "check what the AI found before saving", and that check happens in the same editor. The app should be fully usable by hand after step 5. The owner's real routine is **monthly**: add invoices and sales → see what changed → act → check next month.
+
+2. ~~**Menu.**~~ Done: menu list with status, add/edit/delete dishes, a dish page with the recipe editor (manual entry, AI draft, suggested matches, unit warnings, checks before saving). The recipe save route now rejects unknown or duplicate ingredients and quantities ≤ 0 before touching the saved recipe.
+3. ~~**Ingredients page.**~~ Done: prices with source, date and history; record a new price as a pack price ("£93.60 for 12 kg"); add ingredients (duplicate names rejected); "X of Y ingredients on your menu use your own prices".
+4. ~~**Sales and date ranges.**~~ Done: dishes have on-the-menu dates; sales are daily (or period totals); analysis runs over any date range with presets (latest month by default); Sales page with a coverage strip and manual totals.
+5. ~~**Setup checklist, start fresh, empty states.**~~ Done: Settings → Start fresh / Load demo data (both back up first), a setup checklist on the Overview, short empty states.
+6. ~~**Broaden the benchmark price list.**~~ Done: `data/benchmark_prices.csv`, ~250 ingredients across Italian, British pub, Indian and staples, with an update button in Settings.
+7. ~~**AI imports**~~ Done (planned with George 24 Sep 2026, see "Step 7 plan" below): (a) menu price history, (b) invoice import, (c) till import, (d) menu import, (e) guided setup.
+8. ~~**Monthly routine:**~~ Done (25 Sep 2026): price-rise alerts, "% of cost from your own data" per dish and for the menu, and ingredient and menu price changes on the Overview (see `price_changes.py` and `own_prices.py`).
+9. ~~**Business-wide suggestions:**~~ Done (25 Sep 2026): `suggestions.py`, nine plain checks against rules of thumb in `data/business_rules.csv` (STARTING VALUES for George to review), shown on Insights, counted on the Overview, and a `business_checks` tool for the report agent (Claude chooses and words them; it doesn't invent them).
+10. ~~**Authentication:**~~ Done (26 Sep 2026, planned in plan mode and approved): logins with one database per account, invite-code sign-up, Try the demo guests with a small AI allowance (see `auth.py`). Before deploying: an httpOnly cookie instead of localStorage for the token, a login-attempt limit, and Alembic for schema changes across account databases.
+11. **Deployment**, so the app is reachable by a public link.
+12. **README write-up:** what the app does, how it works, which parts George wrote, and how Claude Code was used.
+
+**Out of scope for now:** review analysis, demand/rota forecasting, a free-form AI narrative layer, menu-gap analysis, scraping supplier/supermarket sites, and live integrations beyond one Square sandbox. Don't start these.
+
+## Step 7 plan: AI imports (agreed 24 Sep 2026)
+
+**Core principle: imports reconcile, they don't insert.** Owners re-upload menus, invoices and till exports repeatedly, so every import answers "what's different from what's stored?". Uploading the same thing twice must never double anything.
+
+**One pipeline for all three:** Upload → **Extract** (Claude reads the document into structured rows, validated with Pydantic) → **Match** (code: remembered aliases first, then the existing two-tier matching) → **Review** (a table of changes with proposed actions, all editable; nothing saved yet) → **Apply** (one transaction, validation before saving, recorded as an `Import`; every row it creates carries `import_id`).
+
+**Remembered aliases:** when the owner confirms a match ("MOZZ FDL 1KG" from a supplier → mozzarella (fior di latte); till item "MARG 12" → Margherita; a till's column mapping; lines to ignore such as cleaning or delivery), it's stored and pre-filled next time, shown as "remembered", still reviewable.
+
+**Shared:** an `Import` record (kind, filename, source/supplier, effective date, status, summary); the original file kept in a git-ignored `backend/uploads/` with a hash; an Imports page listing history; friendly errors when Claude is unreachable; file size/type limits. Tests cover the deterministic parts (diffing, pack parsing, invoice arithmetic, column mapping, aggregation, aliases, apply/undo) with Claude mocked, plus made-up sample files (menu PDF, invoice, Square CSV) for manual end-to-end runs. Document/photo extraction uses a vision-capable model stronger than Haiku (confirm the current model ID when building).
+
+**George's decisions:**
+1. **Menu price history (core logic, approved):** a dish's menu price gets dated history, like ingredient prices. For a period spanning a price change, analysis uses the price in effect on each day, weighted by that day's units. Formulas unchanged; only how the price is found.
+2. **Renames:** always ask the owner "same dish (renamed) or new dish?" when names are close. Never auto-merge.
+3. **Drinks and non-dish items** (add-ons, set menus): ignored by default and remembered. No Drinks category for now.
+4. **Size variants** (10" / 12"): each is its own dish.
+5. **Undo:** invoice and sales imports can be undone (delete the rows carrying that `import_id`). Menu imports can't in v1; their changes stay editable by hand.
+6. **Build order:** (a) menu price history → (b) invoice import → (c) till import → (d) menu import → (e) guided setup flow tying them together.
+
+**Menu import rules** (the owner picks "this menu starts on [date]"; everything is dated from it):
+- New dish → created, on the menu from the start date; shows as Needs recipe; Claude drafts its recipe using the menu description.
+- Same dish, new price → new dated menu price; old price kept.
+- Dish missing from the new menu → `on_menu_until` = day before the start date. Never deleted.
+- Close name match → owner chooses renamed-same-dish vs new dish.
+- Description changed → dish kept, recipe flagged "check recipe".
+- Menu sections mapped to Starter / Main / Side / Dessert by Claude; the owner corrects them.
+
+**Invoice import rules:** Claude extracts supplier, invoice number and date, and lines (description, pack as printed, quantity, unit price, line total). Code parses the pack ("12 x 1kg" → 12,000 g) through `units.py`, checks quantity × unit price ≈ line total (flag if not), matches lines (supplier alias → fuzzy → create ingredient → ignore), blocks a duplicate supplier + invoice number, and shows the change against the current price. Apply records `invoice` prices dated on the invoice date. Prices are ex-VAT.
+
+**Till import rules:** Claude sees only the header and about 5 sample rows (cost, and keeps customer data out) and proposes a column mapping (date, item, quantity, refunds/voids, date format). Code parses every row, aggregates to per-dish daily totals, nets refunds, ignores modifiers, and remembers the mapping per till. Items are matched like invoices (drinks ignored by default). Re-importing a period replaces that source's daily totals for those dates; overlaps with manual totals follow the existing no-double-count rule and are shown as conflicts.
+
+## Done: "deli counter" redesign (agreed and built 25 Sep 2026)
+
+George chose design C from the mockups canvas (claude.ai/artifact/QNewzNGtSRNfS5haAHXXcJ, private): Bricolage Grotesque (narrow, heavy figures) + DM Mono, cream/paper/ink with tomato, mustard and basil blocks, pills, 2px ink outlines, dashed dividers, and A's **ticket rail** for recommended changes (tickets hanging off an ink rail, mustard clip, slight tilt, rotated quadrant stamp, dashed tear line, £ impact). Decisions: nav and page titles lowercase (dish names keep capitals); the top nav row scrolls sideways on narrow screens; figures not built yet ("% from your invoices", "latest invoice price") stay out until step 8; no sparkle/pencil glyphs on buttons.
+
+Done (steps 1-5): tokens, fonts and shared classes; the header nav; tiles, ticket rail and stamps; every page (the Menu page's All view shows each category as a tinted block; the Recipes tab stays a table); these notes. The import review screens only picked up the shared classes and were not checked with a real upload.
+
+Mobile (later, not a priority): responsive pass after the redesign, same app. Nav pills scroll or become a bottom bar; grids stack to one column; tables become stacked rows on phones except the heavy editors (recipe editor, reviews), which scroll sideways; the ticket rail swipes. Priorities: Overview, Actions, and invoice photos from the phone camera.
+
+## Report agent (agreed with George 25 Sep 2026)
+
+George asked for a "Generate report" button on the Overview: Claude writes a report across all the data and suggests next actions, with "real thought" (an agent). **Agreed exception** to "no free-form AI narrative" (out of scope list): allowed because every number in it comes from code (the facts rule below). Design:
+
+- **Agent with read-only tools** (plain Python over the data, each result stored as facts with ids): `period_summary` (contribution, sales, GP %, units vs previous period), `actions` (ranked £ actions, optional category), `dish_detail(dish)` (recipe lines and costs, price history, weekly sales, quadrant now vs last), `price_changes` (ingredient rises/falls in the period, dishes hit, £ margin effect), `sales_pattern(by: weekday|category|dish)`, `data_gaps` (missing recipes, unchecked AI recipes, days without sales).
+- **Hand-written loop** (not an SDK runner), Sonnet 5, max 12 tool calls. First real run (August demo data): 10 tool calls, about a minute, 13,801 input and 2,450 output tokens. Sonnet 5 thinks before answering: its thinking blocks must be sent back unchanged (`as_dict`), and with thinking on the API refuses `tool_choice` forcing a tool, so after the limit Claude is told to write and further calls are refused (3 turns, then the report fails).
+- **Report quality fixes (after George's weekday-focused report, 25 Sep 2026):** it had turned a gap in the tools (no weekday-by-dish split) into a next step asking for more data ("breaking the fourth wall") and cited unrelated facts to fill items. Now: `sales_pattern(by='weekday_by_dish')` (plates a day Mon–Thu against Fri–Sun per dish) and weekday figures with their change against the previous period; the prompt says next steps are things to do in the restaurant, never requests for data or mentions of the tools/app, and each cited fact must directly back the item (no filler; no fitting fact, no item); code caps facts at 4 per item. Facts have short labels with the working in `note` (shown on hover), and a before/after pair is one fact ("£7.40 → £8.20/kg", "£11.50 → £12.40", "+91 plates · 2.9 a day"). Re-run (report 5) was much better; two more tool fixes from it: a price change after the period is marked AFTER (it had blamed September's mozzarella rise for August's margin), and the weekday-by-dish figures give the whole menu's weekend-to-weekday ratio (1.58× on the demo) with each dish's, so "weekend-heavy" is judged against it (the demo seed gives every dish a similar weekly pattern, so differences are small).
+- **Owner's focus:** the reports page has an optional "any particular focus or question" box (max 500 characters). It's stored on the report (`Report.focus`; added to the live database with `ALTER TABLE`, since `create_all` doesn't add columns to existing tables) and added to the brief between `<focus>` tags; Claude investigates it first and says plainly where the data can't answer it. The Overview's Generate report button opens the reports page, where the box is.
+- **Numbers rule:** Claude ends with a `write_report` tool (next steps + findings, each citing fact ids). Code checks every cited id exists and **no digits appear in Claude's text**; on failure the error goes back to Claude once. Every number on the page is drawn by code from the cited facts.
+- **Runs as a background job**; the page polls each second and shows the live trail (tool calls, labelled by code), then the report (next steps first, findings with their numbers), printable / Save as PDF. **Finished reports are stored** (snapshot: period, date, facts, text) with a list of past reports.
+- **Build order:** (1) tools + fact store + tests, no AI; (2) agent loop, checks, background job, tested with a scripted fake Claude (incl. a rule-breaking draft it must fix); (3) report page, Overview button, past reports; (4) CLAUDE.md + real run.
+- **George's decisions (all agreed):** hand-written loop; live trail via background job + polling; store reports; the exception recorded here.
+- **Progress:** (1) done: `report_tools.py` (the six tools, `Facts`, `ReportContext`, `previous_range`, `tool_definitions`, `run_tool`) and `tests/test_report_tools.py`. Tools cost dishes with today's ingredient prices, as the rest of the app does; `price_changes` covers the period start to today, so it can include changes after the period ends (each is dated). (2) done: `report_agent.py` (`run_report` loop with a hand-written tool loop, `check_report`, `run_report_job` in a background thread, `report_out`), the `Report` table (snapshot: trail, facts, content, error, tokens; a new table, so `create_all` adds it without a rebuild), routes `POST /reports?from&to` (409 if one is running, 422 with no sales), `GET /reports`, `GET /reports/{id}` (a running report whose thread has gone is marked interrupted), and `tests/test_report_agent.py` with a scripted fake Claude. (3) done: `ReportsPage.jsx` (`#/reports`: a tile to generate one for the chosen period and the past reports; `#/reports/<id>`: polls each second, shows the trail while running, then next steps and findings, each with its cited facts as chips showing the code-formatted number; Print or save as PDF, with the header hidden in print), and a Generate report button plus a past reports link at the top of the Overview. (4) done: the real run. It passed the checks first time and every number matched the Overview. Fixes from reading it: short weeks are labelled "(only 3 days)" (it had read a 3-day last week as sales falling), and the prompt now forbids claims the data can't support (e.g. "without denting demand"), asks findings not to repeat next steps, and asks for the two to four facts that matter most per item.
+
+After that: step 8 (price-rise alerts, "% of cost from your own data"; the report's `price_changes` covers part of it).
