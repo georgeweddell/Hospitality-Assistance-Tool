@@ -83,6 +83,7 @@ George wrote these and must be able to explain them. **Propose and explain; don'
 
 - **Use the design system in `src/index.css`** (tokens and shared classes: `btn`, `input`, `card`, `table`, `chip`, `tile`, `ticket`, `stamp`, `chart-tip`…). No one-off button, input, table or card styles in components; change a look in `index.css`, once. Light theme only (cream, paper, ink; tomato, mustard, basil). Not the class name `block` (a Tailwind utility).
 - **No explanatory sentences on screen:** labels, figures and short chips only. **No AI-sounding asides** ("usually about 25 s", "this may take a moment", "tip:", "great, …"). Explanations go in `components/Hint.jsx` (hover / click). Check every new piece of on-screen text against this.
+- **Reports and checks (any kind, AI report included): no tip or rule-of-thumb lines.** A benchmark is a short **target** figure beside the real one ("≥ 0.35 per main"); the reasoning goes in the Hint; the action is one short instruction ("Upsell desserts"), with no "or …" alternatives.
 - **Lowercase** nav, page titles, section titles, tabs, buttons and tile labels (mostly done by CSS); dish names keep their capitals. **No glyphs on buttons** (no ✦ or ✎): buttons say what they do in words.
 - **Never `window.confirm` / `alert` / `prompt`** (the app's browser pane blocks them): use `components/ConfirmDialog.jsx`.
 - **All API calls through `src/api.js`**, never `fetch` in a component.

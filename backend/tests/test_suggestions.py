@@ -58,7 +58,7 @@ def test_food_cost_is_worked_out_ex_vat(db, menu):
 
 def test_food_cost_above_the_band_names_the_dearest_plates(db, menu):
     c = checks(db, food_cost_percent=(15, 20))['food_cost']
-    assert c.fires and c.action == 'Reprice or rework the dearest plates'
+    assert c.fires and c.action == 'Reprice the dearest plates'
     # Ex-VAT food cost per dish: Margherita £2 / (£10 / 1.2) = 24.0%, Tiramisu £1 / £5 = 20.0%,
     # Diavola £2 / £10 = 20.0%, Funghi £2 / £10.83 = 18.5%: Margherita is the dearest plate
     assert [f.label for f in c.figures[1:]][0] == 'Margherita: food cost, ex-VAT'
@@ -66,7 +66,7 @@ def test_food_cost_above_the_band_names_the_dearest_plates(db, menu):
 
 def test_food_cost_below_the_band_asks_whether_recipes_are_complete(db, menu):
     c = checks(db, food_cost_percent=(25, 32))['food_cost']
-    assert c.fires and c.action == 'Check recipes are complete and portions are right'
+    assert c.fires and c.action == 'Check recipes and portions'
 
 
 def test_desserts_per_main(db, menu):

@@ -159,7 +159,7 @@ function Workspace({ account }) {
   } else if (page === 'settings') {
     content = <SettingsPage onReset={afterReset} onChanged={refresh} account={account} />
   } else if (page === 'reports') {
-    content = <ReportsPage id={id} range={range} />
+    content = <ReportsPage id={id} range={range} reload={data?.dishes} />
   } else if (!data) {
     content = (
       <div className="flex items-center gap-3 text-muted">
@@ -211,7 +211,7 @@ function Workspace({ account }) {
     )
   }
 
-  const showPicker = RANGED_PAGES.includes(page) && range && lastSale !== undefined
+  const showPicker = (RANGED_PAGES.includes(page) || (page === 'reports' && id === 'suggestions')) && range && lastSale !== undefined
   const picker = showPicker && (
     <RangePicker range={range} lastSale={lastSale}
                  onChange={changeRange} />

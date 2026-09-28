@@ -82,10 +82,12 @@ class Check:
     figures: list[Figure] = field(default_factory=list)
     rule_of_thumb: str = ''               # e.g. "at least 0.35 per main"
     note: str = ''                        # how it's worked out, shown on hover
+    target: str = ''                      # the rule of thumb in a few characters, for the card: "≥ 0.35 per main"
 
     def out(self) -> dict:
         return {'key': self.key, 'title': self.title, 'fires': self.fires, 'action': self.action,
-                'figures': [f.out() for f in self.figures], 'rule_of_thumb': self.rule_of_thumb, 'note': self.note}
+                'figures': [f.out() for f in self.figures], 'rule_of_thumb': self.rule_of_thumb, 'note': self.note,
+                'target': self.target}
 
 
 class Checks:
@@ -123,12 +125,13 @@ class Checks:
         if high is not None and percent > high:
             worst = sorted(self.dishes, key=lambda d: -d.plate_cost / (d.menu_price / VAT))[:3]
             figures += [Figure(f'{d.dish_name}: food cost, ex-VAT', d.plate_cost / (d.menu_price / VAT) * 100, '%') for d in worst]
-            action = 'Reprice or rework the dearest plates'
+            action = 'Reprice the dearest plates'
         elif low is not None and percent < low:
-            action = 'Check recipes are complete and portions are right'
+            action = 'Check recipes and portions'
         return Check('food_cost', 'Food cost', fires, action, figures,
                      f'{low:g}–{high:g}% for a {self.type}' if self.type != 'other' else f'{low:g}–{high:g}%',
-                     'Plate cost x plates sold, over sales without VAT (menu prices / 1.2). ' + note)
+                     'Plate cost x plates sold, over sales without VAT (menu prices / 1.2). ' + note,
+                     f'{low:g}–{high:g}%')
 
     def attach(self, category: DishType, rule_key: str, action: str) -> Check | None:
         units = self.units_by_category()
@@ -143,7 +146,7 @@ class Checks:
                      [Figure(f'{name.capitalize()} per main', ratio, 'per main'),
                       Figure(f'{name.capitalize()} sold', units[category], 'count'),
                       Figure('Mains sold', units[DishType.MAIN], 'count')],
-                     f'at least {low:.2f} per main', note)
+                     f'at least {low:.2f} per main', note, f'≥ {low:.2f} per main')
 
     def midweek(self) -> Check | None:
         low, _, note = self.rule('midweek_share')
@@ -156,10 +159,10 @@ class Checks:
             return None
         a, b = sum(weekday) / len(weekday), sum(weekend) / len(weekend)
         share = a / b
-        return Check('midweek', 'Midweek trade', share < low, 'A midweek offer or event' if share < low else '',
+        return Check('midweek', 'Midweek trade', share < low, 'Run a midweek offer' if share < low else '',
                      [Figure('Mon–Thu sales a day', a, '£'), Figure('Fri–Sun sales a day', b, '£'),
                       Figure('Midweek as a share of the weekend', share * 100, '%')],
-                     f'at least {low * 100:.0f}% of a weekend day', note)
+                     f'at least {low * 100:.0f}% of a weekend day', note, f'≥ {low * 100:.0f}%')
 
     def menu_size(self) -> Check | None:
         _, most, note = self.rule('dishes_per_category')
@@ -173,19 +176,21 @@ class Checks:
         figures, problems = [], []
         for category, count in on_menu.items():
             if most is not None and count > most:
-                problems.append(f'{PLURAL[category]}: {count} dishes')
+                problems.append(PLURAL[category])
                 figures.append(Figure(f'{PLURAL[category].capitalize()} on the menu', count, 'count'))
         for category in {d.category for d in self.dishes}:
             analysed = [d for d in self.dishes if d.category == category]
             dogs = [d for d in analysed if d.quadrant == QuadrantType.DOG]
             share = len(dogs) / len(analysed)
             if dog_most is not None and share > dog_most and len(analysed) >= 3:
-                problems.append(f'{PLURAL[category]}: {len(dogs)} of {len(analysed)} are Dogs')
+                problems.append(PLURAL[category])
                 figures.append(Figure(f'{PLURAL[category].capitalize()}: share that are Dogs', share * 100, '%'))
         rule_of_thumb = '; '.join(([f'at most {most:g} dishes a category'] if most is not None else [])
                                   + ([f'Dogs under {dog_most * 100:.0f}% of one'] if dog_most is not None else []))
-        return Check('menu_size', 'Menu size', bool(problems), 'Trim the menu: ' + '; '.join(problems) if problems else '',
-                     figures, rule_of_thumb, f'{note} {dog_note}'.strip())
+        target = ' · '.join(([f'≤ {most:g} a category'] if most is not None else [])
+                            + ([f'≤ {dog_most * 100:.0f}% Dogs'] if dog_most is not None else []))
+        return Check('menu_size', 'Menu size', bool(problems), 'Trim ' + ', '.join(dict.fromkeys(problems)) if problems else '',
+                     figures, rule_of_thumb, f'{note} {dog_note}'.strip(), target)
 
     def cheapest_top(self) -> Check:
         figures, dishes = [], []
@@ -200,7 +205,7 @@ class Checks:
                 figures += [Figure(f'{cheapest.dish_name}: average price, the cheapest {category.value.lower()}', cheapest.menu_price, '£'),
                             Figure(f'{cheapest.dish_name}: plates sold, the most', cheapest.units_sold, 'count')]
         return Check('cheapest_top', 'Cheapest is the best seller', bool(dishes),
-                     f'Price {", ".join(dishes)} up, or add a cheaper dish to anchor it' if dishes else '', figures,
+                     f'Reprice {", ".join(dishes)}' if dishes else '', figures,
                      'the cheapest dish in a category shouldn\'t be its best seller',
                      'In a category of three or more, the dish at the lowest menu price is also the one sold most.')
 
@@ -221,9 +226,9 @@ class Checks:
         share = top_cost / total
         name = self.db.get(Ingredient, top_id).name
         return Check('one_ingredient', 'Biggest single ingredient', share > most,
-                     f'Watch the {name} price: get a second quote' if share > most else '',
+                     f'Get a second quote for {name}' if share > most else '',
                      [Figure(f'{name}: share of food cost', share * 100, '%'), Figure(f'{name}: cost over the period', top_cost, '£')],
-                     f'no one ingredient over {most * 100:.0f}% of food cost', note)
+                     f'no one ingredient over {most * 100:.0f}% of food cost', note, f'≤ {most * 100:.0f}%')
 
     def cost_basis(self) -> Check | None:
         low, _, note = self.rule('own_price_share')
@@ -231,7 +236,7 @@ class Checks:
         if low is None or share is None:
             return None
         return Check('cost_basis', 'Costs on your own prices', share < low, 'Upload supplier invoices' if share < low else '',
-                     [Figure('Recipe cost on your own prices', share, '%')], f'at least {low:g}%', note)
+                     [Figure('Recipe cost on your own prices', share, '%')], f'at least {low:g}%', note, f'≥ {low:g}%')
 
     def unmatched_rises(self) -> Check:
         rises = [c for c in find_price_changes(self.db, self.start, self.today) if c.is_alert]
@@ -246,7 +251,7 @@ class Checks:
                 figures.append(Figure(f'{c.name}: price change', c.change_percent, 'change %'))
                 figures.append(Figure(f'{c.name}: dishes not repriced since', len(behind), 'count'))
         return Check('unmatched_rise', 'Price rises not passed on', bool(names),
-                     f'Review menu prices on the dishes using {", ".join(names)}' if names else '', figures,
+                     f'Reprice {", ".join(names)} dishes' if names else '', figures,
                      'a rise of 5% or more is followed by a menu price review',
                      'Ingredient rises of 5% or more since the period began, on dishes with no menu price change since.')
 
@@ -255,9 +260,9 @@ class Checks:
             return []
         checks = [
             self.food_cost(),
-            self.attach(DishType.DESSERT, 'desserts_per_main', 'Dessert board or table upsell'),
-            self.attach(DishType.STARTER, 'starters_per_main', 'Sharing starters or a starter bundle'),
-            self.attach(DishType.SIDE, 'sides_per_main', 'Suggest a side with each main'),
+            self.attach(DishType.DESSERT, 'desserts_per_main', 'Upsell desserts'),
+            self.attach(DishType.STARTER, 'starters_per_main', 'Upsell starters'),
+            self.attach(DishType.SIDE, 'sides_per_main', 'Upsell sides'),
             self.midweek(), self.menu_size(), self.cheapest_top(), self.one_ingredient(),
             self.cost_basis(), self.unmatched_rises(),
         ]

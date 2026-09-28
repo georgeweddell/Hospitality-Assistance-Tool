@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import BusinessChecks from './BusinessChecks'
 import Card from './Card'
 import { getJson, postJson } from '../api'
 import { navigate } from '../useHashRoute'
 import { rangeLabel, rangeQuery } from '../dateRange'
 import { shortDate } from '../format'
+import { useSuggestions } from '../suggestions'
 
 // Reports written by the report agent (backend/report_agent.py). Starting one
 // returns straight away; this page polls it each second, showing the trail of
@@ -243,8 +245,31 @@ function ReportList({ range }) {
   )
 }
 
-function ReportsPage({ id, range }) {
-  return id ? <ReportView key={id} id={id} range={range} /> : <ReportList range={range} />
+// Two tabs: the AI reports, and the business suggestions (the business checks
+// for the chosen period, worked out by code: backend/suggestions.py).
+function ReportTabs({ current, firing }) {
+  return (
+    <nav className="tabs" aria-label="Reports">
+      <a href="#/reports" className="tab" aria-current={current === 'reports' ? 'page' : undefined}>reports</a>
+      <a href="#/reports/suggestions" className="tab" aria-current={current === 'suggestions' ? 'page' : undefined}>
+        business suggestions
+        {firing > 0 && <span className="count count-warn">{firing}</span>}
+      </a>
+    </nav>
+  )
+}
+
+function ReportsPage({ id, range, reload }) {
+  const checks = useSuggestions(range, reload)
+  if (id && id !== 'suggestions') return <ReportView key={id} id={id} range={range} />
+  const firing = checks ? checks.filter((c) => c.fires).length : 0
+  return (
+    <div className="space-y-5">
+      <ReportTabs current={id ? 'suggestions' : 'reports'} firing={firing} />
+      {!id ? <ReportList range={range} />
+        : checks ? <BusinessChecks checks={checks} /> : <p className="text-muted">Loading…</p>}
+    </div>
+  )
 }
 
 export default ReportsPage

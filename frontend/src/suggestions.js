@@ -8,6 +8,7 @@ import { rangeQuery } from './dateRange'
 export function useSuggestions(range, reload) {
   const [checks, setChecks] = useState(null)
   useEffect(() => {
+    if (!range) return   // the period isn't known yet
     let ignore = false
     getJson(`/suggestions?${rangeQuery(range)}`)
       .then((rows) => { if (!ignore) setChecks(rows) })

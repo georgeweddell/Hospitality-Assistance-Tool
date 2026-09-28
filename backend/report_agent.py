@@ -64,7 +64,8 @@ Only claim what the data shows. It has no information on how customers would rea
 why a dish sells, or what competitors charge, so don't say a change will or won't affect demand: say \
 what to try and what to watch. Compare like with like (a short week against a full one is not a fall).
 
-Be brief: titles under ten words, details one or two sentences. British English."""
+Be brief: titles under ten words, details one or two sentences. British English. No tips, asides, \
+hedges or rules of thumb tacked on to an item: each detail says what to do or what was found, nothing more."""
 
 
 _client = None

@@ -6,7 +6,9 @@ export const PAGES = ['overview', 'actions', 'menu', 'ingredients', 'sales', 'im
 
 function currentRoute() {
   const [page, id] = window.location.hash.replace('#/', '').split('/')
-  return PAGES.includes(page) ? { page, id: id ? Number(id) : null } : { page: 'overview', id: null }
+  // A numeric id is a record (a dish, a report); a word is a sub-page (reports/suggestions).
+  const parsed = !id ? null : /^\d+$/.test(id) ? Number(id) : id
+  return PAGES.includes(page) ? { page, id: parsed } : { page: 'overview', id: null }
 }
 
 export function navigate(path) {

@@ -114,8 +114,8 @@ function OverviewPage({ dishes, prevDishes, actions, range, unchecked = 0 }) {
         ) : <span />}
         <span className="flex flex-wrap items-center gap-4">
           {firing > 0 && (
-            <a href="#/analysis" className="link font-mono text-sm font-normal">
-              {firing} business check{firing === 1 ? '' : 's'} to look at →
+            <a href="#/reports/suggestions" className="link font-mono text-sm font-normal">
+              {firing} business suggestion{firing === 1 ? '' : 's'} →
             </a>
           )}
           <a href="#/reports" className="btn btn-primary">Generate report</a>

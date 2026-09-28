@@ -44,7 +44,7 @@ function RestaurantType({ onChanged }) {
       <div className="flex flex-wrap items-center gap-4 border-t border-line px-5 py-4">
         <span className="flex grow items-center gap-2 font-semibold">
           Type of restaurant
-          <Hint label="About the type" content="Picks the rules of thumb the business checks on Insights are judged against, such as the usual food cost for this kind of restaurant." />
+          <Hint label="About the type" content="Picks the rules of thumb the business suggestions under Reports are judged against, such as the usual food cost for this kind of restaurant." />
         </span>
         {error && <span className="text-sm text-danger">{error}</span>}
         {business && (
