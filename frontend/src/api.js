@@ -1,4 +1,6 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+// Where the API is. A production build is served by the API server itself, so
+// it calls its own address (''); `npm run dev` calls the backend on port 8000.
+const BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:8000')
 
 // The login (backend: auth.py) is an httpOnly cookie the server sets: this page
 // never sees the token, and the browser sends the cookie with every request

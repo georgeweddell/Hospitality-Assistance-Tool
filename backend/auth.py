@@ -40,7 +40,10 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 load_dotenv()
 
 BACKEND = Path(__file__).parent
-ACCOUNTS_DIR = BACKEND / 'accounts'      # tests point this at a temporary folder
+# Where auth.db and the accounts live: the backend folder on the laptop; on the
+# live site DATA_DIR=/data, a disk that survives restarts and redeploys (step 11).
+DATA_DIR = Path(os.getenv('DATA_DIR') or BACKEND)
+ACCOUNTS_DIR = DATA_DIR / 'accounts'     # tests point this at a temporary folder
 TOKEN_DAYS = 7
 COOKIE = 'docket_session'               # the login cookie's name
 GUEST_DAYS = 7
@@ -63,7 +66,8 @@ class Account(AuthBase):
     reports_used = Column(Integer, nullable=False, default=0)
 
 
-auth_engine = create_engine(f"sqlite:///{BACKEND / 'auth.db'}", connect_args={'check_same_thread': False})
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+auth_engine = create_engine(f"sqlite:///{DATA_DIR / 'auth.db'}", connect_args={'check_same_thread': False})
 AuthSession = sessionmaker(bind=auth_engine, expire_on_commit=False)   # tests swap in an in-memory one
 
 

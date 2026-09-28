@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from menu_engineering import classify_all_dishes, build_action_list, list_incomplete_dishes, get_dish_units_sold, on_menu_during
 from costing import cost_dish, best_price, menu_price_on, menu_prices
 from database import Base, engine
@@ -62,9 +63,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-def read_root():
-    return {"message":"Hello World"}
+@app.get("/health")
+def health():
+    """For the host (Render) to check the server is up."""
+    return {"ok": True}
 
 
 # --- Accounts (auth.py) ---------------------------------------------------------------
@@ -969,3 +971,14 @@ def get_report(report_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Report not found")
     still_running(report, db)
     return report_agent.report_out(report)
+
+
+# --- The app itself (step 11) ---------------------------------------------------------
+# On the live site this server also serves the built React app (frontend/dist,
+# made by `npm run build`), so the page and the API share one address: the login
+# cookie just works and no other origin needs allowing. Mounted last, so every
+# API route above wins; hash routing means the page only needs / and /assets/.
+# On the laptop there's usually no build, and Vite serves the page instead.
+FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
+if FRONTEND_DIST.is_dir():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="app")

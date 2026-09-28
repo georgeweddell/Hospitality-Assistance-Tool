@@ -14,6 +14,13 @@
       "runtimeArgs": ["--prefix", "frontend", "run", "dev"],
       "port": 5173,
       "autoPort": false
+    },
+    {
+      "name": "live-check",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-NoProfile", "-Command", "$env:DATA_DIR = \"$env:TEMP\\docket-live-check\"; $env:DEMO_ENABLED = '0'; $env:INVITE_CODE = 'live-check-only'; cd backend; .\\venv\\Scripts\\python.exe migrate.py --all; .\\venv\\Scripts\\python.exe -m uvicorn main:app --port 8010 --proxy-headers"],
+      "port": 8010,
+      "autoPort": false
     }
   ]
 }
