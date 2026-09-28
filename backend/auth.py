@@ -6,10 +6,12 @@ How it works:
   - Accounts live in their own small database, auth.db. A password is never
     stored: only a bcrypt hash, a one-way scramble that can check a password
     but can't be turned back into it.
-  - Logging in returns a token (a JWT): signed text saying "account 7, valid
-    until 3 Oct". The browser sends it with every request as
-    "Authorization: Bearer <token>". It is signed with SECRET_KEY from .env,
-    so it can't be forged or edited.
+  - Logging in gives a token (a JWT): signed text saying "account 7, valid
+    until 3 Oct". It is signed with SECRET_KEY from .env, so it can't be
+    forged or edited. The server puts it in an httpOnly cookie (step 11): the
+    browser sends it with every request, and page scripts can't read it, so a
+    malicious script can't steal it. Scripts and tests can still send it as
+    "Authorization: Bearer <token>".
   - Each account's restaurant data is its own SQLite file,
     accounts/<id>/menu.db, with its uploads and backups beside it. get_db
     (database.py) opens the logged-in account's file, so every route that uses
@@ -29,7 +31,7 @@ from pathlib import Path
 import bcrypt
 import jwt
 from dotenv import load_dotenv
-from fastapi import Header, HTTPException
+from fastapi import Cookie, Header, HTTPException, Response
 from sqlalchemy import Column, DateTime, Integer, String, create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -38,6 +40,7 @@ load_dotenv()
 BACKEND = Path(__file__).parent
 ACCOUNTS_DIR = BACKEND / 'accounts'      # tests point this at a temporary folder
 TOKEN_DAYS = 7
+COOKIE = 'docket_session'               # the login cookie's name
 GUEST_DAYS = 7
 MIN_PASSWORD = 8
 
@@ -83,13 +86,34 @@ def secret() -> str:
     return key
 
 
-def make_token(account: Account, now: datetime | None = None) -> str:
-    """A signed token for the account, valid for TOKEN_DAYS (or until a guest expires, if sooner)."""
-    now = now or datetime.now(timezone.utc)
-    expires = now + timedelta(days=TOKEN_DAYS)
+def token_expiry(account: Account, now: datetime | None = None) -> datetime:
+    """When a login made now ends: after TOKEN_DAYS, or when a guest expires, if sooner."""
+    expires = (now or datetime.now(timezone.utc)) + timedelta(days=TOKEN_DAYS)
     if account.expires_at:
         expires = min(expires, account.expires_at.replace(tzinfo=timezone.utc))
-    return jwt.encode({'sub': str(account.id), 'exp': expires}, secret(), algorithm='HS256')
+    return expires
+
+
+def make_token(account: Account, now: datetime | None = None) -> str:
+    """A signed token for the account, valid until token_expiry."""
+    return jwt.encode({'sub': str(account.id), 'exp': token_expiry(account, now)}, secret(), algorithm='HS256')
+
+
+def set_login_cookie(response: Response, account: Account):
+    """
+    Signs the account in: the token goes in an httpOnly cookie (scripts can't
+    read it), SameSite=Lax (not sent with requests started by other sites),
+    Secure when COOKIE_SECURE=1 (HTTPS only: set on the live site, not on the
+    laptop, which uses plain http).
+    """
+    now = datetime.now(timezone.utc)
+    response.set_cookie(COOKIE, make_token(account, now), httponly=True, samesite='lax',
+                        secure=os.getenv('COOKIE_SECURE') == '1', path='/',
+                        max_age=int((token_expiry(account, now) - now).total_seconds()))
+
+
+def clear_login_cookie(response: Response):
+    response.delete_cookie(COOKIE, path='/', httponly=True, samesite='lax', secure=os.getenv('COOKIE_SECURE') == '1')
 
 
 def read_token(token: str) -> int:
@@ -97,16 +121,21 @@ def read_token(token: str) -> int:
     return int(jwt.decode(token, secret(), algorithms=['HS256'])['sub'])
 
 
-def get_account(authorization: str | None = Header(None)) -> Account:
+def get_account(authorization: str | None = Header(None),
+                docket_session: str | None = Cookie(None)) -> Account:
     """
-    The logged-in account, from the "Authorization: Bearer <token>" header.
-    401 if there's no token, it's invalid or expired, or the account is gone
-    or (a guest) past its date.
+    The logged-in account, from the login cookie, else an "Authorization:
+    Bearer <token>" header (scripts and tests). 401 if there's no token, it's
+    invalid or expired, or the account is gone or (a guest) past its date.
     """
-    if not authorization or not authorization.startswith('Bearer '):
+    if isinstance(docket_session, str) and docket_session:   # (not a str when called directly, as tests do)
+        token = docket_session
+    elif authorization and authorization.startswith('Bearer '):
+        token = authorization.removeprefix('Bearer ')
+    else:
         raise HTTPException(status_code=401, detail='Please sign in')
     try:
-        account_id = read_token(authorization.removeprefix('Bearer '))
+        account_id = read_token(token)
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail='Your session has ended. Please sign in again')
     with AuthSession() as session:

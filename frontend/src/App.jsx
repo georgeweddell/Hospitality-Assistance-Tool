@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { SIGNED_OUT, getJson, getToken } from './api'
+import { SIGNED_OUT, getJson } from './api'
 import useHashRoute from './useHashRoute'
 import { presets, previousRange, rangeQuery } from './dateRange'
 import Layout from './components/Layout'
@@ -231,27 +231,30 @@ function Workspace({ account }) {
   )
 }
 
-// The login page until this browser has a token; then the workspace, with the
-// account (for the guest chip and Settings). Signing out, or any request
-// answered 401, comes back here (api.js SIGNED_OUT).
+// On load, asks the server who is signed in (the login is an httpOnly cookie
+// this page can't read): the workspace, with the account (for the guest chip
+// and Settings), or the login page. Nothing shows until it knows, so the login
+// page doesn't flash. Signing out, or any request answered 401, comes back to
+// the login page (api.js SIGNED_OUT).
 function App() {
-  const [signedIn, setSignedIn] = useState(() => Boolean(getToken()))
-  const [account, setAccount] = useState(null)
+  const [account, setAccount] = useState(undefined)   // undefined = not known yet, null = signed out
 
   useEffect(() => {
-    const onSignedOut = () => { setSignedIn(false); setAccount(null) }
+    const onSignedOut = () => setAccount(null)
     window.addEventListener(SIGNED_OUT, onSignedOut)
     return () => window.removeEventListener(SIGNED_OUT, onSignedOut)
   }, [])
 
   useEffect(() => {
-    if (!signedIn) return
     let ignore = false
-    getJson('/auth/me').then((a) => { if (!ignore) setAccount(a) }).catch(() => {})
+    getJson('/auth/me')
+      .then((a) => { if (!ignore) setAccount(a) })
+      .catch(() => { if (!ignore) setAccount(null) })
     return () => { ignore = true }
-  }, [signedIn])
+  }, [])
 
-  if (!signedIn) return <LoginPage onSignedIn={(a) => { setAccount(a); setSignedIn(true) }} />
+  if (account === undefined) return null
+  if (account === null) return <LoginPage onSignedIn={setAccount} />
   return <Workspace account={account} />
 }
 

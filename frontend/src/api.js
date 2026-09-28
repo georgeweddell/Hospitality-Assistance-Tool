@@ -1,31 +1,14 @@
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
-// The login token (backend: auth.py), kept in this browser. Every request sends
-// it as "Authorization: Bearer <token>". A 401 means it's missing or has ended:
-// it's forgotten and the app goes back to the login page (the SIGNED_OUT event).
-// Browser storage can be unavailable, so every access is guarded.
-const TOKEN_KEY = 'docket-token'
+// The login (backend: auth.py) is an httpOnly cookie the server sets: this page
+// never sees the token, and the browser sends the cookie with every request
+// (credentials: 'include'; needed while the page and the API are on different
+// ports on the laptop). A 401 means the login is missing or has ended: the app
+// goes back to the login page (the SIGNED_OUT event).
 export const SIGNED_OUT = 'docket:signed-out'
 
-export function getToken() {
+function signedOut() {
   try {
-    return localStorage.getItem(TOKEN_KEY)
-  } catch {
-    return null
-  }
-}
-
-export function setToken(token) {
-  try {
-    localStorage.setItem(TOKEN_KEY, token)
-  } catch {
-    // not stored: the login lasts until the page is reloaded
-  }
-}
-
-export function signOut() {
-  try {
-    localStorage.removeItem(TOKEN_KEY)
     sessionStorage.clear()   // the last account's chosen period and views
   } catch {
     // nothing stored
@@ -33,14 +16,16 @@ export function signOut() {
   window.dispatchEvent(new Event(SIGNED_OUT))
 }
 
-function authHeaders() {
-  const token = getToken()
-  return token ? { Authorization: `Bearer ${token}` } : {}
+// Only the server can remove an httpOnly cookie. Signed out here even if that call fails.
+export function signOut() {
+  return fetch(`${BASE_URL}/auth/logout`, { method: 'POST', credentials: 'include' })
+    .catch(() => {})
+    .then(signedOut)
 }
 
 // A 401 from anything but a login attempt ends the session.
 function checkSignedIn(response, path) {
-  if (response.status === 401 && !path.startsWith('/auth/')) signOut()
+  if (response.status === 401 && !path.startsWith('/auth/')) signedOut()
 }
 
 // Use the backend's own message (FastAPI's "detail") when it sent a plain-text one.
@@ -55,7 +40,7 @@ function errorFromResponse(response, fallback) {
 }
 
 function request(method, path, body) {
-  const options = { method, headers: authHeaders() }
+  const options = { method, headers: {}, credentials: 'include' }
   if (body !== undefined) {
     options.headers['Content-Type'] = 'application/json'
     options.body = JSON.stringify(body)
@@ -78,7 +63,7 @@ export const deleteJson = (path) => request('DELETE', path)
 export function postFile(path, file) {
   const body = new FormData()
   body.append('file', file)
-  return fetch(`${BASE_URL}${path}`, { method: 'POST', body, headers: authHeaders() }).then((response) => {
+  return fetch(`${BASE_URL}${path}`, { method: 'POST', body, credentials: 'include' }).then((response) => {
     checkSignedIn(response, path)
     if (!response.ok) {
       return errorFromResponse(response, `Upload failed (${response.status})`)

@@ -5,7 +5,7 @@ from costing import cost_dish, best_price, menu_price_on, menu_prices
 from database import Base, engine
 import models
 import schemas
-from fastapi import Depends, Form, HTTPException, Query, UploadFile
+from fastapi import Depends, Form, HTTPException, Query, Response, UploadFile
 from sqlalchemy.orm import Session
 from database import get_db
 from schemas import DishClassificationOut, DishCostOut, IngredientCreate, IngredientOut, IngredientPriceCreate, IngredientPriceOut, DishType, DishCreate, DishUpdate, DishOut, DishDetailOut, MenuPriceOut, RecipeLineOut, MatchedIngredientDraft, RecipeSaveOut, SalesRecordCreate, SalesRecordOut, ActionItemOut, IncompleteDishOut, SalesCoverageOut, SalesEntryIn, SalesEntryOut, SetupStatusOut, ResetIn, BenchmarkSyncOut, InvoiceDraft, InvoiceReviewOut, InvoiceApplyIn, ImportOut, SalesReviewIn, SalesReviewOut, SalesApplyIn, MenuApplyIn, MenuReviewOut, MenuReviewIn, MenuDraft, RecipeRowOut, RecipeConfirm, ConfirmedIngredient, SalesSummaryOut
@@ -50,9 +50,13 @@ auth.init_auth()     # the accounts database, auth.db
 
 app = FastAPI()
 
+# Only needed when the page and the API are on different addresses (the laptop:
+# 5173 and 8000). On the live site one server serves both, so no other origin is
+# allowed. allow_credentials lets the browser send the login cookie.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(","),
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -63,10 +67,12 @@ def read_root():
 
 
 # --- Accounts (auth.py) ---------------------------------------------------------------
-# These don't use get_db, so they work without a login token.
+# These don't use get_db, so they work without a login token. Signing in sets the
+# login cookie; the token itself is never sent to the page.
 
-def token_out(account: Account) -> dict:
-    return {"token": auth.make_token(account), "account": account_out(account)}
+def signed_in(response: Response, account: Account) -> dict:
+    auth.set_login_cookie(response, account)
+    return {"account": account_out(account)}
 
 
 def account_out(account: Account) -> dict:
@@ -78,7 +84,7 @@ def account_out(account: Account) -> dict:
 
 
 @app.post("/auth/signup")
-def signup(data: schemas.SignupIn):
+def signup(data: schemas.SignupIn, response: Response):
     """A new owner account, with the invite code from .env; its database starts with the benchmark ingredients."""
     invite = os.getenv("INVITE_CODE")
     if not invite or data.invite_code.strip() != invite:
@@ -93,20 +99,20 @@ def signup(data: schemas.SignupIn):
         session.add(account)
         session.commit()
     reset_database(auth.engine_for(account.id), with_demo=False)
-    return token_out(account)
+    return signed_in(response, account)
 
 
 @app.post("/auth/login")
-def login(data: schemas.LoginIn):
+def login(data: schemas.LoginIn, response: Response):
     with auth.AuthSession() as session:
         account = session.query(Account).filter(Account.email == data.email.strip().lower()).first()
     if account is None or not auth.check_password(data.password, account.password_hash):
         raise HTTPException(status_code=401, detail="Email or password is wrong")
-    return token_out(account)
+    return signed_in(response, account)
 
 
 @app.post("/auth/demo")
-def try_demo():
+def try_demo(response: Response):
     """
     A private guest account with its own fresh copy of the demo pizzeria, gone
     after auth.GUEST_DAYS; a small AI allowance. Expired guests are cleared first.
@@ -117,7 +123,14 @@ def try_demo():
         session.add(account)
         session.commit()
     reset_database(auth.engine_for(account.id), with_demo=True)
-    return token_out(account)
+    return signed_in(response, account)
+
+
+@app.post("/auth/logout")
+def logout(response: Response):
+    """Signs out: only the server can remove an httpOnly cookie."""
+    auth.clear_login_cookie(response)
+    return {"ok": True}
 
 
 @app.get("/auth/me")

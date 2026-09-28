@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { postJson, setToken } from '../api'
+import { postJson } from '../api'
 
 // Signing in (backend: auth.py): sign in, create an account with the invite
 // code, or try the demo (a private guest copy of the demo pizzeria).
@@ -12,7 +12,6 @@ function LoginPage({ onSignedIn }) {
   const [error, setError] = useState(null)
 
   const done = (result) => {
-    setToken(result.token)
     window.location.hash = '#/overview'
     onSignedIn(result.account)
   }
