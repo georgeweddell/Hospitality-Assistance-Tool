@@ -1,0 +1,14 @@
+# Kept out of the Docker build (Dockerfile): secrets, local data, and things the
+# build makes itself.
+**/.env
+**/venv/
+**/node_modules/
+**/__pycache__/
+**/*.pyc
+backend/*.db
+backend/accounts/
+backend/uploads/
+frontend/dist/
+.git/
+.claude/
+Claude outputs/

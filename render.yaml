@@ -1,0 +1,29 @@
+# The live site on Render, described as a file (a "Blueprint"): Render reads it
+# when the service is created from this repo. Steps: docs/deploy.md.
+services:
+  - type: web
+    name: docket
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: 0.5c-512mb          # the smallest paid size; a disk needs a paid plan
+    region: frankfurt         # the closest to the UK (Render has no London region)
+    healthCheckPath: /health
+    autoDeployTrigger: commit # every push to main redeploys
+    disk:                     # survives restarts and deploys; snapshotted daily by Render
+      name: docket-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: DATA_DIR         # auth.db and accounts/ on the disk
+        value: /data
+      - key: COOKIE_SECURE    # the login cookie only over HTTPS
+        value: "1"
+      - key: DEMO_ENABLED     # no public Try the demo (George, 28 Sep 2026)
+        value: "0"
+      - key: SECRET_KEY       # signs logins: a new random value, made by Render
+        generateValue: true
+      - key: ANTHROPIC_API_KEY
+        sync: false           # typed into the Render dashboard, never into the repo
+      - key: INVITE_CODE
+        sync: false

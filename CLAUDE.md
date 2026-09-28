@@ -4,6 +4,7 @@ Read this at the start of every session. It holds the rules and a map; the detai
 - **`docs/architecture.md`**: what every backend and frontend file does, and the rules each module follows. **Read the part for a module before changing it.**
 - **`docs/decisions.md`**: the agreed plans and George's decisions with dates (imports, redesign, report agent, roadmap detail).
 - **`docs/demo.md`**: the 5-minute demo script.
+- **`docs/deploy.md`**: the live site on Render (setup, updating, backups, limits).
 
 ## What this project is
 
@@ -28,7 +29,7 @@ Read this at the start of every session. It holds the rules and a map; the detai
 
 - **Backend (`backend/`):** `main.py` every route · `models.py` tables · `schemas.py` request/response shapes · `auth.py` logins, one database per account · `database.py` `get_db` (the logged-in account's database) · `costing.py` plate cost, `best_price`, dated menu prices · `menu_engineering.py` quadrants, action list, `proposed_change` · `units.py` pack price → base unit · imports: `invoices.py`/`invoice_ai.py`, `tills.py`/`till_ai.py`, `menus.py`/`menu_ai.py` · `recipe_ai.py`, `matching.py`, `recipe_checks.py` · `price_changes.py`, `own_prices.py` · `suggestions.py` + `data/business_rules.csv` · `report_tools.py`, `report_agent.py` · `sales_report.py` · `onboarding.py` · `benchmarks.py` + `data/benchmark_prices.csv` · `periods.py` · `seed_demo.py` (demo data, `reset_database`) · `create_account.py` · `tests/`.
 - **Frontend (`frontend/src/`):** `App.jsx` (login gate, shared data, page choice) · `api.js` (all calls; the login is an httpOnly cookie) · `index.css` (the design system) · `components/` one file per page and piece · helpers `format.js`, `dateRange.js`, `actionText.js`, `quadrants.js`, `priceChanges.js`, `suggestions.js`.
-- **Data:** each account's data is `backend/accounts/<id>/menu.db` (+ `uploads/`, `backups/`); accounts in `backend/auth.db`; `backend/menu.db` is what `seed_demo.py` builds. All git-ignored. `backend/.env` (git-ignored) holds `ANTHROPIC_API_KEY`, `SECRET_KEY`, `INVITE_CODE`, `GUEST_AI_CALLS`, `GUEST_REPORTS`.
+- **Data:** each account's data is `backend/accounts/<id>/menu.db` (+ `uploads/`, `backups/`); accounts in `backend/auth.db`; `backend/menu.db` is what `seed_demo.py` builds. All git-ignored. `backend/.env` (git-ignored) holds `ANTHROPIC_API_KEY`, `SECRET_KEY`, `INVITE_CODE`, `GUEST_AI_CALLS`, `GUEST_REPORTS`. Settings for the live site (step 11, in `render.yaml`): `DATA_DIR` (where `auth.db` and `accounts/` live; default `backend/`), `COOKIE_SECURE=1`, `DEMO_ENABLED=0`, `ALLOWED_ORIGINS` (dev CORS only).
 
 ## Running it
 
@@ -94,12 +95,14 @@ George wrote these and must be able to explain them. **Propose and explain; don'
 2. **Messier menus (parked).** Test menu import on real messy menus and report what breaks.
 3. **Matcher cutoff (left as is).** difflib 0.45 gives poor "Or use:" suggestions; ~0.6 would be cleaner. Core logic.
 4. **Rules of thumb to review (George).** `backend/data/business_rules.csv` holds starting values, not researched figures.
+5. **`auth.db` has no migrations.** It uses `create_all` (new tables only); changing an `Account` column needs Alembic set up for it too.
+6. **One server process only.** Login limits, open databases and report jobs live in memory; don't run more than one instance or worker.
 
 ## Roadmap
 
 1–10 done (detail in `docs/decisions.md`): price history · menu editor · ingredients · sales and date ranges · setup and reset · benchmark list · AI imports (menu, invoice, till, guided setup) · monthly routine (price-rise alerts, own-price share) · business checks · logins (one database per account, invite code, Try the demo). Also done: the "deli counter" redesign and the report agent.
 
-11. **Deployment**, reachable by a public link. Includes: the login token in an httpOnly cookie instead of localStorage, a login-attempt limit, Alembic for schema changes across account databases, a persistent disk for `auth.db` and `accounts/`, CORS for the real origin.
+11. **Deployment** on Render: built (28 Sep 2026): httpOnly login cookie, login-attempt limits, `DEMO_ENABLED` switch (off live), Alembic migrations, one server for page and API, `DATA_DIR` on a persistent disk, `Dockerfile` + `render.yaml`. **George to deploy** (`docs/deploy.md`).
 12. **README write-up:** what the app does, how it works, which parts George wrote, how Claude Code was used.
 
 **Out of scope:** review analysis, demand/rota forecasting, menu-gap analysis, scraping supplier sites, live integrations beyond one Square sandbox.
