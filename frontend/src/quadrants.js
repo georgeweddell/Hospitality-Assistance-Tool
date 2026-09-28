@@ -5,7 +5,7 @@
 // `action` is the short label for the Overview's opportunity cards.
 export const QUADRANTS = {
   Star: { color: '#2e5a36', text: '#2e5a36', tint: '#d6e5d3', action: 'Keep and feature', meaning: 'Popular and profitable' },
-  Plowhorse: { color: '#d9a21e', text: '#7a5600', tint: '#f3e1b0', action: 'Reprice or re-engineer', meaning: 'Popular, low margin' },
+  Plowhorse: { color: '#d4661c', text: '#8a3a06', tint: '#f7d0ae', action: 'Reprice or re-engineer', meaning: 'Popular, low margin' },
   Puzzle: { color: '#2b4c9b', text: '#2b4c9b', tint: '#dce3f2', action: 'Promote', meaning: 'Profitable, rarely ordered' },
   Dog: { color: '#6a2e57', text: '#6a2e57', tint: '#eadae4', action: 'Review for removal', meaning: 'Low margin, few sales' },
 }

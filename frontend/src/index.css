@@ -36,6 +36,10 @@
   --danger: #a3261a;
   --danger-bg: #f6dcd2;
 
+  /* Corners: things you press (buttons, tabs, toggles, dropdowns) have small
+     rounded corners; only small labels (chips, counts, the hint "i") are pills. */
+  --radius-control: 8px;
+
   color-scheme: light;
   font-family: var(--font-sans);
   font-size: 15px;
@@ -141,10 +145,11 @@ body {
     gap: 0.5rem;
     padding: 0.6875rem 1.125rem;
     border: 1.5px solid var(--ink);
-    border-radius: 999px;
+    border-radius: var(--radius-control);
     font-family: var(--font-mono);
     font-size: 0.8125rem;
     font-weight: 500;
+    text-align: center;
     line-height: 1.25;
     text-transform: lowercase;   /* labels, like the nav and titles */
     white-space: nowrap;
@@ -193,7 +198,7 @@ body {
     font-size: 1.125rem;
     line-height: 1;
     cursor: pointer;
-    border-radius: 999px;
+    border-radius: var(--radius-control);
   }
   .btn-icon:hover {
     color: var(--danger);
@@ -342,10 +347,11 @@ body {
   .tab {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.375rem;
     padding: 0.5rem 0.9375rem;
     border: 1.5px solid var(--ink);
-    border-radius: 999px;
+    border-radius: var(--radius-control);
     background: transparent;
     color: var(--ink);
     font-family: var(--font-mono);
@@ -369,12 +375,13 @@ body {
     gap: 0.25rem;
     padding: 0.1875rem;
     border: 1.5px solid var(--ink);
-    border-radius: 999px;
+    border-radius: var(--radius-control);
   }
   .segmented button {
     padding: 0.375rem 0.875rem;
     border: none;
-    border-radius: 999px;
+    border-radius: 5px;   /* the frame's 8px, less its padding: the corners nest */
+    text-align: center;
     background: transparent;
     color: var(--ink);
     font-family: var(--font-mono);
@@ -502,14 +509,16 @@ body {
     color: var(--line-strong);
   }
 
-  /* A select drawn as a pill (the period picker). */
+  /* A select drawn like a button (the period picker; named before pills were dropped). */
   .input-pill {
     padding: 0.625rem 1.125rem;
     border-color: var(--ink);
-    border-radius: 999px;
+    border-radius: var(--radius-control);
     background: transparent;
     font-family: var(--font-mono);
     font-size: 0.8125rem;
+    text-align: center;
+    text-align-last: center;   /* a select's shown option ignores text-align alone */
     cursor: pointer;
   }
 
@@ -641,7 +650,7 @@ body {
   .ticket-change {
     align-self: flex-start;
     padding: 0.25rem 0.625rem;
-    border-radius: 999px;
+    border-radius: 6px;
     background: var(--ink);
     color: var(--bg);
     font-family: var(--font-mono);
