@@ -4,7 +4,7 @@
 
 *Docket* is the kitchen word for an order ticket.
 
-> **Live demo:** *link to follow (deployment is set up; see [docs/deploy.md](docs/deploy.md))*
+> **Live:** [docket-u00z.onrender.com](https://docket-u00z.onrender.com/) (accounts by invite; get in touch for access)
 
 I built it as a portfolio project for Forward Deployed Engineer and Solutions Engineer roles. It was inspired by my own time line-cooking in a Neapolitan pizzeria. The aim was one complete journey that works from start to finish: messy real-world input, AI that reads it, code that does the maths, and a person who checks both.
 
