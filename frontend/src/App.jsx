@@ -15,7 +15,7 @@ import SettingsPage from './components/SettingsPage'
 import SetupPage from './components/SetupPage'
 import SetupChecklist from './components/SetupChecklist'
 import { setupComplete } from './setup'
-import RangePicker from './components/RangePicker'
+import RangePicker, { CoverageChips } from './components/RangePicker'
 import LoginPage from './components/LoginPage'
 import ReportsPage from './components/ReportsPage'
 
@@ -214,7 +214,7 @@ function Workspace({ account }) {
   const showPicker = RANGED_PAGES.includes(page) && range && lastSale !== undefined
   const picker = showPicker && (
     <RangePicker range={range} lastSale={lastSale}
-                 coverage={data?.range === range ? data.coverage : null} onChange={changeRange} />
+                 onChange={changeRange} />
   )
 
   return (
@@ -223,6 +223,7 @@ function Workspace({ account }) {
       page={page}
       title={page === 'menu' && id ? null : TITLES[page]}
       toolbar={picker}
+      notes={showPicker && data?.range === range ? <CoverageChips range={range} coverage={data.coverage} /> : null}
       badges={{ menu: data?.incomplete.length }}
     >
       {content}

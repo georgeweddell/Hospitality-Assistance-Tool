@@ -35,7 +35,8 @@ function Brand() {
 }
 
 // account: the signed-in account (auth/me); a guest sees how much AI is left.
-function Layout({ page, title, toolbar, account, badges = {}, children }) {
+// notes: status chips for the title row (e.g. how complete the period's sales are).
+function Layout({ page, title, toolbar, notes, account, badges = {}, children }) {
   const onSettings = page === 'settings'
   return (
     <div className="min-h-screen bg-bg text-ink">
@@ -52,22 +53,30 @@ function Layout({ page, title, toolbar, account, badges = {}, children }) {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-2.5">
-          {account?.kind === 'guest' && (
-            <a href="#/settings" className="chip chip-warn num" title="Demo account">
-              guest · {account.ai_calls_left} AI left
-            </a>
-          )}
           {toolbar}
           <a href={`#/${SETTINGS.page}`} aria-label={SETTINGS.label} title={SETTINGS.label}
              aria-current={onSettings ? 'page' : undefined}
-             className={`flex h-11 w-11 items-center justify-center rounded-full border-[1.5px] border-ink ${onSettings ? 'bg-ink text-bg' : 'hover:bg-surface'}`}>
+             className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[1.5px] border-ink ${onSettings ? 'bg-ink text-bg' : 'hover:bg-surface'}`}>
             <NavIcon path={SETTINGS.icon} />
           </a>
         </div>
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-7 sm:px-10 lg:py-9">
-        {title && <h1 className="page-title mb-8">{title}</h1>}
+        {/* Status chips sit beside the page title, not in the header row, which has no room for them. */}
+        {(title || notes || account?.kind === 'guest') && (
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
+            {title ? <h1 className="page-title">{title}</h1> : <span />}
+            <span className="flex flex-wrap items-center gap-2">
+              {notes}
+              {account?.kind === 'guest' && (
+                <a href="#/settings" className="chip chip-warn num" title="Demo account">
+                  guest · {account.ai_calls_left} AI left
+                </a>
+              )}
+            </span>
+          </div>
+        )}
         {children}
       </main>
     </div>
