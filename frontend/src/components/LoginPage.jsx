@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getJson, postJson } from '../api'
+import PublicLayout from './PublicLayout'
 
 // Signing in (backend: auth.py): sign in, create an account with the invite
 // code, or try the demo (a private guest copy of the demo pizzeria). The demo
@@ -43,12 +44,8 @@ function LoginPage({ onSignedIn }) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg px-4 py-10 text-ink">
-      <div className="w-full max-w-md space-y-6">
-        <p className="text-center text-[56px] font-extrabold leading-none tracking-[-0.04em]">
-          docket<span className="text-accent">.</span>
-        </p>
-
+    <PublicLayout bare>
+      <div className="mx-auto w-full max-w-md space-y-6">
         <form onSubmit={submit} className="card space-y-4 p-6">
           <div className="segmented w-full" role="group" aria-label="Sign in or create an account">
             <button type="button" className="flex-1" aria-pressed={mode === 'signin'} onClick={() => setMode('signin')}>sign in</button>
@@ -74,6 +71,12 @@ function LoginPage({ onSignedIn }) {
           <button type="submit" disabled={busy !== null} className="btn btn-secondary w-full">
             {busy === 'form' ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}
           </button>
+          {mode === 'signup' && (
+            <p className="label m-0 text-center">
+              By creating an account you agree to the <a href="#/terms" className="link">terms</a> and
+              the <a href="#/privacy" className="link">privacy notice</a>.
+            </p>
+          )}
         </form>
 
         {demo && (
@@ -82,7 +85,7 @@ function LoginPage({ onSignedIn }) {
           </button>
         )}
       </div>
-    </div>
+    </PublicLayout>
   )
 }
 

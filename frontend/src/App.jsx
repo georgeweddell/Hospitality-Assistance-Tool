@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { SIGNED_OUT, getJson } from './api'
-import useHashRoute from './useHashRoute'
+import useHashRoute, { PAGES } from './useHashRoute'
 import { presets, previousRange, rangeQuery } from './dateRange'
 import Layout from './components/Layout'
 import OverviewPage from './components/OverviewPage'
@@ -18,6 +18,9 @@ import { setupComplete } from './setup'
 import RangePicker, { CoverageChips } from './components/RangePicker'
 import LoginPage from './components/LoginPage'
 import ReportsPage from './components/ReportsPage'
+import LandingPage from './components/LandingPage'
+import PrivacyPage from './components/PrivacyPage'
+import TermsPage from './components/TermsPage'
 
 const TITLES = {
   overview: 'overview',
@@ -64,7 +67,9 @@ function NoSales() {
 
 // The app once signed in: loads the shared data and picks the page.
 function Workspace({ account }) {
-  const { page, id } = useHashRoute()
+  const route = useHashRoute()
+  const { id } = route
+  const page = PAGES.includes(route.page) ? route.page : 'overview'   // '#/' or '#/login' once signed in
   const [lastSale, setLastSale] = useState(undefined)   // undefined = not loaded yet
   const [range, setRange] = useState(loadRange)
   const [data, setData] = useState(null)
@@ -233,10 +238,14 @@ function Workspace({ account }) {
 
 // On load, asks the server who is signed in (the login is an httpOnly cookie
 // this page can't read): the workspace, with the account (for the guest chip
-// and Settings), or the login page. Nothing shows until it knows, so the login
+// and Settings), or a public page. Nothing shows until it knows, so the login
 // page doesn't flash. Signing out, or any request answered 401, comes back to
 // the login page (api.js SIGNED_OUT).
+// Public pages: privacy and terms open for anyone, straight away. Signed out,
+// the bare address ('#/') is the landing page and anything else the login page
+// (so an app link after the login has expired asks to sign in).
 function App() {
+  const { page } = useHashRoute()
   const [account, setAccount] = useState(undefined)   // undefined = not known yet, null = signed out
 
   useEffect(() => {
@@ -253,8 +262,10 @@ function App() {
     return () => { ignore = true }
   }, [])
 
+  if (page === 'privacy') return <PrivacyPage signedIn={!!account} />
+  if (page === 'terms') return <TermsPage signedIn={!!account} />
   if (account === undefined) return null
-  if (account === null) return <LoginPage onSignedIn={setAccount} />
+  if (account === null) return page === '' ? <LandingPage /> : <LoginPage onSignedIn={setAccount} />
   return <Workspace account={account} />
 }
 

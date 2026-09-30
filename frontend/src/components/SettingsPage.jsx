@@ -167,6 +167,11 @@ function SettingsPage({ onReset, onChanged, account }) {
       )}
       {error && <p className="alert-error">{error}</p>}
 
+      <p className="flex gap-6">
+        <a href="#/privacy" className="label hover:text-ink">privacy &amp; cookies</a>
+        <a href="#/terms" className="label hover:text-ink">terms</a>
+      </p>
+
       <ConfirmDialog
         open={asking !== null}
         title={asking?.confirmTitle}
