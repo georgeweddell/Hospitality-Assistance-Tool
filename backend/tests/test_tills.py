@@ -15,8 +15,8 @@ import main
 from menu_engineering import get_dish_units_sold
 from models import DishType, Import, ImportStatus, SalesRecord, TillItemAlias
 from schemas import SalesApplyIn, TillItemChoice, TillMappingIn
-from tills import (ImportProblem, apply_sales, parse_date, parse_sales, read_csv, review_sales,
-                   undo_sales_import)
+from tills import (ImportProblem, apply_sales, dish_suggestions, parse_date, parse_quantity, parse_sales, read_csv,
+                   review_sales, undo_sales_import)
 
 TODAY = date(2026, 9, 24)
 SEP = (date(2026, 9, 1), date(2026, 9, 30))
@@ -97,6 +97,56 @@ def test_bad_rows_are_counted_not_guessed():
 def test_semicolon_files_are_read():
     header, rows = read_csv("Date;Item;Qty\n18/09/2026;Margherita;2\n")
     assert header == ["Date", "Item", "Qty"] and rows == [["18/09/2026", "Margherita", "2"]]
+
+
+@pytest.mark.parametrize("value, expected", [
+    ("2", 2), ("2.0", 2), ("-1", -1),
+    ("1,200", 1200),        # a thousands comma: three digits after it
+    ("1,00", 1),            # a decimal comma, as European tills write it (not 100)
+    ("-1,5", -1.5),
+    ("two", None),
+])
+def test_quantities(value, expected):
+    assert parse_quantity(value) == expected
+
+
+def test_report_lines_above_the_header_are_passed_over():
+    # Two report lines, a blank line, then the 3-column header and rows.
+    text = "SumUp Sales Report\nPeriod;01.08.2026 - 31.08.2026\n\nDate;Description;Quantity\n01.08.2026;CHIPS;1,00\n"
+    header, rows = read_csv(text)
+    assert header == ["Date", "Description", "Quantity"] and rows == [["01.08.2026", "CHIPS", "1,00"]]
+
+
+def test_total_lines_are_left_out():
+    text = CSV + "19/09/2026,,Total,9,,,\n,,Grand Total,15,,,\n"
+    totals, skipped = parse_sales(*read_csv(text), MAPPING)
+    assert "Total" not in totals and "Grand Total" not in totals
+    assert skipped == {"Total lines": 2}
+
+
+def test_rows_marked_void_or_cancelled_are_left_out():
+    # 18 Sep Margherita: 2 + 1 - 1 refunded = 2; the voided row doesn't count.
+    text = CSV + "18/09/2026,12:50,Margherita,1,,Void,\n"
+    mapping = MAPPING.model_copy(update={"skip_column": "Event Type", "skip_values": "Void, Cancelled"})
+    totals, skipped = parse_sales(*read_csv(text), mapping)
+    assert totals["Margherita"] == {date(2026, 9, 18): 2}
+    assert skipped == {"Void (left out)": 1}
+
+
+def test_a_size_column_splits_items_sold_in_more_than_one_size():
+    # Fish & Chips comes as Regular and Small, so each size is its own item;
+    # Chips only ever as Regular, so it keeps its plain name (and still matches the dish "Chips").
+    text = ("Date,Item,Qty,Size\n2026-09-18,Fish & Chips,2,Regular\n2026-09-18,Fish & Chips,1,Small\n"
+            "2026-09-18,Chips,3,Regular\n")
+    mapping = TillMappingIn(date_column="Date", item_column="Item", quantity_column="Qty", date_format="%Y-%m-%d",
+                            size_column="Size")
+    totals, _ = parse_sales(*read_csv(text), mapping)
+    assert set(totals) == {"Fish & Chips · Regular", "Fish & Chips · Small", "Chips"}
+    assert totals["Fish & Chips · Small"] == {date(2026, 9, 18): 1}
+
+
+def test_suggestions_ignore_capital_letters(db, menu):
+    assert [s.name for s in dish_suggestions([menu["margherita"], menu["diavola"]], "DIAVOLA PIZZA")] == ["Diavola"]
 
 
 def test_a_missing_column_is_reported():
@@ -185,12 +235,20 @@ def test_sales_outside_the_menu_dates_are_saved_with_a_warning(db, add_dish, cos
     assert diavola.flags == ["off_menu"]
 
 
-@pytest.mark.parametrize("problem", ["undecided item", "future date", "same file", "nothing to save"])
+def test_a_row_dated_after_today_is_left_out_not_the_whole_file(db, menu):
+    # A till clock set to 2027 on one row: the rest of the file is saved.
+    text = CSV + "18/09/2027,12:00,Diavola,5,,Payment,\n"
+    review = review_sales(db, text, HASH, mapping=MAPPING)
+    assert review.skipped == {"Dated after today": 1}
+
+    apply(db, menu, text=text)
+    assert db.query(SalesRecord).filter(SalesRecord.dish_id == menu["diavola"].id).one().units_sold == 2
+
+
+@pytest.mark.parametrize("problem", ["undecided item", "same file", "nothing to save"])
 def test_apply_refuses(db, menu, problem):
     if problem == "undecided item":
         kw = {"choices": []}                     # MARG 12 has no dish
-    elif problem == "future date":
-        kw = {"text": CSV.replace("19/09/2026", "25/09/2026")}
     elif problem == "same file":
         apply(db, menu)
         kw = {}

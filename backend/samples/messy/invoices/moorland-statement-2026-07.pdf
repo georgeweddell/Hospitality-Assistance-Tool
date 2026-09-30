@@ -1,0 +1,73 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [10 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold /Encoding /WinAnsiEncoding >>
+endobj
+7 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Times-Roman /Encoding /WinAnsiEncoding >>
+endobj
+8 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Times-Bold /Encoding /WinAnsiEncoding >>
+endobj
+9 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Times-Italic /Encoding /WinAnsiEncoding >>
+endobj
+10 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R /F4 6 0 R /F5 7 0 R /F6 8 0 R /F7 9 0 R >> >> /Contents 11 0 R >>
+endobj
+11 0 obj
+<< /Length 1458 >>
+stream
+BT /F4 16 Tf 50.0 790.0 Td (MOORLAND MEATS LTD \(SAMPLE\)) Tj ET
+BT /F3 8 Tf 50.0 774.0 Td (FAMILY BUTCHERS SINCE 1962) Tj ET
+BT /F3 8 Tf 50.0 763.0 Td (UNIT 7 MOOR LANE IND EST, SAMPLETON SA1 7MM) Tj ET
+BT /F3 8 Tf 50.0 752.0 Td (VAT NO GB 000 0002 00 \(SAMPLE\)) Tj ET
+BT /F4 18 Tf 447.8 790.0 Td (STATEMENT) Tj ET
+BT /F4 8 Tf 381.8 770.0 Td (DATE: 31/07/2026   ACCOUNT: TIDE01) Tj ET
+BT /F3 9 Tf 50.0 700.0 Td (The Tidewater \(sample\)) Tj ET
+BT /F3 9 Tf 50.0 689.0 Td (2 Quay Street, Porthsample) Tj ET
+BT /F3 9 Tf 50.0 678.0 Td (Cornwall TR0 0AA) Tj ET
+BT /F4 8 Tf 50.0 640.0 Td (DATE        REF        DETAIL              DEBIT      CREDIT    BALANCE) Tj ET
+BT /F3 8 Tf 50.0 624.0 Td (01/06/2026             BALANCE B/FWD                                 0.00) Tj ET
+BT /F3 8 Tf 50.0 611.0 Td (02/06/2026  44120      INVOICE              456.98                 456.98) Tj ET
+BT /F3 8 Tf 50.0 598.0 Td (30/06/2026             PAYMENT - THANK YOU              456.98       0.00) Tj ET
+BT /F3 8 Tf 50.0 585.0 Td (30/07/2026  44377      INVOICE              660.51                 660.51) Tj ET
+BT /F4 8 Tf 50.0 562.0 Td (CURRENT   30 DAYS   60 DAYS   90+ DAYS      AMOUNT DUE) Tj ET
+BT /F3 8 Tf 50.0 549.0 Td ( 660.51      0.00      0.00       0.00    £660.51) Tj ET
+BT /F3 8 Tf 50.0 522.0 Td (PLEASE REMIT TO: SAMPLE BANK  SORT 00-00-00  ACC 00000000) Tj ET
+BT /F3 6 Tf 50.0 40.0 Td (Made-up sample document for testing Docket. Not a real business.) Tj ET
+endstream
+endobj
+xref
+0 12
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000116 00000 n 
+0000000213 00000 n 
+0000000315 00000 n 
+0000000410 00000 n 
+0000000510 00000 n 
+0000000609 00000 n 
+0000000707 00000 n 
+0000000807 00000 n 
+0000000995 00000 n 
+trailer
+<< /Size 12 /Root 1 0 R >>
+startxref
+2506
+%%EOF

@@ -151,7 +151,88 @@ def test_review_spots_an_invoice_already_imported(db, stock):
     assert review_invoice(db, draft(mozz_line())).already_imported == record.id
 
 
+def test_a_reprinted_copy_is_spotted_even_if_the_supplier_is_read_differently(db, stock):
+    # Same invoice number and date; the supplier's name read as "Vesuvio Foods" this time.
+    record = apply_invoice(db, apply_in(mozz_apply(stock)), today=TODAY)
+    copy = InvoiceDraft(supplier="Vesuvio Foods", invoice_number="inv-1001", invoice_date=INVOICE_DATE,
+                        lines=[mozz_line()])
+    assert review_invoice(db, copy).already_imported == record.id
+
+    # The same number on another date is another supplier's invoice, not a copy.
+    other = copy.model_copy(update={"invoice_date": date(2026, 9, 1)})
+    assert review_invoice(db, other).already_imported is None
+
+
+def test_a_receipt_line_with_only_a_price_is_one_pack_at_that_price(db, stock):
+    # "00 FLOUR 16KG   14.99" on a till receipt: 1 pack of 16 kg at £14.99 = £0.000937/g
+    [line] = review_invoice(db, draft(mozz_line(description="00 FLOUR 16KG", likely_ingredient="00 flour",
+                                                pack_count=1, pack_size=16, quantity=None, unit_price=None,
+                                                line_total=14.99))).lines
+    assert (line.quantity, line.unit_price) == (1, 14.99)
+    assert line.price_per_unit == pytest.approx(14.99 / 16000)
+
+
+def test_imperial_packs_convert_to_grams_and_ml():
+    # 5 lb of bacon at £17.95: 5 x 453.59237 g = 2,267.96 g -> £0.0079147/g
+    assert line_price(1, 5, "lb", 17.95, UnitType.GRAM) == pytest.approx(17.95 / 2267.96185)
+    # 20 steaks of 8 oz at £5.40 each, priced per steak: 8 x 28.3495 g = 226.8 g -> £0.02381/g
+    assert line_price(1, 8, "oz", 5.40, UnitType.GRAM) == pytest.approx(5.40 / 226.796185)
+    # 4 pints of milk at £1.95: 4 x 568.26 ml = 2,273.0 ml -> £0.000858/ml
+    assert line_price(1, 4, "pint", 1.95, UnitType.ML) == pytest.approx(1.95 / 2273.045)
+    # 15 dozen eggs at £29.25: 180 eggs -> £0.1625 each
+    assert line_price(1, 15, "dozen", 29.25, UnitType.EACH) == pytest.approx(0.1625)
+
+
+def test_credit_notes_and_statements_price_nothing(db, stock):
+    for kind in ("credit_note", "statement"):
+        credit = InvoiceDraft(supplier=SUPPLIER, invoice_number="CN-1", invoice_date=INVOICE_DATE,
+                              document_type=kind, lines=[mozz_line(quantity=-1, line_total=-93.60)])
+        [line] = review_invoice(db, credit).lines
+        # Still matched, so the owner could switch it on, but ignored by default.
+        assert (line.action, line.ingredient_id) == ("ignore", stock["mozzarella"].id)
+
+
+def test_a_line_with_nothing_delivered_is_ignored_and_not_remembered(db, stock):
+    # "Samphire - NOT AVAILABLE": quantity 0 at £12.00 isn't a price paid.
+    [line] = review_invoice(db, draft(mozz_line(quantity=0, line_total=0))).lines
+    assert line.action == "ignore"
+
+    apply_invoice(db, apply_in(mozz_apply(stock, description="FLOUR", ingredient_id=stock["flour"].id,
+                                          unit_price=15.60),
+                               InvoiceApplyLine(description="MOZZ FDL 1KG x12", action="ignore", quantity=0)),
+                  today=TODAY)
+    # Next week it's delivered: not remembered as "ignore", so it's matched as usual.
+    [line] = review_invoice(db, draft(mozz_line(), number="INV-1002")).lines
+    assert (line.action, line.remembered) == ("update", False)
+
+
 # --- Apply -------------------------------------------------------------------------
+
+def test_two_lines_for_one_ingredient_are_combined(db, stock):
+    # 2 cases at £93.60 (24 kg) and 1 case at £99.00 (12 kg):
+    # (2 x 93.60 + 1 x 99.00) / 36,000 g = 286.20 / 36,000 = £0.00795/g
+    record = apply_invoice(db, apply_in(mozz_apply(stock, quantity=2),
+                                        mozz_apply(stock, description="MOZZ 2", quantity=1, unit_price=99.00)),
+                           today=TODAY)
+
+    prices = db.query(IngredientPrice).filter(IngredientPrice.import_id == record.id).all()
+    assert len(prices) == 1
+    assert prices[0].price_per_unit == pytest.approx(0.00795)
+    remembered = {a.description for a in db.query(SupplierAlias).all()}
+    assert {"mozz fdl 1kg x12", "mozz 2"} <= remembered
+
+
+def test_two_lines_for_one_new_ingredient_are_combined(db, stock):
+    # Sirloin 4.35 kg at £25.90/kg and 3.90 kg at £27.90/kg, priced per kg:
+    # (4.35 x 25.90 + 3.90 x 27.90) / 8,250 g = 221.475 / 8,250 = £0.026845/g
+    joint = dict(action="new", new_ingredient_name="sirloin", pack_count=1, pack_size=1, pack_unit="kg")
+    apply_invoice(db, apply_in(InvoiceApplyLine(description="SIRLOIN CW", quantity=4.35, unit_price=25.90, **joint),
+                               InvoiceApplyLine(description="SIRLOIN CW 2", quantity=3.90, unit_price=27.90, **joint)),
+                  today=TODAY)
+
+    sirloin = db.query(Ingredient).filter(Ingredient.name == "sirloin").one()
+    assert best_price(db, sirloin.id).price_per_unit == pytest.approx(0.026845, abs=1e-6)
+
 
 def test_apply_records_a_dated_invoice_price(db, stock):
     record = apply_invoice(db, apply_in(mozz_apply(stock)), today=TODAY)
@@ -184,7 +265,7 @@ def test_one_bad_line_means_nothing_is_saved(db, stock):
 
 
 @pytest.mark.parametrize("problem", [
-    "duplicate invoice", "same file", "future date", "same ingredient twice", "nothing to save", "name taken",
+    "duplicate invoice", "same file", "future date", "nothing to save", "name taken", "new name, two kinds of unit",
 ])
 def test_apply_refuses(db, stock, problem):
     if problem in ("duplicate invoice", "same file"):
@@ -193,10 +274,14 @@ def test_apply_refuses(db, stock, problem):
         "duplicate invoice": apply_in(mozz_apply(stock)),
         "same file": apply_in(mozz_apply(stock), number="INV-9999", file_hash="abc"),
         "future date": apply_in(mozz_apply(stock), invoice_date=date(2026, 9, 25)),
-        "same ingredient twice": apply_in(mozz_apply(stock), mozz_apply(stock, description="MOZZ 2")),
         "nothing to save": apply_in(InvoiceApplyLine(description="DELIVERY", action="ignore")),
         "name taken": apply_in(InvoiceApplyLine(description="EGGS", action="new", new_ingredient_name="Egg",
                                                 pack_count=1, pack_size=30, pack_unit="each", unit_price=8.40)),
+        "new name, two kinds of unit": apply_in(
+            InvoiceApplyLine(description="CREAM 2L", action="new", new_ingredient_name="cream",
+                             pack_count=1, pack_size=2, pack_unit="l", unit_price=7.20),
+            InvoiceApplyLine(description="CREAM 1KG", action="new", new_ingredient_name="cream",
+                             pack_count=1, pack_size=1, pack_unit="kg", unit_price=4.90)),
     }[problem]
 
     with pytest.raises(ImportProblem):

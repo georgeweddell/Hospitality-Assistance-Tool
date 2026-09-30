@@ -20,14 +20,17 @@ from anthropic import Anthropic
 from dotenv import load_dotenv
 
 from schemas import TillColumnsDraft, TillItemHints, TillMappingIn
-from tills import SAMPLE_ROWS, parse_date
+from tills import SAMPLE_ROWS, parse_date, status_columns
 
 load_dotenv()
 
 # Small, text-only work: Haiku is enough, and much cheaper than Sonnet.
 MODEL = "claude-haiku-4-5-20251001"
 DATE_FORMATS = ["%d/%m/%Y", "%Y-%m-%d", "%m/%d/%Y", "%d-%m-%Y", "%d.%m.%Y", "%d/%m/%y"]
-PERSONAL = re.compile(r"customer|e-?mail|phone|mobile|card|address|postcode", re.IGNORECASE)
+# Columns blanked before Claude sees the sample rows: customer details, and free text or staff
+# names that often hold them ("Notes": "call 07700 900123 when ready").
+PERSONAL = re.compile(r"customer|e-?mail|phone|mobile|card|address|postcode|note|comment|staff|server|employee|"
+                      r"cashier|operator|waiter", re.IGNORECASE)
 
 _client = None
 
@@ -58,6 +61,8 @@ Say which column holds each of these, using the column names exactly as in the h
 - quantity_column: how many were sold on that row.
 - date_format: how the dates are written, one of {", ".join(DATE_FORMATS)}. UK tills usually write the day first.
 - refund_column and refund_value: only if refunds are marked by a column value (e.g. "Event Type" = "Refund") rather than a negative quantity. Otherwise leave both empty.
+- size_column: only if a separate column holds the size or variation of the item (e.g. "Price Point Name" with Regular / Small). Otherwise empty.
+- skip_column and skip_values: only if a column marks rows that aren't sales, such as voids or cancelled orders (e.g. "Status" with "Cancelled"). skip_values: the values seen in the sample rows or usual for this till that mean "not a sale", comma-separated (e.g. "Void, Cancelled"). Never refunds (those are netted) or ordinary sales values.
 
 Leave a field empty if no column fits. Don't guess.
 """
@@ -94,9 +99,26 @@ def check_columns(draft, header, rows):
     if date_format is None:
         return None
 
+    size = draft.size_column if draft.size_column in header and draft.size_column != draft.item_column else None
+    # Claude sees 5 rows, which rarely include a refund or a void: fill any gap from the whole file.
+    found = status_columns(header, rows, skip=required)
+    if refund is None and found[0]:
+        draft = draft.model_copy(update={"refund_column": found[0], "refund_value": found[1]})
+        refund = found[0]
+    if not (draft.skip_column in header and draft.skip_values) and found[2]:
+        draft = draft.model_copy(update={"skip_column": found[2], "skip_values": found[3]})
+    # Rows to leave out, never including the refund value (refunds are netted, not dropped).
+    skip, skip_values = None, None
+    if draft.skip_column in header and draft.skip_values:
+        refund_value = (draft.refund_value or "").strip().lower() if refund == draft.skip_column else None
+        values = [v.strip() for v in draft.skip_values.split(",") if v.strip() and v.strip().lower() != refund_value]
+        if values:
+            skip, skip_values = draft.skip_column, ", ".join(values)
+
     return TillMappingIn(date_column=draft.date_column, item_column=draft.item_column,
                          quantity_column=draft.quantity_column, date_format=date_format,
-                         refund_column=refund, refund_value=draft.refund_value if refund else None)
+                         refund_column=refund, refund_value=draft.refund_value if refund else None,
+                         size_column=size, skip_column=skip, skip_values=skip_values)
 
 
 def propose_columns(header, rows):

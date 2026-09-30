@@ -24,7 +24,8 @@ The overlap rules (agreed with George):
 
 import csv
 import io
-from collections import defaultdict
+import re
+from collections import Counter, defaultdict
 from datetime import date, datetime
 from difflib import get_close_matches
 
@@ -33,6 +34,7 @@ from models import Dish, Import, ImportKind, ImportStatus, SalesRecord, TillItem
 from schemas import DishSuggestion, SalesItemOut, SalesReviewOut, TillMappingIn
 
 SAMPLE_ROWS = 5   # rows shown to help choose columns (and, in till_ai.py, all Claude sees)
+TOTAL_ROWS = {"total", "totals", "subtotal", "sub total", "grand total"}   # summary lines, not sales
 
 
 # --- Reading the file ------------------------------------------------------------------
@@ -46,16 +48,30 @@ def decode(content: bytes) -> str:
 
 
 def read_csv(text):
-    """(header, rows). Works out whether the file uses commas, semicolons or tabs."""
-    try:
-        dialect = csv.Sniffer().sniff(text[:4096], delimiters=",;\t")
-    except csv.Error:
-        dialect = csv.excel
-    lines = [row for row in csv.reader(io.StringIO(text), dialect) if any(cell.strip() for cell in row)]
-    if not lines:
-        raise ImportProblem("The file is empty")
-    header = [cell.strip() for cell in lines[0]]
-    return header, lines[1:]
+    """
+    (header, rows).
+
+    The separator is whichever of comma, semicolon or tab splits the file's
+    usual row into the most columns: "01.08.2026;CHIPS;1,00" is 3 columns
+    with semicolons but 2 with commas, so semicolons win.
+
+    Some tills put report lines above the header ("Sales Report", "Period;...").
+    The header is the first row as wide as most of the file's rows, so those
+    lines are passed over. Example: 5 short report lines, then a 12-column
+    header and 12-column rows -> the header is line 6.
+    """
+    best = None   # (usual width, lines)
+    for separator in (",", ";", "\t"):
+        lines = [row for row in csv.reader(io.StringIO(text), delimiter=separator) if any(cell.strip() for cell in row)]
+        if not lines:
+            raise ImportProblem("The file is empty")
+        width = Counter(len(row) for row in lines).most_common(1)[0][0]
+        if best is None or width > best[0]:
+            best = (width, lines)
+    usual_width, lines = best
+    start = next(i for i, row in enumerate(lines) if len(row) >= usual_width)
+    header = [cell.strip() for cell in lines[start]]
+    return header, lines[start + 1:]
 
 
 def header_signature(header):
@@ -78,14 +94,77 @@ def parse_date(value, date_format):
 
 
 def parse_quantity(value):
-    """ "2", "2.0", "-1", "1,200" -> a number. None if it isn't one."""
+    """
+    "2", "2.0", "-1", "1,200" -> a number. None if it isn't one.
+    A comma followed by one or two digits is a decimal comma, as European
+    tills write it: "1,00" -> 1 and "-1,5" -> -1.5 (not 100 and -15).
+    """
+    text = (value or "").strip()
+    if re.fullmatch(r"-?\d+,\d{1,2}", text):
+        text = text.replace(",", ".")
     try:
-        return float((value or "").strip().replace(",", ""))
+        return float(text.replace(",", ""))
     except ValueError:
         return None
 
 
-def parse_sales(header, rows, mapping):
+def is_total_row(item):
+    """ "Total", "GRAND TOTAL", "Total for 01/09/2026" -> True: a summary line, not a sale."""
+    name = normalise(item)
+    return name in TOTAL_ROWS or name.startswith("total for ")
+
+
+def skip_values(mapping):
+    """The values that mean "leave this row out": "Void, Cancelled" -> {"void", "cancelled"}."""
+    return {normalise(v) for v in (mapping.skip_values or "").split(",") if v.strip()}
+
+
+REFUND_WORDS = re.compile(r"^(refund|refunded|return|returned)$")
+LEAVE_OUT_WORDS = re.compile(r"void|cancel|reject|declin|fail")
+
+
+def status_columns(header, rows, skip=()):
+    """
+    Where the file marks refunds and rows that aren't sales, read from every row
+    (Claude sees only the first few, which are usually ordinary sales).
+    A column qualifies if it holds only a few different values (a status, not
+    a name). Returns (refund column, refund value, skip column, skip values):
+    e.g. ("Event Type", "Refund", "Event Type", "Void") for Payment/Refund/Void.
+    """
+    refund = leave_out = (None, None)
+    for i, name in enumerate(header):
+        if name in skip:
+            continue
+        values = {row[i].strip() for row in rows if i < len(row) and row[i].strip()}
+        if not values or len(values) > 8:
+            continue
+        refund_values = sorted(v for v in values if REFUND_WORDS.match(v.lower()))
+        skip_values = sorted(v for v in values if LEAVE_OUT_WORDS.search(v.lower()))
+        if refund_values and refund[0] is None:
+            refund = (name, refund_values[0])
+        if skip_values and leave_out[0] is None:
+            leave_out = (name, ", ".join(skip_values))
+    return (*refund, *leave_out)
+
+
+def size_items(header, rows, mapping):
+    """
+    Item names sold in more than one size in the size column, e.g. "Fish & Chips"
+    as Regular and Small. Only these get the size added to the name
+    ("Fish & Chips · Small"); an item always sold as "Regular" keeps its plain
+    name, so it still matches the dish of the same name.
+    """
+    if not mapping.size_column:
+        return set()
+    item_i, size_i = header.index(mapping.item_column), header.index(mapping.size_column)
+    sizes = defaultdict(set)
+    for row in rows:
+        if item_i < len(row) and size_i < len(row) and row[size_i].strip():
+            sizes[row[item_i].strip()].add(row[size_i].strip())
+    return {item for item, found in sizes.items() if len(found) > 1}
+
+
+def parse_sales(header, rows, mapping, today=None):
     """
     Reads every row with the chosen columns.
 
@@ -96,8 +175,14 @@ def parse_sales(header, rows, mapping):
     Refunds are netted: a negative quantity already is, and a row whose refund
     column holds the refund value counts as minus its quantity. Only the item
     column is read, so modifiers in other columns are ignored.
+
+    Rows left out, and counted by reason: total lines, rows whose skip column
+    holds a skip value (voids, cancelled orders), and rows dated after today
+    (a till clock set wrong), so one bad row never blocks the whole file.
     """
-    missing = [c for c in (mapping.date_column, mapping.item_column, mapping.quantity_column, mapping.refund_column)
+    today = today or date.today()
+    missing = [c for c in (mapping.date_column, mapping.item_column, mapping.quantity_column, mapping.refund_column,
+                           mapping.size_column, mapping.skip_column)
                if c and c not in header]
     if missing:
         raise ImportProblem(f"The file has no column called '{missing[0]}'")
@@ -107,6 +192,8 @@ def parse_sales(header, rows, mapping):
         i = col[name]
         return row[i] if i < len(row) else ""
 
+    sized = size_items(header, rows, mapping)
+    leave_out = skip_values(mapping)
     totals = defaultdict(lambda: defaultdict(float))
     skipped = defaultdict(int)
     for row in rows:
@@ -114,10 +201,21 @@ def parse_sales(header, rows, mapping):
         if not item:
             skipped["No item name"] += 1
             continue
+        if is_total_row(item):
+            skipped["Total lines"] += 1
+            continue
+        if mapping.skip_column and normalise(cell(row, mapping.skip_column)) in leave_out:
+            skipped[f"{cell(row, mapping.skip_column).strip()} (left out)"] += 1
+            continue
         day = parse_date(cell(row, mapping.date_column), mapping.date_format)
         if day is None:
             skipped["Date not readable"] += 1
             continue
+        if day > today:
+            skipped["Dated after today"] += 1
+            continue
+        if item in sized:
+            item = f"{item} · {cell(row, mapping.size_column).strip()}"
         quantity = parse_quantity(cell(row, mapping.quantity_column))
         if quantity is None:
             skipped["Quantity not a number"] += 1
@@ -137,9 +235,10 @@ def remembered_mapping(db, header):
 
 
 def dish_suggestions(dishes, name, limit=3):
-    names = [d.name for d in dishes]
-    by_name = {d.name: d for d in dishes}
-    return [DishSuggestion(id=by_name[n].id, name=n) for n in get_close_matches(name, names, n=limit, cutoff=0.45)]
+    """Close dish names, ignoring case: "SMASH BURGER" still finds "Tidewater Smash Burger"."""
+    by_name = {d.name.lower(): d for d in dishes}
+    return [DishSuggestion(id=by_name[n].id, name=by_name[n].name)
+            for n in get_close_matches(name.lower(), list(by_name), n=limit, cutoff=0.45)]
 
 
 def default_choice(db, item, dishes, hint):
@@ -188,14 +287,14 @@ def day_status(records, day):
     return "replace" if covering else "new"
 
 
-def plan_sales(db, text, mapping, choices=(), hints=None):
+def plan_sales(db, text, mapping, choices=(), hints=None, today=None):
     """
     Everything review and apply need, worked out once:
       header, rows, totals, skipped, items (SalesItemOut), and to_save:
       [(dish_id, day, units, records to replace)].
     """
     header, rows = read_csv(text)
-    totals, skipped = parse_sales(header, rows, mapping)
+    totals, skipped = parse_sales(header, rows, mapping, today)
     dishes = db.query(Dish).all()
     dishes_by_id = {d.id: d for d in dishes}
     hints = {h.item: h for h in (hints or [])}
@@ -301,7 +400,8 @@ def remember(db, header, mapping, items):
     if row is None:
         row = TillMapping(header_signature=signature)
         db.add(row)
-    for field in ("date_column", "item_column", "quantity_column", "date_format", "refund_column", "refund_value"):
+    for field in ("date_column", "item_column", "quantity_column", "date_format", "refund_column", "refund_value",
+                  "size_column", "skip_column", "skip_values"):
         setattr(row, field, getattr(mapping, field))
 
     for it in items:
@@ -330,13 +430,10 @@ def apply_sales(db, text, data, today=None):
         if c.action == "dish" and c.dish_id not in known:
             raise ImportProblem(f"'{c.item}': choose a dish or Ignore")
 
-    plan = plan_sales(db, text, data.mapping, data.choices)
+    plan = plan_sales(db, text, data.mapping, data.choices, today=today)
     undecided = [it.item for it in plan["items"] if "choose" in it.flags]
     if undecided:
         raise ImportProblem(f"'{undecided[0]}': choose a dish or Ignore")
-    future = [day for _, day, _, _ in plan["to_save"] if day > today]
-    if future:
-        raise ImportProblem(f"The file has sales dated in the future ({min(future):%d %b %Y}). Check the date format.")
     if not plan["to_save"]:
         raise ImportProblem("There are no sales to save (everything is ignored or already entered another way)")
 

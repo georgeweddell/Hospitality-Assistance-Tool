@@ -9,13 +9,21 @@ at the moment it's entered. Every price input path should go through here.
 
 from models import UnitType
 
-# Pack unit -> (the base unit it measures, how many base units it contains)
+# Pack unit -> (the base unit it measures, how many base units it contains).
+# Imperial units use the standard UK conversions, so a price "per lb" or "per
+# pint" becomes a price per gram or ml the same way as metric ones.
 PACK_UNITS = {
     "kg": (UnitType.GRAM, 1000),
     "g": (UnitType.GRAM, 1),
+    "lb": (UnitType.GRAM, 453.59237),
+    "oz": (UnitType.GRAM, 28.349523125),
     "l": (UnitType.ML, 1000),
     "ml": (UnitType.ML, 1),
+    "cl": (UnitType.ML, 10),
+    "pint": (UnitType.ML, 568.26125),      # UK pint
+    "gallon": (UnitType.ML, 4546.09),      # UK gallon
     "each": (UnitType.EACH, 1),
+    "dozen": (UnitType.EACH, 12),
 }
 
 

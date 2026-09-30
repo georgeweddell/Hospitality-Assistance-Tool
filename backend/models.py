@@ -164,6 +164,9 @@ class TillMapping(Base):
     date_format = Column(String, nullable=False)       # e.g. "%d/%m/%Y"
     refund_column = Column(String, nullable=True)      # a column marking refunds, if the till uses one
     refund_value = Column(String, nullable=True)       # the value in it that means "refund"
+    size_column = Column(String, nullable=True)        # a column holding the size (Regular / Small), if any
+    skip_column = Column(String, nullable=True)        # a column marking rows to leave out (voids, cancelled)
+    skip_values = Column(String, nullable=True)        # the values in it to leave out, comma-separated
 
 class TillItemAlias(Base):
     # A remembered match: this till item name means this dish (or: ignore it).

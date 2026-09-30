@@ -30,6 +30,7 @@ from pathlib import Path
 from alembic import command
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from sqlalchemy import inspect
 
 HERE = Path(__file__).parent
@@ -41,6 +42,11 @@ def alembic_config(connection) -> Config:
     config.set_main_option('script_location', str(HERE / 'migrations'))
     config.attributes['connection'] = connection
     return config
+
+
+def latest() -> str:
+    """The newest migration in migrations/versions/."""
+    return ScriptDirectory.from_config(alembic_config(None)).get_current_head()
 
 
 def revision(engine) -> str | None:

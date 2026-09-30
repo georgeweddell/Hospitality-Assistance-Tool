@@ -2,8 +2,12 @@
 // owner edits. The backend works everything out again when the invoice is
 // applied (backend/invoices.py), so these are only for display.
 
-// Pack unit -> [the base unit it measures, base units per pack unit]
-const PACK_BASE = { kg: ['gram', 1000], g: ['gram', 1], l: ['ml', 1000], ml: ['ml', 1], each: ['each', 1] }
+// Pack unit -> [the base unit it measures, base units per pack unit], as in backend/units.py.
+const PACK_BASE = {
+  kg: ['gram', 1000], g: ['gram', 1], lb: ['gram', 453.59237], oz: ['gram', 28.349523125],
+  l: ['ml', 1000], ml: ['ml', 1], cl: ['ml', 10], pint: ['ml', 568.26125], gallon: ['ml', 4546.09],
+  each: ['each', 1], dozen: ['each', 12],
+}
 export const PACK_UNIT_OPTIONS = Object.keys(PACK_BASE)
 const BIG_CHANGE_PERCENT = 25
 
@@ -85,6 +89,7 @@ export function applyLine(line) {
     pack_count: num(line.pack_count),
     pack_size: num(line.pack_size),
     pack_unit: line.pack_unit || null,
+    quantity: num(line.quantity),
     unit_price: num(line.unit_price),
   }
 }

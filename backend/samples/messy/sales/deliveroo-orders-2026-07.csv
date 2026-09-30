@@ -1,0 +1,162 @@
+Order ID,Date,Time,Status,Customer First Name,Delivery Postcode,Items,Subtotal (£),Commission (£),Payout (£)
+GB-9157257,01/07/2026,17:47,Delivered,Sam,AB1 2CD,1x Fish & Chips (Regular); 1x Tidewater Burger; 1x Salt & Pepper Squid,43.50,13.05,30.45
+GB-8207132,01/07/2026,20:02,Delivered,Jo,AB1 2CD,1x Tidewater Burger; 1x Fish & Chips (Regular),34.00,10.20,23.80
+GB-2792813,01/07/2026,19:50,Delivered,Alex,AB1 2CD,1x Tidewater Burger,16.50,4.95,11.55
+GB-9970529,01/07/2026,21:47,Delivered,Sam,AB1 2CD,2x Mushroom Risotto; 1x Tidewater Burger; 1x Sticky Toffee Pudding,54.50,16.35,38.15
+GB-3886656,02/07/2026,20:47,Delivered,Alex,AB1 2CD,1x Tidewater Burger; 1x Salt & Pepper Squid; 1x Truffle Fries,32.00,9.60,22.40
+GB-6016361,02/07/2026,17:24,Delivered,Chris,AB1 2CD,1x Salt & Pepper Squid; 2x Tidewater Burger; 1x Sticky Toffee Pudding,50.50,15.15,35.35
+GB-3885790,02/07/2026,21:25,Delivered,Sam,AB1 2CD,1x Kids Fish & Chips; 1x Fish & Chips (Regular),25.50,7.65,17.85
+GB-5888064,02/07/2026,20:21,Delivered,Alex,AB1 2CD,2x Tidewater Burger; 2x Chips,42.00,12.60,29.40
+GB-8361103,03/07/2026,21:07,Delivered,Jo,AB1 2CD,1x Kids Fish & Chips,8.00,2.40,5.60
+GB-4992930,03/07/2026,18:11,Delivered,Sam,AB1 2CD,3x Tidewater Burger; 1x Chips; 1x Sticky Toffee Pudding,62.00,18.60,43.40
+GB-1426932,03/07/2026,20:26,Delivered,Alex,AB1 2CD,2x Fish & Chips (Regular); 1x Mushroom Risotto; 1x Chips; 1x Sticky Toffee Pudding,62.50,18.75,43.75
+GB-7147567,03/07/2026,17:38,Rejected,Jo,AB1 2CD,2x Fish & Chips (Regular); 1x Mushroom Risotto; 1x Chips,54.50,16.35,38.15
+GB-9799719,04/07/2026,17:51,Delivered,Chris,AB1 2CD,1x Mushroom Risotto; 1x Kids Fish & Chips; 1x Fish & Chips (Regular); 1x Chips; 1x Sticky Toffee Pudding,53.00,15.90,37.10
+GB-7424331,04/07/2026,17:04,Delivered,Jo,AB1 2CD,1x Fish & Chips (Regular); 1x Sticky Toffee Pudding,25.50,7.65,17.85
+GB-5342905,04/07/2026,19:09,Cancelled,Jo,AB1 2CD,1x Salt & Pepper Squid; 1x Tidewater Burger; 1x Fish & Chips (Regular); 2x Truffle Fries,55.50,16.65,38.85
+GB-7181493,05/07/2026,18:04,Delivered,Chris,AB1 2CD,3x Fish & Chips (Regular); 2x Chips,61.50,18.45,43.05
+GB-9992216,05/07/2026,21:08,Delivered,Sam,AB1 2CD,1x Kids Fish & Chips; 1x Chips; 1x Sticky Toffee Pudding,20.50,6.15,14.35
+GB-2352580,05/07/2026,17:09,Delivered,Pat,AB1 2CD,1x Tidewater Burger; 1x Kids Fish & Chips; 1x Truffle Fries,30.50,9.15,21.35
+GB-4167631,05/07/2026,18:00,Delivered,Sam,AB1 2CD,1x Tidewater Burger; 1x Fish & Chips (Regular); 1x Sticky Toffee Pudding,42.00,12.60,29.40
+GB-9726321,05/07/2026,19:47,Delivered,Pat,AB1 2CD,1x Fish & Chips (Regular),17.50,5.25,12.25
+GB-1638667,05/07/2026,17:45,Delivered,Pat,AB1 2CD,1x Tidewater Burger; 1x Sticky Toffee Pudding,24.50,7.35,17.15
+GB-6200598,05/07/2026,19:23,Delivered,Pat,AB1 2CD,1x Mushroom Risotto; 2x Chips,24.00,7.20,16.80
+GB-2104400,07/07/2026,19:46,Delivered,Alex,AB1 2CD,1x Tidewater Burger; 2x Chips,25.50,7.65,17.85
+GB-5295607,07/07/2026,18:40,Delivered,Chris,AB1 2CD,1x Fish & Chips (Regular); 1x Kids Fish & Chips; 2x Truffle Fries,37.50,11.25,26.25
+GB-4788191,07/07/2026,21:53,Delivered,Chris,AB1 2CD,1x Fish & Chips (Regular); 1x Tidewater Burger; 1x Salt & Pepper Squid,43.50,13.05,30.45
+GB-4244069,07/07/2026,21:25,Delivered,Chris,AB1 2CD,1x Mushroom Risotto; 1x Fish & Chips (Regular),32.50,9.75,22.75
+GB-7077821,07/07/2026,21:06,Delivered,Sam,AB1 2CD,1x Fish & Chips (Regular); 1x Chips; 1x Sticky Toffee Pudding,30.00,9.00,21.00
+GB-6077683,07/07/2026,18:35,Delivered,Jo,AB1 2CD,1x Fish & Chips (Regular); 1x Sticky Toffee Pudding,25.50,7.65,17.85
+GB-4408686,07/07/2026,18:58,Delivered,Pat,AB1 2CD,2x Tidewater Burger; 1x Fish & Chips (Regular); 2x Truffle Fries,62.50,18.75,43.75
+GB-3398476,08/07/2026,21:31,Delivered,Chris,AB1 2CD,1x Tidewater Burger; 1x Fish & Chips (Regular); 2x Truffle Fries; 1x Sticky Toffee Pudding,54.00,16.20,37.80
+GB-1681656,08/07/2026,19:12,Delivered,Chris,AB1 2CD,1x Fish & Chips (Regular); 1x Kids Fish & Chips; 1x Truffle Fries,31.50,9.45,22.05
+GB-7504107,08/07/2026,19:23,Delivered,Alex,AB1 2CD,1x Salt & Pepper Squid,9.50,2.85,6.65
+GB-7060584,08/07/2026,17:04,Delivered,Jo,AB1 2CD,1x Mushroom Risotto; 1x Fish & Chips (Regular); 1x Tidewater Burger; 1x Sticky Toffee Pudding,57.00,17.10,39.90
+GB-4378146,08/07/2026,21:52,Delivered,Chris,AB1 2CD,1x Tidewater Burger; 2x Mushroom Risotto; 2x Truffle Fries,58.50,17.55,40.95
+GB-6603951,08/07/2026,20:35,Delivered,Jo,AB1 2CD,1x Fish & Chips (Regular); 1x Tidewater Burger,34.00,10.20,23.80
+GB-8161915,09/07/2026,17:48,Delivered,Sam,AB1 2CD,1x Tidewater Burger,16.50,4.95,11.55
+GB-6164166,09/07/2026,17:53,Delivered,Pat,AB1 2CD,1x Fish & Chips (Regular); 1x Sticky Toffee Pudding,25.50,7.65,17.85
+GB-3315376,09/07/2026,20:53,Delivered,Chris,AB1 2CD,1x Fish & Chips (Regular); 1x Salt & Pepper Squid; 2x Chips,36.00,10.80,25.20
+GB-1389618,09/07/2026,17:14,Delivered,Jo,AB1 2CD,2x Fish & Chips (Regular); 1x Salt & Pepper Squid; 2x Chips,53.50,16.05,37.45
+GB-9681702,09/07/2026,18:58,Delivered,Chris,AB1 2CD,1x Tidewater Burger; 2x Chips,25.50,7.65,17.85
+GB-6092173,09/07/2026,17:39,Delivered,Pat,AB1 2CD,2x Fish & Chips (Regular),35.00,10.50,24.50
+GB-2282672,09/07/2026,18:42,Delivered,Jo,AB1 2CD,3x Fish & Chips (Regular); 1x Chips,57.00,17.10,39.90
+GB-2119852,09/07/2026,18:06,Delivered,Alex,AB1 2CD,1x Tidewater Burger; 2x Fish & Chips (Regular),51.50,15.45,36.05
+GB-3503921,09/07/2026,18:34,Delivered,Sam,AB1 2CD,1x Fish & Chips (Regular),17.50,5.25,12.25
+GB-3676540,10/07/2026,18:44,Delivered,Chris,AB1 2CD,3x Fish & Chips (Regular),52.50,15.75,36.75
+GB-3055897,10/07/2026,20:28,Delivered,Sam,AB1 2CD,1x Tidewater Burger; 2x Fish & Chips (Regular); 2x Chips,60.50,18.15,42.35
+GB-9090289,10/07/2026,17:18,Cancelled,Alex,AB1 2CD,1x Fish & Chips (Regular); 2x Truffle Fries; 1x Sticky Toffee Pudding,37.50,11.25,26.25
+GB-3967015,10/07/2026,18:52,Delivered,Chris,AB1 2CD,1x Fish & Chips (Regular); 1x Tidewater Burger; 1x Kids Fish & Chips; 2x Truffle Fries,54.00,16.20,37.80
+GB-3579340,10/07/2026,19:26,Delivered,Pat,AB1 2CD,2x Fish & Chips (Regular); 1x Kids Fish & Chips; 2x Chips; 1x Sticky Toffee Pudding,60.00,18.00,42.00
+GB-8973749,10/07/2026,18:04,Delivered,Chris,AB1 2CD,1x Fish & Chips (Regular); 1x Truffle Fries,23.50,7.05,16.45
+GB-4738307,10/07/2026,19:00,Delivered,Chris,AB1 2CD,1x Fish & Chips (Regular); 2x Truffle Fries,29.50,8.85,20.65
+GB-5923644,11/07/2026,21:37,Delivered,Sam,AB1 2CD,1x Tidewater Burger; 2x Fish & Chips (Regular),51.50,15.45,36.05
+GB-6704626,11/07/2026,20:04,Delivered,Jo,AB1 2CD,1x Fish & Chips (Regular); 1x Truffle Fries,23.50,7.05,16.45
+GB-2053675,11/07/2026,18:06,Delivered,Sam,AB1 2CD,1x Mushroom Risotto,15.00,4.50,10.50
+GB-9007844,11/07/2026,19:43,Delivered,Jo,AB1 2CD,1x Fish & Chips (Regular); 1x Chips,22.00,6.60,15.40
+GB-2599248,11/07/2026,21:34,Delivered,Pat,AB1 2CD,1x Fish & Chips (Regular); 1x Truffle Fries,23.50,7.05,16.45
+GB-8348931,11/07/2026,20:23,Delivered,Sam,AB1 2CD,1x Fish & Chips (Regular); 2x Truffle Fries,29.50,8.85,20.65
+GB-2482745,12/07/2026,20:47,Delivered,Alex,AB1 2CD,1x Tidewater Burger; 1x Kids Fish & Chips; 2x Chips,33.50,10.05,23.45
+GB-4467846,12/07/2026,21:38,Delivered,Sam,AB1 2CD,1x Tidewater Burger; 2x Chips,25.50,7.65,17.85
+GB-3308519,12/07/2026,17:55,Delivered,Chris,AB1 2CD,1x Mushroom Risotto; 1x Tidewater Burger,31.50,9.45,22.05
+GB-2975449,12/07/2026,18:08,Delivered,Alex,AB1 2CD,1x Kids Fish & Chips; 1x Tidewater Burger; 1x Truffle Fries,30.50,9.15,21.35
+GB-6221950,12/07/2026,20:05,Delivered,Pat,AB1 2CD,1x Tidewater Burger; 1x Truffle Fries,22.50,6.75,15.75
+GB-4219841,12/07/2026,21:32,Delivered,Chris,AB1 2CD,1x Fish & Chips (Regular); 1x Chips,22.00,6.60,15.40
+GB-3655220,12/07/2026,19:44,Delivered,Jo,AB1 2CD,1x Fish & Chips (Regular); 1x Sticky Toffee Pudding,25.50,7.65,17.85
+GB-8968057,14/07/2026,21:41,Delivered,Chris,AB1 2CD,2x Fish & Chips (Regular); 1x Tidewater Burger; 1x Sticky Toffee Pudding,59.50,17.85,41.65
+GB-8362294,14/07/2026,20:27,Delivered,Chris,AB1 2CD,1x Fish & Chips (Regular); 1x Kids Fish & Chips; 1x Truffle Fries,31.50,9.45,22.05
+GB-7868180,14/07/2026,18:43,Delivered,Pat,AB1 2CD,1x Fish & Chips (Regular); 1x Chips,22.00,6.60,15.40
+GB-7782328,14/07/2026,20:22,Delivered,Sam,AB1 2CD,2x Fish & Chips (Regular); 1x Salt & Pepper Squid; 1x Chips,49.00,14.70,34.30
+GB-2352691,14/07/2026,20:26,Delivered,Chris,AB1 2CD,1x Fish & Chips (Regular); 1x Truffle Fries,23.50,7.05,16.45
+GB-6920846,14/07/2026,21:09,Delivered,Alex,AB1 2CD,1x Salt & Pepper Squid; 2x Chips; 1x Sticky Toffee Pudding,26.50,7.95,18.55
+GB-3706250,14/07/2026,18:21,Delivered,Chris,AB1 2CD,1x Fish & Chips (Regular); 2x Truffle Fries,29.50,8.85,20.65
+GB-1814676,14/07/2026,21:52,Delivered,Sam,AB1 2CD,2x Fish & Chips (Regular); 1x Mushroom Risotto; 2x Chips,59.00,17.70,41.30
+GB-5973795,15/07/2026,18:07,Delivered,Jo,AB1 2CD,1x Fish & Chips (Regular); 2x Truffle Fries,29.50,8.85,20.65
+GB-5713289,15/07/2026,21:30,Delivered,Chris,AB1 2CD,1x Fish & Chips (Regular); 1x Tidewater Burger; 1x Chips,38.50,11.55,26.95
+GB-3418820,15/07/2026,21:18,Delivered,Alex,AB1 2CD,1x Mushroom Risotto; 2x Truffle Fries,27.00,8.10,18.90
+GB-7813356,15/07/2026,20:49,Delivered,Chris,AB1 2CD,1x Tidewater Burger; 1x Salt & Pepper Squid; 1x Chips,30.50,9.15,21.35
+GB-2520427,15/07/2026,19:05,Delivered,Jo,AB1 2CD,1x Salt & Pepper Squid; 2x Chips,18.50,5.55,12.95
+GB-9969987,15/07/2026,21:53,Delivered,Sam,AB1 2CD,1x Tidewater Burger; 1x Truffle Fries,22.50,6.75,15.75
+GB-2911001,15/07/2026,20:41,Delivered,Alex,AB1 2CD,1x Fish & Chips (Regular); 2x Mushroom Risotto,47.50,14.25,33.25
+GB-7922068,16/07/2026,19:44,Delivered,Jo,AB1 2CD,2x Fish & Chips (Regular),35.00,10.50,24.50
+GB-4813792,16/07/2026,21:12,Delivered,Alex,AB1 2CD,2x Fish & Chips (Regular); 1x Tidewater Burger,51.50,15.45,36.05
+GB-6218727,16/07/2026,17:03,Delivered,Sam,AB1 2CD,1x Fish & Chips (Regular); 2x Chips,26.50,7.95,18.55
+GB-8694884,16/07/2026,21:57,Delivered,Sam,AB1 2CD,1x Mushroom Risotto; 1x Fish & Chips (Regular); 1x Tidewater Burger,49.00,14.70,34.30
+GB-4634566,16/07/2026,17:56,Delivered,Pat,AB1 2CD,1x Tidewater Burger; 2x Chips; 1x Sticky Toffee Pudding,33.50,10.05,23.45
+GB-7916733,16/07/2026,17:21,Delivered,Alex,AB1 2CD,1x Fish & Chips (Regular); 1x Salt & Pepper Squid; 1x Truffle Fries,33.00,9.90,23.10
+GB-8245546,16/07/2026,21:31,Delivered,Sam,AB1 2CD,2x Fish & Chips (Regular); 2x Chips,44.00,13.20,30.80
+GB-9028258,17/07/2026,19:50,Delivered,Chris,AB1 2CD,1x Tidewater Burger; 1x Fish & Chips (Regular); 1x Sticky Toffee Pudding,42.00,12.60,29.40
+GB-9875426,17/07/2026,21:24,Delivered,Chris,AB1 2CD,1x Kids Fish & Chips; 1x Mushroom Risotto; 1x Truffle Fries; 1x Sticky Toffee Pudding,37.00,11.10,25.90
+GB-4390650,17/07/2026,19:54,Delivered,Sam,AB1 2CD,1x Salt & Pepper Squid; 1x Fish & Chips (Regular),27.00,8.10,18.90
+GB-9303716,17/07/2026,21:22,Delivered,Jo,AB1 2CD,1x Fish & Chips (Regular); 2x Truffle Fries,29.50,8.85,20.65
+GB-7699535,17/07/2026,19:06,Delivered,Sam,AB1 2CD,3x Fish & Chips (Regular); 1x Chips,57.00,17.10,39.90
+GB-7723614,18/07/2026,19:11,Delivered,Pat,AB1 2CD,1x Fish & Chips (Regular); 2x Chips,26.50,7.95,18.55
+GB-2027541,18/07/2026,19:34,Delivered,Sam,AB1 2CD,2x Tidewater Burger; 1x Fish & Chips (Regular),50.50,15.15,35.35
+GB-2538845,18/07/2026,21:57,Delivered,Alex,AB1 2CD,1x Fish & Chips (Regular); 1x Truffle Fries; 1x Sticky Toffee Pudding,31.50,9.45,22.05
+GB-1952574,18/07/2026,20:53,Delivered,Sam,AB1 2CD,2x Fish & Chips (Regular); 1x Salt & Pepper Squid; 1x Sticky Toffee Pudding,52.50,15.75,36.75
+GB-1682428,18/07/2026,18:36,Delivered,Chris,AB1 2CD,1x Tidewater Burger; 1x Truffle Fries,22.50,6.75,15.75
+GB-1140699,18/07/2026,18:03,Delivered,Alex,AB1 2CD,1x Salt & Pepper Squid; 1x Fish & Chips (Regular); 1x Mushroom Risotto; 2x Truffle Fries,54.00,16.20,37.80
+GB-7185541,18/07/2026,17:14,Delivered,Jo,AB1 2CD,2x Fish & Chips (Regular); 1x Kids Fish & Chips; 1x Truffle Fries,49.00,14.70,34.30
+GB-9284543,19/07/2026,17:54,Delivered,Alex,AB1 2CD,1x Tidewater Burger; 2x Fish & Chips (Regular); 2x Chips,60.50,18.15,42.35
+GB-1560179,19/07/2026,19:10,Delivered,Sam,AB1 2CD,1x Fish & Chips (Regular); 2x Chips,26.50,7.95,18.55
+GB-5219861,19/07/2026,20:12,Delivered,Sam,AB1 2CD,1x Tidewater Burger; 1x Salt & Pepper Squid; 1x Sticky Toffee Pudding,34.00,10.20,23.80
+GB-9892994,19/07/2026,17:19,Delivered,Sam,AB1 2CD,1x Salt & Pepper Squid; 1x Sticky Toffee Pudding,17.50,5.25,12.25
+GB-9137209,21/07/2026,18:17,Delivered,Chris,AB1 2CD,1x Salt & Pepper Squid; 2x Chips; 1x Sticky Toffee Pudding,26.50,7.95,18.55
+GB-9990717,21/07/2026,18:06,Cancelled,Jo,AB1 2CD,1x Fish & Chips (Regular); 2x Tidewater Burger; 1x Truffle Fries,56.50,16.95,39.55
+GB-2269465,21/07/2026,20:42,Rejected,Jo,AB1 2CD,2x Fish & Chips (Regular); 1x Tidewater Burger; 2x Chips,60.50,18.15,42.35
+GB-5916466,21/07/2026,17:06,Delivered,Pat,AB1 2CD,2x Fish & Chips (Regular); 1x Tidewater Burger; 2x Truffle Fries,63.50,19.05,44.45
+GB-9540664,21/07/2026,19:50,Delivered,Chris,AB1 2CD,1x Mushroom Risotto; 1x Chips,19.50,5.85,13.65
+GB-7675397,21/07/2026,19:48,Rejected,Pat,AB1 2CD,1x Fish & Chips (Regular),17.50,5.25,12.25
+GB-5298181,22/07/2026,21:08,Delivered,Pat,AB1 2CD,2x Fish & Chips (Regular); 2x Chips,44.00,13.20,30.80
+GB-4527583,22/07/2026,19:06,Delivered,Chris,AB1 2CD,2x Fish & Chips (Regular); 1x Salt & Pepper Squid; 1x Chips,49.00,14.70,34.30
+GB-8675990,22/07/2026,21:56,Delivered,Alex,AB1 2CD,1x Fish & Chips (Regular); 1x Tidewater Burger; 1x Chips,38.50,11.55,26.95
+GB-7339261,22/07/2026,19:58,Delivered,Sam,AB1 2CD,1x Fish & Chips (Regular); 1x Salt & Pepper Squid; 1x Mushroom Risotto; 2x Chips,51.00,15.30,35.70
+GB-9442226,22/07/2026,21:43,Delivered,Alex,AB1 2CD,2x Fish & Chips (Regular); 1x Mushroom Risotto; 1x Sticky Toffee Pudding,58.00,17.40,40.60
+GB-2605277,22/07/2026,19:17,Delivered,Pat,AB1 2CD,1x Mushroom Risotto,15.00,4.50,10.50
+GB-4424112,22/07/2026,20:43,Delivered,Jo,AB1 2CD,2x Fish & Chips (Regular); 1x Tidewater Burger; 1x Sticky Toffee Pudding,59.50,17.85,41.65
+GB-6724684,22/07/2026,17:59,Delivered,Sam,AB1 2CD,1x Salt & Pepper Squid; 2x Chips,18.50,5.55,12.95
+GB-3065179,22/07/2026,21:23,Delivered,Pat,AB1 2CD,1x Fish & Chips (Regular); 1x Tidewater Burger,34.00,10.20,23.80
+GB-6712330,23/07/2026,17:35,Delivered,Sam,AB1 2CD,1x Fish & Chips (Regular); 1x Chips,22.00,6.60,15.40
+GB-8297928,23/07/2026,21:50,Delivered,Chris,AB1 2CD,1x Fish & Chips (Regular); 2x Truffle Fries; 1x Sticky Toffee Pudding,37.50,11.25,26.25
+GB-7999766,23/07/2026,18:46,Delivered,Chris,AB1 2CD,1x Salt & Pepper Squid; 1x Mushroom Risotto; 1x Chips; 1x Sticky Toffee Pudding,37.00,11.10,25.90
+GB-2497110,23/07/2026,20:08,Delivered,Jo,AB1 2CD,1x Tidewater Burger; 1x Fish & Chips (Regular); 1x Chips; 1x Sticky Toffee Pudding,46.50,13.95,32.55
+GB-4706156,23/07/2026,17:16,Cancelled,Jo,AB1 2CD,1x Fish & Chips (Regular); 1x Salt & Pepper Squid; 1x Sticky Toffee Pudding,35.00,10.50,24.50
+GB-8865350,23/07/2026,20:52,Delivered,Pat,AB1 2CD,1x Fish & Chips (Regular); 1x Tidewater Burger; 1x Chips,38.50,11.55,26.95
+GB-3390702,23/07/2026,18:34,Delivered,Sam,AB1 2CD,1x Tidewater Burger; 2x Chips; 1x Sticky Toffee Pudding,33.50,10.05,23.45
+GB-4753867,23/07/2026,17:41,Delivered,Chris,AB1 2CD,1x Fish & Chips (Regular),17.50,5.25,12.25
+GB-3936583,23/07/2026,17:00,Delivered,Chris,AB1 2CD,2x Tidewater Burger; 1x Sticky Toffee Pudding,41.00,12.30,28.70
+GB-8556590,24/07/2026,17:51,Delivered,Pat,AB1 2CD,1x Mushroom Risotto; 1x Truffle Fries; 1x Sticky Toffee Pudding,29.00,8.70,20.30
+GB-3843312,24/07/2026,17:14,Delivered,Sam,AB1 2CD,2x Tidewater Burger; 2x Chips; 1x Sticky Toffee Pudding,50.00,15.00,35.00
+GB-6870181,24/07/2026,17:49,Delivered,Jo,AB1 2CD,1x Fish & Chips (Regular); 1x Tidewater Burger; 1x Truffle Fries,40.00,12.00,28.00
+GB-9503706,25/07/2026,21:36,Delivered,Pat,AB1 2CD,1x Tidewater Burger; 1x Kids Fish & Chips; 1x Sticky Toffee Pudding,32.50,9.75,22.75
+GB-6145593,25/07/2026,17:58,Delivered,Jo,AB1 2CD,2x Tidewater Burger,33.00,9.90,23.10
+GB-4268137,25/07/2026,20:57,Delivered,Chris,AB1 2CD,1x Salt & Pepper Squid; 1x Fish & Chips (Regular); 1x Tidewater Burger,43.50,13.05,30.45
+GB-3254652,25/07/2026,17:21,Delivered,Jo,AB1 2CD,1x Tidewater Burger; 1x Fish & Chips (Regular); 2x Chips,43.00,12.90,30.10
+GB-2552441,25/07/2026,21:38,Delivered,Pat,AB1 2CD,1x Fish & Chips (Regular),17.50,5.25,12.25
+GB-5865084,25/07/2026,20:40,Delivered,Sam,AB1 2CD,2x Tidewater Burger; 1x Fish & Chips (Regular),50.50,15.15,35.35
+GB-8433915,25/07/2026,17:41,Delivered,Chris,AB1 2CD,1x Mushroom Risotto; 1x Fish & Chips (Regular); 1x Tidewater Burger; 1x Truffle Fries; 1x Sticky Toffee Pudding,63.00,18.90,44.10
+GB-7879685,25/07/2026,17:30,Delivered,Jo,AB1 2CD,1x Fish & Chips (Regular); 1x Truffle Fries,23.50,7.05,16.45
+GB-7798255,26/07/2026,20:53,Delivered,Pat,AB1 2CD,1x Fish & Chips (Regular),17.50,5.25,12.25
+GB-4455253,26/07/2026,18:30,Delivered,Chris,AB1 2CD,1x Salt & Pepper Squid; 1x Tidewater Burger; 1x Fish & Chips (Regular); 1x Sticky Toffee Pudding,51.50,15.45,36.05
+GB-1536133,26/07/2026,17:20,Cancelled,Jo,AB1 2CD,1x Mushroom Risotto; 1x Tidewater Burger; 1x Fish & Chips (Regular); 1x Chips,53.50,16.05,37.45
+GB-2187709,28/07/2026,20:15,Delivered,Pat,AB1 2CD,1x Fish & Chips (Regular); 2x Tidewater Burger; 1x Chips,55.00,16.50,38.50
+GB-9255919,28/07/2026,18:31,Delivered,Sam,AB1 2CD,1x Tidewater Burger,16.50,4.95,11.55
+GB-2061489,28/07/2026,17:24,Delivered,Pat,AB1 2CD,3x Tidewater Burger,49.50,14.85,34.65
+GB-5543458,28/07/2026,17:05,Delivered,Chris,AB1 2CD,1x Tidewater Burger; 2x Fish & Chips (Regular); 1x Truffle Fries,57.50,17.25,40.25
+GB-6215169,28/07/2026,17:21,Delivered,Jo,AB1 2CD,2x Salt & Pepper Squid; 1x Tidewater Burger,35.50,10.65,24.85
+GB-5458381,29/07/2026,19:41,Delivered,Sam,AB1 2CD,1x Mushroom Risotto; 1x Sticky Toffee Pudding,23.00,6.90,16.10
+GB-4117839,29/07/2026,21:48,Delivered,Alex,AB1 2CD,1x Fish & Chips (Regular); 1x Chips,22.00,6.60,15.40
+GB-5043982,29/07/2026,21:34,Delivered,Sam,AB1 2CD,2x Tidewater Burger; 1x Fish & Chips (Regular); 2x Truffle Fries,62.50,18.75,43.75
+GB-5355074,29/07/2026,21:55,Delivered,Sam,AB1 2CD,1x Salt & Pepper Squid; 2x Truffle Fries,21.50,6.45,15.05
+GB-6129122,29/07/2026,19:22,Delivered,Alex,AB1 2CD,1x Mushroom Risotto; 1x Tidewater Burger; 1x Fish & Chips (Regular); 2x Chips,58.00,17.40,40.60
+GB-6925642,29/07/2026,20:19,Delivered,Jo,AB1 2CD,1x Tidewater Burger; 1x Truffle Fries; 1x Sticky Toffee Pudding,30.50,9.15,21.35
+GB-1846671,29/07/2026,21:55,Delivered,Pat,AB1 2CD,1x Tidewater Burger; 1x Salt & Pepper Squid; 1x Chips,30.50,9.15,21.35
+GB-7424474,30/07/2026,17:23,Delivered,Pat,AB1 2CD,1x Mushroom Risotto; 1x Truffle Fries; 1x Sticky Toffee Pudding,29.00,8.70,20.30
+GB-5365887,30/07/2026,20:05,Delivered,Chris,AB1 2CD,2x Tidewater Burger; 1x Fish & Chips (Regular); 2x Chips; 1x Sticky Toffee Pudding,67.50,20.25,47.25
+GB-9406566,30/07/2026,18:13,Delivered,Sam,AB1 2CD,2x Fish & Chips (Regular),35.00,10.50,24.50
+GB-9300269,30/07/2026,20:31,Delivered,Alex,AB1 2CD,1x Tidewater Burger,16.50,4.95,11.55
+GB-4717758,30/07/2026,20:00,Delivered,Alex,AB1 2CD,1x Tidewater Burger; 1x Fish & Chips (Regular); 1x Chips,38.50,11.55,26.95
+GB-8358036,30/07/2026,18:25,Delivered,Alex,AB1 2CD,1x Mushroom Risotto; 1x Sticky Toffee Pudding,23.00,6.90,16.10
+GB-1798758,31/07/2026,18:55,Delivered,Alex,AB1 2CD,3x Fish & Chips (Regular); 1x Chips,57.00,17.10,39.90
+GB-6306221,31/07/2026,21:31,Rejected,Pat,AB1 2CD,3x Tidewater Burger,49.50,14.85,34.65
+GB-5080782,31/07/2026,17:07,Delivered,Jo,AB1 2CD,2x Tidewater Burger; 1x Fish & Chips (Regular); 1x Chips,55.00,16.50,38.50

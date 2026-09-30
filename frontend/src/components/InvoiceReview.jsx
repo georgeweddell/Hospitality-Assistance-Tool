@@ -5,6 +5,12 @@ import { postJson } from '../api'
 import { pounds, priceForDisplay } from '../format'
 import { FLAGS, PACK_UNIT_OPTIONS, applyLine, changePercent, lineFlags, linePrice, lineUnit, toEditable } from '../invoices'
 
+// Documents that aren't a purchase: every line starts as Ignore.
+const DOCUMENT_CHIPS = {
+  credit_note: ['Credit note', "A credit note refunds goods that were short or sent back, so it doesn't change what you pay. Its lines are ignored."],
+  statement: ['Statement', "A statement lists invoices and what's owed. Upload the invoices themselves to record prices."],
+}
+
 const ACTIONS = [['update', 'Update price'], ['new', 'New ingredient'], ['ignore', 'Ignore']]
 
 function Change({ percent }) {
@@ -46,7 +52,7 @@ function Line({ line, ingredients, byId, onChange }) {
           <span className="text-muted">×</span>
           <input aria-label="Pack size" className="input num w-14 px-2" inputMode="decimal"
                  value={line.pack_size} onChange={set('pack_size')} />
-          <select aria-label="Pack unit" className="input w-[4.5rem] px-2" value={line.pack_unit} onChange={set('pack_unit')}>
+          <select aria-label="Pack unit" className="input w-[5.5rem] px-2" value={line.pack_unit} onChange={set('pack_unit')}>
             <option value="">–</option>
             {PACK_UNIT_OPTIONS.map((u) => <option key={u} value={u}>{u}</option>)}
           </select>
@@ -164,8 +170,13 @@ function InvoiceReview({ review, ingredients, onApplied, onCancel }) {
             <input type="date" className="input" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
           </label>
         </div>
-        {(review.already_imported || review.prices_include_vat) && (
+        {(review.already_imported || review.prices_include_vat || DOCUMENT_CHIPS[review.document_type]) && (
           <div className="mt-4 flex flex-wrap gap-2">
+            {DOCUMENT_CHIPS[review.document_type] && (
+              <Hint content={DOCUMENT_CHIPS[review.document_type][1]}>
+                <span className="chip chip-warn">{DOCUMENT_CHIPS[review.document_type][0]}</span>
+              </Hint>
+            )}
             {review.already_imported && (
               <Hint content="This invoice has been imported before. Undo that import on the Imports page to import it again.">
                 <span className="chip chip-warn">Already imported</span>

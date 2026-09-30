@@ -4,6 +4,9 @@ from typing import Literal, Optional
 from datetime import datetime
 from datetime import date
 
+# The pack units a price can be given in; units.py converts each to g / ml / each.
+PackUnit = Literal["kg", "g", "lb", "oz", "l", "ml", "cl", "pint", "gallon", "each", "dozen"]
+
 class PriceInput(BaseModel):
     """
     A price, given either way:
@@ -15,7 +18,7 @@ class PriceInput(BaseModel):
     price_per_unit: Optional[float] = Field(default=None, ge=0)
     pack_price: Optional[float] = Field(default=None, ge=0)
     pack_quantity: Optional[float] = Field(default=None, gt=0)
-    pack_unit: Optional[Literal["kg", "g", "l", "ml", "each"]] = None
+    pack_unit: Optional[PackUnit] = None
     source: PriceSource = PriceSource.MANUAL
     supplier: Optional[str] = None
 
@@ -309,7 +312,6 @@ class BenchmarkSyncOut(BaseModel):
 
 # --- Invoice import ------------------------------------------------------------------
 
-PackUnit = Literal["kg", "g", "l", "ml", "each"]
 LineKind = Literal["food", "non_food", "charge"]
 LineAction = Literal["update", "new", "ignore"]
 
@@ -325,10 +327,15 @@ class InvoiceLineDraft(BaseModel):
     kind: LineKind = "food"
     likely_ingredient: Optional[str] = None    # Claude's guess, from the ingredient list where possible
 
+# What the document is. Only an invoice or a receipt prices anything: a credit note
+# refunds a delivery and a statement lists invoices, so neither is a purchase price.
+DocumentType = Literal["invoice", "receipt", "credit_note", "statement"]
+
 class InvoiceDraft(BaseModel):
     supplier: Optional[str] = None
     invoice_number: Optional[str] = None
     invoice_date: Optional[date] = None
+    document_type: DocumentType = "invoice"
     prices_include_vat: bool = False
     lines: list[InvoiceLineDraft]
 
@@ -348,6 +355,7 @@ class InvoiceReviewOut(BaseModel):
     supplier: Optional[str] = None
     invoice_number: Optional[str] = None
     invoice_date: Optional[date] = None
+    document_type: DocumentType = "invoice"
     prices_include_vat: bool = False
     already_imported: Optional[int] = None     # id of an applied import of the same invoice
     filename: Optional[str] = None
@@ -363,6 +371,7 @@ class InvoiceApplyLine(BaseModel):
     pack_count: Optional[float] = None
     pack_size: Optional[float] = None
     pack_unit: Optional[PackUnit] = None
+    quantity: Optional[float] = None           # packs bought: weights two lines for one ingredient
     unit_price: Optional[float] = None
 
 class InvoiceApplyIn(BaseModel):
@@ -403,6 +412,9 @@ class TillMappingIn(BaseModel):
     date_format: DateFormat
     refund_column: Optional[str] = None     # a column marking refunds, if any
     refund_value: Optional[str] = None      # the value in it that means "refund", e.g. "Refund"
+    size_column: Optional[str] = None       # a column holding the size or variation, e.g. "Price Point Name"
+    skip_column: Optional[str] = None       # a column marking rows to leave out, e.g. "Status"
+    skip_values: Optional[str] = None       # the values in it to leave out, comma-separated, e.g. "Void, Cancelled"
 
     class Config:
         from_attributes = True
@@ -474,6 +486,9 @@ class TillColumnsDraft(BaseModel):
     date_format: Optional[DateFormat] = None
     refund_column: Optional[str] = None
     refund_value: Optional[str] = None
+    size_column: Optional[str] = None
+    skip_column: Optional[str] = None
+    skip_values: Optional[str] = None
 
 class TillItemHints(BaseModel):
     items: list[TillItemHint]

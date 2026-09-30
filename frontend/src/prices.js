@@ -1,10 +1,11 @@
 // Entering prices the way invoices show them (a pack price), for the price forms.
 
 // Pack units that fit each base unit, and how many base units each holds.
+// Imperial units use the standard UK conversions (backend/units.py does the real one).
 export const PACK_UNITS = {
-  gram: [['kg', 1000], ['g', 1]],
-  ml: [['l', 1000], ['ml', 1]],
-  each: [['each', 1]],
+  gram: [['kg', 1000], ['g', 1], ['lb', 453.59237], ['oz', 28.349523125]],
+  ml: [['l', 1000], ['ml', 1], ['cl', 10], ['pint', 568.26125], ['gallon', 4546.09]],
+  each: [['each', 1], ['dozen', 12]],
 }
 
 export function emptyPrice(unit) {

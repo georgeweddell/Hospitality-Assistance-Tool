@@ -21,12 +21,16 @@ def build_menu_prompt(dish_names: list[str]) -> str:
     return f"""This is a UK restaurant's menu. List every item on it, in order.
 
     For each item:
-    - name: as printed, without the price.
+    - name: as printed, without the price and without diet or allergen codes such as (v), (vg), (gf).
+      An item crossed out by hand (a line through it, or marked "86") isn't on the menu: leave it out.
+      A price crossed out and rewritten by hand: use the handwritten price.
     - price: in pounds, as a number. If an item comes in sizes (e.g. 10" and 12"), list each size as its own item,
       with the size in the name (e.g. 'Margherita 12"') and its own price.
     - section: the menu heading it's under, as printed.
     - category: Starter, Main, Side or Dessert. Pizzas, pasta and large plates are Main; small plates and antipasti
       are Starter; sides and contorni are Side; dolci are Dessert. Leave empty for anything that isn't a dish.
+    - Items in a children's section (Kids, Little ones, Children's menu) get "Kids " in front of the name
+      (e.g. "Kids Fish & Chips"), so they aren't mistaken for the adult dish of the same name.
     - description: as printed, if there is one.
     - kind: "dish" for food on the menu; "other" for drinks, set menus, add-ons and extras (e.g. "add burrata +£3").
     - likely_existing: the restaurant's dishes are stored as: {stored}.

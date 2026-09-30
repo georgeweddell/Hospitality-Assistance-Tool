@@ -25,6 +25,7 @@ from schemas import IngredientSuggestion, InvoiceReviewLine, InvoiceReviewOut
 from units import PACK_UNITS, price_per_base_unit
 
 BIG_CHANGE_PERCENT = 25   # a price this far from the current one is flagged: often a misread pack
+NO_PRICES = {"credit_note", "statement"}   # documents that record no purchase prices
 
 
 class ImportProblem(ValueError):
@@ -50,6 +51,11 @@ def line_price(pack_count, pack_size, pack_unit, unit_price, ingredient_unit):
     return price_per_base_unit(unit_price, pack_count * pack_size, pack_unit, ingredient_unit)
 
 
+def not_delivered(line):
+    """Quantity 0 or less: "NOT AVAILABLE", or goods sent back. No purchase price there."""
+    return line.quantity is not None and line.quantity <= 0
+
+
 def totals_agree(quantity, unit_price, line_total):
     """
     Quantity x unit price should equal the line total, to within 1p or 1%
@@ -67,27 +73,43 @@ def find_alias(db, supplier, description):
     ).first()
 
 
-def already_imported(db, supplier, invoice_number, file_hash=None):
-    """An applied invoice import of the same supplier + invoice number, or the same file. None if there isn't one."""
+def already_imported(db, supplier, invoice_number, file_hash=None, invoice_date=None):
+    """
+    An applied invoice import of the same invoice, or None. The same invoice is:
+    the same supplier + invoice number; or the same invoice number on the same
+    date, however the supplier's name was read ("Harbour Fish Co" and
+    "Harbour Fish Co (sample)" on a reprinted copy); or the same file.
+    """
     applied = db.query(Import).filter(Import.kind == ImportKind.INVOICE, Import.status == ImportStatus.APPLIED)
-    if supplier and invoice_number:
-        same = applied.filter(func.lower(Import.supplier) == supplier.strip().lower(),
-                              Import.reference == invoice_number.strip()).first()
-        if same:
-            return same
+    if invoice_number:
+        same_number = applied.filter(func.lower(Import.reference) == invoice_number.strip().lower())
+        if supplier:
+            same = same_number.filter(func.lower(Import.supplier) == supplier.strip().lower()).first()
+            if same:
+                return same
+        if invoice_date:
+            same = same_number.filter(Import.effective_date == invoice_date).first()
+            if same:
+                return same
     if file_hash:
         return applied.filter(Import.file_hash == file_hash).first()
     return None
 
 
-def review_line(db, supplier, invoice_date, line):
+def review_line(db, supplier, invoice_date, line, document_type="invoice"):
     """
     Matches one line and works out its price. Matching order:
       1. a remembered match for this supplier and description
       2. an exact match on Claude's likely ingredient name
       3. suggestions from the fuzzy matcher (offered, never chosen automatically)
     Non-food lines and charges are ignored unless a remembered match says otherwise.
+    Also ignored by default (the owner can change it): every line of a credit
+    note or statement, and a line with nothing delivered (quantity 0 or less,
+    e.g. "NOT AVAILABLE" or goods returned), since none is a purchase price.
     """
+    if line.quantity is None and line.unit_price is None and line.line_total is not None:
+        # A till receipt prints one price per line ("CASTER SUGAR 5KG  6.49"): one pack at that price.
+        line = line.model_copy(update={"quantity": 1, "unit_price": line.line_total})
     review = InvoiceReviewLine(**line.model_dump(), action="ignore")
     flags = []
     if not totals_agree(line.quantity, line.unit_price, line.line_total):
@@ -110,6 +132,8 @@ def review_line(db, supplier, invoice_date, line):
             review.action = "new"
             review.new_ingredient_name = name.strip().lower()
             review.suggestions = [IngredientSuggestion(id=s.id, name=s.name) for s in suggest_ingredients(db, name)]
+    if document_type in NO_PRICES or not_delivered(line):
+        review.action = "ignore"   # the match is kept, so switching it back on needs no choosing
 
     # The unit the price is measured in: the matched ingredient's, or (for a
     # new ingredient) whatever the pack is measured in.
@@ -146,7 +170,7 @@ def review_line(db, supplier, invoice_date, line):
 
 def review_invoice(db, draft, filename=None, file_hash=None):
     """Turns Claude's reading of an invoice into lines for the owner to check. Saves nothing."""
-    duplicate = already_imported(db, draft.supplier, draft.invoice_number, file_hash)
+    duplicate = already_imported(db, draft.supplier, draft.invoice_number, file_hash, draft.invoice_date)
     return InvoiceReviewOut(
         supplier=draft.supplier,
         invoice_number=draft.invoice_number,
@@ -155,7 +179,8 @@ def review_invoice(db, draft, filename=None, file_hash=None):
         already_imported=duplicate.id if duplicate else None,
         filename=filename,
         file_hash=file_hash,
-        lines=[review_line(db, draft.supplier, draft.invoice_date, line) for line in draft.lines],
+        document_type=draft.document_type,
+        lines=[review_line(db, draft.supplier, draft.invoice_date, line, draft.document_type) for line in draft.lines],
     )
 
 
@@ -180,7 +205,7 @@ def apply_invoice(db, data, today=None):
     # --- Check everything ---------------------------------------------------------
     if data.invoice_date > today:
         raise ImportProblem("The invoice date is in the future")
-    duplicate = already_imported(db, data.supplier, data.invoice_number, data.file_hash)
+    duplicate = already_imported(db, data.supplier, data.invoice_number, data.file_hash, data.invoice_date)
     if duplicate:
         raise ImportProblem(f"This invoice was already imported on {duplicate.created_at:%d %b %Y}. "
                             "Undo that import first to import it again.")
@@ -189,35 +214,43 @@ def apply_invoice(db, data, today=None):
     if not kept:
         raise ImportProblem("Every line is set to Ignore, so there's nothing to save")
 
-    planned = []   # (line, ingredient or None for new, unit, price per unit)
-    seen_ids, seen_names = set(), set()
+    # One price per ingredient. Two lines for the same ingredient (two joints
+    # of different weights) are combined: what was paid / how much came.
+    groups = {}   # ("id", ingredient id) or ("new", name) -> {ingredient, name, unit, paid, amount, lines}
     for line in kept:
         if line.action == "update":
             ingredient = db.get(Ingredient, line.ingredient_id) if line.ingredient_id else None
             if ingredient is None:
                 raise ImportProblem(f"'{line.description}': choose an ingredient")
-            if ingredient.id in seen_ids:
-                raise ImportProblem(f"{ingredient.name} appears on two lines. Ignore one of them.")
-            seen_ids.add(ingredient.id)
-            unit = ingredient.unit
+            key, name, unit = ("id", ingredient.id), ingredient.name, ingredient.unit
         else:
             name = (line.new_ingredient_name or "").strip().lower()
             if not name:
                 raise ImportProblem(f"'{line.description}': enter a name for the new ingredient")
             if db.query(Ingredient).filter(func.lower(Ingredient.name) == name).first():
                 raise ImportProblem(f"There's already an ingredient called '{name}'. Choose it instead of adding a new one.")
-            if name in seen_names:
-                raise ImportProblem(f"'{name}' appears on two lines. Ignore one of them.")
             if line.pack_unit is None:
                 raise ImportProblem(f"'{line.description}': enter the pack size")
-            seen_names.add(name)
-            ingredient = None
-            unit = PACK_UNITS[line.pack_unit][0]
+            ingredient, key, unit = None, ("new", name), PACK_UNITS[line.pack_unit][0]
+            if key in groups and groups[key]["unit"] != unit:
+                raise ImportProblem(f"'{name}' is on two lines measured differently (by weight and by volume or count)")
         try:
-            price = line_price(line.pack_count, line.pack_size, line.pack_unit, line.unit_price, unit)
+            line_price(line.pack_count, line.pack_size, line.pack_unit, line.unit_price, unit)   # checks the line
         except ValueError as e:
             raise ImportProblem(f"'{line.description}': {e}")
-        planned.append((line, ingredient, unit, price))
+        group = groups.setdefault(key, {"ingredient": ingredient, "name": name, "unit": unit,
+                                        "paid": 0.0, "amount": 0.0, "lines": []})
+        packs = line.quantity if line.quantity and line.quantity > 0 else 1
+        group["paid"] += packs * line.unit_price
+        group["amount"] += packs * line.pack_count * line.pack_size * PACK_UNITS[line.pack_unit][1]
+        group["lines"].append(line)
+
+    planned = []   # (group, price per unit)
+    for group in groups.values():
+        # Example: sirloin, 4.35 kg at £25.90/kg and 3.90 kg at £27.90/kg:
+        # (4.35 x 25.90 + 3.90 x 27.90) / 8,250 g = (112.665 + 108.81) / 8,250 = £0.02685 per g.
+        # One line gives exactly its own price: (packs x price) / (packs x pack size).
+        planned.append((group, group["paid"] / group["amount"]))
 
     # --- Save --------------------------------------------------------------------
     record = Import(kind=ImportKind.INVOICE, filename=data.filename, file_hash=data.file_hash,
@@ -227,17 +260,20 @@ def apply_invoice(db, data, today=None):
     db.add(record)
     db.flush()   # assigns record.id
 
-    for line, ingredient, unit, price in planned:
+    for group, price in planned:
+        ingredient = group["ingredient"]
         if ingredient is None:
-            ingredient = Ingredient(name=line.new_ingredient_name.strip().lower(), unit=unit, import_id=record.id)
+            ingredient = Ingredient(name=group["name"], unit=group["unit"], import_id=record.id)
             db.add(ingredient)
             db.flush()
         db.add(IngredientPrice(ingredient_id=ingredient.id, price_per_unit=price, source=PriceSource.INVOICE,
                                supplier=record.supplier, effective_date=data.invoice_date, import_id=record.id))
-        remember(db, data.supplier, line.description, ingredient_id=ingredient.id)
+        for line in group["lines"]:
+            remember(db, data.supplier, line.description, ingredient_id=ingredient.id)
 
     for line in data.lines:
-        if line.action == "ignore":
+        # A line with nothing delivered isn't remembered as "ignore": next time it may come.
+        if line.action == "ignore" and not not_delivered(line):
             remember(db, data.supplier, line.description, ignore=True)
 
     db.commit()

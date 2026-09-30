@@ -77,6 +77,13 @@ def test_customer_details_are_blanked():
     assert first[header.index("Customer Name")] == "" and first[header.index("Card Brand")] == ""
 
 
+def test_notes_and_staff_names_are_blanked():
+    # Free-text notes often hold phone numbers; staff columns hold names.
+    header = ["Date", "Item", "Qty", "Notes", "Staff"]
+    rows = [["18/09/2026", "Margherita", "1", "call 07700 900123 when ready", "Jess"]]
+    assert redact(header, rows)[0] == ["18/09/2026", "Margherita", "1", "", ""]
+
+
 def test_claude_sees_only_the_header_and_five_rows():
     prompt = build_columns_prompt(*read_csv(CSV))
 
@@ -107,11 +114,35 @@ def test_a_wrong_date_format_is_corrected_from_the_data():
 
 
 def test_a_refund_column_needs_a_value():
-    header, rows = read_csv(CSV)
+    # "Event Type" with no value is dropped; with no refunds anywhere in the file, nothing replaces it.
+    text = CSV.replace(",Refund,", ",Payment,")
+    header, rows = read_csv(text)
     draft = TillColumnsDraft(date_column="Date", item_column="Item", quantity_column="Qty",
                              date_format="%d/%m/%Y", refund_column="Event Type")
 
     assert check_columns(draft, header, rows).refund_column is None
+
+
+def test_refunds_and_voids_are_found_in_rows_claude_didnt_see():
+    # Claude sees rows 1-5, all ordinary sales; the refund and the void are further down.
+    text = ("Date,Item,Qty,Event Type\n" + "18/09/2026,Margherita,1,Payment\n" * 5
+            + "18/09/2026,Margherita,1,Refund\n18/09/2026,Diavola,1,Void\n")
+    header, rows = read_csv(text)
+    draft = TillColumnsDraft(date_column="Date", item_column="Item", quantity_column="Qty", date_format="%d/%m/%Y")
+
+    mapping = check_columns(draft, header, rows)
+    assert (mapping.refund_column, mapping.refund_value) == ("Event Type", "Refund")
+    assert (mapping.skip_column, mapping.skip_values) == ("Event Type", "Void")
+
+
+def test_size_and_leave_out_columns_are_checked():
+    # A size column that isn't in the file is dropped; the refund value is never also left out.
+    header, rows = read_csv(CSV)
+    draft = TillColumnsDraft(date_column="Date", item_column="Item", quantity_column="Qty", date_format="%d/%m/%Y",
+                             refund_column="Event Type", refund_value="Refund", size_column="Price Point Name",
+                             skip_column="Event Type", skip_values="Refund, Void")
+    mapping = check_columns(draft, header, rows)
+    assert (mapping.size_column, mapping.skip_column, mapping.skip_values) == (None, "Event Type", "Void")
 
 
 # --- The upload route ------------------------------------------------------------------------

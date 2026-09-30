@@ -13,7 +13,11 @@ const DATE_FORMATS = [
   ['%d.%m.%Y', '18.09.2026'],
   ['%d/%m/%y', '18/09/26'],
 ]
-const EMPTY_MAPPING = { date_column: '', item_column: '', quantity_column: '', date_format: '%d/%m/%Y', refund_column: '', refund_value: '' }
+const EMPTY_MAPPING = {
+  date_column: '', item_column: '', quantity_column: '', date_format: '%d/%m/%Y',
+  refund_column: '', refund_value: '', size_column: '', skip_column: '', skip_values: '',
+}
+const OPTIONAL = ['refund_column', 'refund_value', 'size_column', 'skip_column', 'skip_values']
 
 const FLAG_CHIPS = {
   choose: () => ['chip-warn', 'Choose a dish', 'Not matched to a dish yet. Choose one, or Ignore.'],
@@ -28,7 +32,14 @@ function mappingComplete(m) {
 
 // The body the review and apply routes expect for a mapping.
 function mappingBody(m) {
-  return { ...m, refund_column: m.refund_column || null, refund_value: m.refund_column ? m.refund_value || null : null }
+  return {
+    ...m,
+    refund_column: m.refund_column || null,
+    refund_value: m.refund_column ? m.refund_value || null : null,
+    size_column: m.size_column || null,
+    skip_column: m.skip_column || null,
+    skip_values: m.skip_column ? m.skip_values || null : null,
+  }
 }
 
 function ColumnSelect({ label, value, header, onChange, blank = 'Choose…' }) {
@@ -47,7 +58,7 @@ function ColumnSelect({ label, value, header, onChange, blank = 'Choose…' }) {
 function SalesReview({ initial, dishes, onApplied, onCancel }) {
   const [review, setReview] = useState(initial)
   const [mapping, setMapping] = useState(() => (initial.mapping
-    ? { ...EMPTY_MAPPING, ...initial.mapping, refund_column: initial.mapping.refund_column ?? '', refund_value: initial.mapping.refund_value ?? '' }
+    ? { ...EMPTY_MAPPING, ...initial.mapping, ...Object.fromEntries(OPTIONAL.map((f) => [f, initial.mapping[f] ?? ''])) }
     : EMPTY_MAPPING))
   // The owner's choice per item, starting from the first review (which includes Claude's suggestions).
   const [choices, setChoices] = useState(() => Object.fromEntries(initial.items.map((it) => [it.item, { action: it.action, dish_id: it.dish_id }])))
@@ -55,7 +66,7 @@ function SalesReview({ initial, dishes, onApplied, onCancel }) {
   const [kinds] = useState(() => Object.fromEntries(initial.items.map((it) => [it.item, it.kind])))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
-  const typing = useRef(null)   // timer: re-read once the owner stops typing the refund value
+  const typing = useRef(null)   // timer: re-read once the owner stops typing a value
 
   const sortedDishes = useMemo(() => [...dishes].sort((a, b) => a.name.localeCompare(b.name)), [dishes])
 
@@ -89,8 +100,8 @@ function SalesReview({ initial, dishes, onApplied, onCancel }) {
     refresh(next, choices)
   }
 
-  const setRefundValue = (value) => {
-    const next = { ...mapping, refund_value: value }
+  const setTyped = (field) => (value) => {
+    const next = { ...mapping, [field]: value }
     setMapping(next)
     clearTimeout(typing.current)
     typing.current = setTimeout(() => refresh(next, choices), 500)
@@ -148,13 +159,23 @@ function SalesReview({ initial, dishes, onApplied, onCancel }) {
             </select>
           </label>
           <ColumnSelect label="Item" value={mapping.item_column} header={review.header} onChange={setColumn('item_column')} />
+          <ColumnSelect label="Size in" value={mapping.size_column} header={review.header}
+                        onChange={setColumn('size_column')} blank="No size column" />
           <ColumnSelect label="Quantity" value={mapping.quantity_column} header={review.header} onChange={setColumn('quantity_column')} />
-          <div className="grid grid-cols-[1fr_auto] items-end gap-2">
+          <div className="grid grid-cols-[1fr_auto] items-end gap-2 sm:col-span-2">
             <ColumnSelect label="Refunds marked in" value={mapping.refund_column} header={review.header}
                           onChange={setColumn('refund_column')} blank="Negative quantities" />
             {mapping.refund_column && (
-              <input aria-label="Refund value" className="input w-24" value={mapping.refund_value}
-                     onChange={(e) => setRefundValue(e.target.value)} />
+              <input aria-label="Refund value" className="input w-32" value={mapping.refund_value}
+                     onChange={(e) => setTyped('refund_value')(e.target.value)} />
+            )}
+          </div>
+          <div className="grid grid-cols-[1fr_auto] items-end gap-2 sm:col-span-2 lg:col-span-3">
+            <ColumnSelect label="Leave out rows where" value={mapping.skip_column} header={review.header}
+                          onChange={setColumn('skip_column')} blank="Keep every row" />
+            {mapping.skip_column && (
+              <input aria-label="Values to leave out" className="input w-48" placeholder="Void, Cancelled"
+                     value={mapping.skip_values} onChange={(e) => setTyped('skip_values')(e.target.value)} />
             )}
           </div>
         </div>
@@ -193,7 +214,7 @@ function SalesReview({ initial, dishes, onApplied, onCancel }) {
               {review.conflict_days > 0 && <span className="chip chip-warn num">{review.conflict_days} skipped</span>}
               {skippedRows > 0 && (
                 <Hint align="right" content={Object.entries(review.skipped).map(([reason, n]) => `${reason}: ${n}`).join(' · ')}>
-                  <span className="chip chip-warn num">{skippedRows} rows unreadable</span>
+                  <span className="chip chip-warn num">{skippedRows} rows left out</span>
                 </Hint>
               )}
             </span>
