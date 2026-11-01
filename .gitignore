@@ -21,3 +21,9 @@ Claude outputs/
 # accounts (step 10): the login database and one folder per account
 backend/auth.db
 backend/accounts/
+
+# Superdesign design tool: local context and drafts
+.superdesign/
+
+# promo video (/brag): render, scripts and captured screens
+brag-output/

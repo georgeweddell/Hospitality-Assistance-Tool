@@ -6,6 +6,8 @@
 
 > **Live:** [docket-u00z.onrender.com](https://docket-u00z.onrender.com/) (accounts by invite; get in touch for access)
 
+![The overview: a month's contribution, sales and margin, the top recommended changes, and every dish in its quadrant](docs/screenshots/overview.png)
+
 I built it as a portfolio project for Forward Deployed Engineer and Solutions Engineer roles. It was inspired by my own time line-cooking in a Neapolitan pizzeria. The aim was one complete journey that works from start to finish: messy real-world input, AI that reads it, code that does the maths, and a person who checks both.
 
 ---
@@ -29,6 +31,25 @@ I built it as a portfolio project for Forward Deployed Engineer and Solutions En
    - **Business suggestions:** checks against trade rules of thumb (food cost %, desserts per main, midweek trade, over-reliance on one ingredient, and more).
    - **AI report:** Claude investigates the data with read-only tools and writes next steps. Every number in the report comes from code, not from Claude.
 
+## What it looks like
+
+Screens from the demo pizzeria, August 2026.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/actions.png" alt="The action list"><br><b>Actions:</b> each change and the £ it would add in a month, ranked.</td>
+    <td width="50%"><img src="docs/screenshots/dish.png" alt="A dish: price, plate cost, margin and recipe"><br><b>A dish:</b> recipe costed line by line, where each price came from, and a price-rise alert.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/insights.png" alt="The menu-engineering chart"><br><b>Insights:</b> every dish plotted by popularity and margin against its category.</td>
+    <td><img src="docs/screenshots/checks.png" alt="Business suggestions"><br><b>Business suggestions:</b> the real figure beside a target, and one action.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/menu.png" alt="The menu, by category"><br><b>Menu:</b> price, cost, margin and quadrant for every dish.</td>
+    <td><img src="docs/screenshots/landing.png" alt="The public landing page"><br><b>Landing page.</b></td>
+  </tr>
+</table>
+
 ## How it works
 
 ```
@@ -51,7 +72,7 @@ I built it as a portfolio project for Forward Deployed Engineer and Solutions En
 - **Analysis is always for a date range.** Only sales wholly inside it count, and only dishes on the menu for the whole range are analysed. A dish taken out of the analysis also comes out of the averages, or every other dish's quadrant would shift.
 - **Every number records where it came from** (which invoice or benchmark, and its date). Price history is kept, never overwritten, and imports can be undone.
 
-**Stack:** Python, FastAPI, SQLAlchemy, Pydantic v2, SQLite, Alembic · React, Vite, Tailwind CSS v4, Recharts · Anthropic SDK (Claude Sonnet 5 for invoices, menus and the report agent; Haiku for recipes and till mapping) · pytest (291 tests) · Docker and Render for deployment.
+**Stack:** Python, FastAPI, SQLAlchemy, Pydantic v2, SQLite, Alembic · React, Vite, Tailwind CSS v4, Recharts · Anthropic SDK (Claude Sonnet 5 for invoices, menus and the report agent; Haiku for recipes and till mapping) · pytest (313 tests) · Docker and Render for deployment.
 
 **Accounts:** each restaurant's data is its own SQLite file, opened only through one function (`get_db`) for the logged-in account. No query can leak data between accounts, even if someone forgets a filter. Logins use a signed token in an httpOnly cookie, with limits on login attempts. Schema changes reach every account's database through Alembic migrations.
 
@@ -73,7 +94,7 @@ I wrote the first working version the same way (July 2026): the data models, the
 - the deployment work;
 - most of the tests.
 
-Around 86 of the project's 100 commits are co-authored with it.
+Around 9 in 10 of the project's commits are co-authored with it.
 
 ## How I used Claude Code
 
@@ -137,5 +158,5 @@ Open http://localhost:5173 and choose **Try the demo** (a private copy of the de
 
 - **VAT:** margins use VAT-inclusive menu prices; the trade usually reports gross profit ex-VAT. It's an open decision, because changing it changes the costing engine.
 - **Starting values:** the business-check rules of thumb are sensible first figures, not researched benchmarks, and the benchmark ingredient prices are estimates. A restaurant's own invoices replace them.
-- **Tested on tidy data:** menu import has been tested on clean menus, not yet on really messy ones.
+- **Messy data:** the imports were run on a deliberately messy made-up bistro (2 menus, 15 supplier documents, 7 sales files; [`backend/samples/messy/`](backend/samples/messy/)) and what broke was fixed. Some cases are still not handled: dishes inside set menus, delivery-platform exports with a whole order in one cell, items priced each (an 8oz steak) in a recipe written in grams, and market-price dishes.
 - **One server:** it's built to run as a single server process (login limits and running reports live in memory), which suits a single-restaurant tool.
