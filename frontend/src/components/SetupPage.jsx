@@ -25,11 +25,11 @@ const RAIL = [
 // What each upload step shows: its colour (as on the Imports page), the figure
 // label, the upload, and the way to do it by hand.
 const UPLOAD_STEPS = {
-  dishes: { tone: 'tile-mustard corner-tr', label: 'dishes on your menu', kind: 'menu', upload: 'Upload your menu',
+  dishes: { tone: 'tile-paper corner-tr', label: 'dishes on your menu', kind: 'menu', upload: 'Upload your menu',
             formats: 'pdf · photo', byHand: ['#/menu', 'add dishes by hand'] },
-  prices: { tone: 'tile-tomato', label: 'ingredients on your own prices', kind: 'invoice', upload: 'Upload invoices',
+  prices: { tone: 'tile-paper', label: 'ingredients on your own prices', kind: 'invoice', upload: 'Upload invoices',
             formats: 'pdf · photo · several', byHand: ['#/ingredients', 'enter prices by hand'] },
-  sales: { tone: 'tile-basil corner-tl', label: 'sales', kind: 'sales', upload: 'Upload a till export',
+  sales: { tone: 'tile-paper corner-tl', label: 'sales', kind: 'sales', upload: 'Upload a till export',
            formats: 'csv till export', byHand: ['#/sales', 'type totals by hand'] },
 }
 
@@ -130,16 +130,16 @@ function SetupPage({ status, onChanged }) {
     body = (
       <div className="space-y-5">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <div className="tile tile-mustard corner-tr min-h-[140px]">
+          <div className="tile tile-paper corner-tr min-h-[140px]">
             <span className="tile-label">dishes</span><span className="figure text-[3.5rem]">{status.dishes}</span>
           </div>
           <div className="tile tile-outline min-h-[140px]">
             <span className="tile-label">with a recipe</span><span className="figure text-[3.5rem]">{steps.recipes.figure}</span>
           </div>
-          <div className="tile tile-tomato min-h-[140px]">
+          <div className="tile tile-paper min-h-[140px]">
             <span className="tile-label">own prices</span><span className="figure text-[3.5rem]">{steps.prices.figure}</span>
           </div>
-          <div className="tile tile-basil corner-tl min-h-[140px]">
+          <div className="tile tile-paper corner-tl min-h-[140px]">
             <span className="tile-label">sales</span><span className="figure text-[3.5rem]">{steps.sales.figure.toLowerCase()}</span>
           </div>
         </div>

@@ -104,9 +104,9 @@ function SalesMoney({ range, coverage }) {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Figure label="dish sales" value={poundsRounded(summary.total_sales)} tone="tile-tomato corner-tr" />
         <Figure label="dishes sold" value={Math.round(summary.total_units).toLocaleString('en-GB')} tone="tile-outline" />
-        <Figure label="busiest day" value={poundsRounded(busiest.sales)} sub={shortDate(busiest.day).toLowerCase()} tone="tile-mustard" />
+        <Figure label="busiest day" value={poundsRounded(busiest.sales)} sub={shortDate(busiest.day).toLowerCase()} tone="tile-paper" />
         <Figure label="average day" value={poundsRounded(summary.total_sales / trading.length)}
-                sub={`${trading.length} trading`} tone="tile-basil corner-tl" />
+                sub={`${trading.length} trading`} tone="tile-paper corner-tl" />
       </div>
 
       <Card title="Sales by day"
@@ -154,8 +154,8 @@ function SalesMoney({ range, coverage }) {
 
       {shown > 0 && (
         <div className="grid gap-5 lg:grid-cols-2">
-          <Sellers title="Best sellers" dishes={summary.dishes.slice(0, shown)} className="corner-tl bg-basil-soft" />
-          <Sellers title="Lowest sellers" dishes={summary.dishes.slice(-shown).reverse()} className="corner-tr bg-plum-soft" />
+          <Sellers title="Best sellers" dishes={summary.dishes.slice(0, shown)} className="corner-tl" />
+          <Sellers title="Lowest sellers" dishes={summary.dishes.slice(-shown).reverse()} className="corner-tr" />
         </div>
       )}
     </div>

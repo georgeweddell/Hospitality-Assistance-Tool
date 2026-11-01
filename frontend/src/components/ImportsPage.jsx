@@ -11,11 +11,11 @@ import useUploadQueue from '../useUploadQueue'
 
 const KIND_LABELS = { invoice: 'Invoice', sales: 'Sales', menu: 'Menu' }
 
-// One colour tile per kind of file, each with its upload button.
+// One paper tile per kind of file, each with its upload button.
 const TILES = [
-  { kind: 'menu', word: 'menu', formats: 'pdf · photo', tone: 'tile-mustard corner-tr' },
-  { kind: 'invoice', word: 'invoices', formats: 'pdf · photo · several', tone: 'tile-tomato', multiple: true },
-  { kind: 'sales', word: 'sales', formats: 'csv till export', tone: 'tile-basil corner-tl' },
+  { kind: 'menu', word: 'menu', formats: 'pdf · photo', tone: 'tile-paper corner-tr' },
+  { kind: 'invoice', word: 'invoices', formats: 'pdf · photo · several', tone: 'tile-paper', multiple: true },
+  { kind: 'sales', word: 'sales', formats: 'csv till export', tone: 'tile-paper corner-tl' },
 ]
 
 // Upload an invoice, a till export or a menu, check what Claude read, apply it; and

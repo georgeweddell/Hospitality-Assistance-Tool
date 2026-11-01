@@ -140,7 +140,8 @@ function DishPage({ dishId, range, analysed, action, actionRank, onChanged }) {
       )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat label="menu price" value={pounds(dish.menu_price)} tone="tile-mustard corner-tr"
+        {/* Margin is the one coloured tile; the rest are paper. */}
+        <Stat label="menu price" value={pounds(dish.menu_price)} tone="tile-paper corner-tr"
               sub={action?.target_price != null
                 ? `target ${pounds(action.target_price)} · +${pounds(action.margin_gap)}`
                 : current && earlier ? `from ${shortDate(current.effective_date)} · was ${pounds(earlier.price)}` : ''} />
@@ -148,7 +149,7 @@ function DishPage({ dishId, range, analysed, action, actionRank, onChanged }) {
               sub={ownShare != null ? `${ownShare}% own prices` : ''} />
         <Stat label="margin" value={costed ? pounds(dish.cost.margin_pounds) : '—'} tone="tile-basil"
               sub={costed ? `${percent(dish.cost.margin_percent)} gp` : ''} />
-        <Stat label={`sold · ${rangeLabel(range).toLowerCase()}`} value={dish.units_sold} tone="tile-tomato corner-tl" />
+        <Stat label={`sold · ${rangeLabel(range).toLowerCase()}`} value={dish.units_sold} tone="tile-paper corner-tl" />
       </div>
 
       {hits.length > 0 && (

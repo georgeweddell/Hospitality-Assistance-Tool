@@ -30,14 +30,14 @@ function CoverageStrip({ range, coverage }) {
               <span
                 key={d}
                 aria-label={`${d}: ${covered.has(d) ? 'sales recorded' : 'no sales'}`}
-                className={`h-4 w-4 rounded-[4px] ${covered.has(d) ? 'bg-accent' : 'bg-line'}`}
+                className={`h-4 w-4 rounded-[4px] ${covered.has(d) ? 'bg-ink' : 'bg-line'}`}
               />
             ))}
           </div>
         </div>
       ))}
       <p className="flex gap-5 pt-1 text-sm text-muted">
-        <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-[3px] bg-accent" />Sales recorded</span>
+        <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-[3px] bg-ink" />Sales recorded</span>
         <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-[3px] bg-line" />None</span>
       </p>
     </div>

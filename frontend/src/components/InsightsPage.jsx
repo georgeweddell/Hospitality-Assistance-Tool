@@ -63,6 +63,7 @@ function InsightsPage({ dishes, prevDishes, actions, range }) {
   const byId = Object.fromEntries(inCategory.map((d) => [d.dish_id, d]))
   const hasPrev = prevDishes.length > 0
   const since = previousLabel(range)
+  const onPrev = (v) => `${v}% on ${since.toLowerCase()}`   // every change says what it compares with
 
   // Highlights
   const earner = inCategory.reduce((best, d) =>
@@ -96,7 +97,7 @@ function InsightsPage({ dishes, prevDishes, actions, range }) {
 
         <div className="space-y-5">
           {earner && (
-            <div className="tile tile-basil corner-bl">
+            <div className="tile tile-paper corner-bl">
               <span className="flex items-center justify-between gap-2">
                 <span className="tile-label">top earner</span>
                 <Hint align="right" label="About top earner" content="Margin × units sold: what the dish contributed over the period." />
@@ -108,7 +109,7 @@ function InsightsPage({ dishes, prevDishes, actions, range }) {
             </div>
           )}
 
-          <div className="tile tile-tomato corner-tl">
+          <div className="tile tile-paper corner-tl">
             <span className="flex items-center justify-between gap-2">
               <span className="tile-label">biggest opportunity</span>
               <Hint align="right" label="About the opportunity" content={IMPACT_EXPLAINED} />
@@ -148,17 +149,17 @@ function InsightsPage({ dishes, prevDishes, actions, range }) {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Figure label="Contribution" value={poundsRounded(now.contribution)}>
-          {compare && <Delta value={pctChange(now.contribution, before.contribution)} />}
+          {compare && <Delta value={pctChange(now.contribution, before.contribution)} format={onPrev} />}
         </Figure>
         <Figure label="Sales" value={poundsRounded(now.sales)}>
-          {compare && <Delta value={pctChange(now.sales, before.sales)} />}
+          {compare && <Delta value={pctChange(now.sales, before.sales)} format={onPrev} />}
         </Figure>
         <Figure label="Margin per dish sold" value={pounds(now.avgMargin)}>
           {/* in pence, so Delta's one-decimal rounding keeps a few pence exact */}
-          {compare && <Delta value={(now.avgMargin - before.avgMargin) * 100} format={(v) => `£${(v / 100).toFixed(2)}`} />}
+          {compare && <Delta value={(now.avgMargin - before.avgMargin) * 100} format={(v) => `£${(v / 100).toFixed(2)} on ${since.toLowerCase()}`} />}
         </Figure>
         <Figure label="Dishes sold" value={now.units.toLocaleString('en-GB')}>
-          {compare && <Delta value={pctChange(now.units, before.units)} />}
+          {compare && <Delta value={pctChange(now.units, before.units)} format={onPrev} />}
         </Figure>
       </div>
     </div>

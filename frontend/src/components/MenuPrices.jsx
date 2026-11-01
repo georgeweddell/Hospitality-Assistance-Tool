@@ -40,7 +40,7 @@ function MenuPrices({ dishId, prices, onChanged }) {
               {p.effective_date > today && <span className="chip chip-muted">Upcoming</span>}
               <span className={`num ${p === current ? 'font-semibold' : 'text-muted'}`}>{pounds(p.price)}</span>
               <button type="button" onClick={() => setRemoving(p)} aria-label={`Remove price from ${shortDate(p.effective_date)}`}
-                      className="btn-icon">×</button>
+                      className="btn-remove">Remove</button>
             </span>
           </li>
         ))}

@@ -224,7 +224,7 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
                       {cost != null ? pounds(cost) : '—'}
                     </td>
                     <td className="pt-3 text-right">
-                      <button type="button" onClick={() => removeRow(row.key)} aria-label="Remove line" className="btn-icon">×</button>
+                      <button type="button" onClick={() => removeRow(row.key)} aria-label="Remove line" className="btn-remove">Remove</button>
                     </td>
                   </tr>
                 )

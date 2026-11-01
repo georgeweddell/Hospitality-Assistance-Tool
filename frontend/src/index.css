@@ -190,17 +190,20 @@ body {
     padding: 0.375rem 0.75rem;
     font-size: 0.75rem;
   }
-  .btn-icon {
+  /* "remove" at the end of a row (recipe lines, menu prices): quiet until hovered. */
+  .btn-remove {
     padding: 0.25rem 0.5rem;
     border: none;
     background: transparent;
     color: var(--muted);
-    font-size: 1.125rem;
-    line-height: 1;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1.25;
+    text-transform: lowercase;
     cursor: pointer;
     border-radius: var(--radius-control);
   }
-  .btn-icon:hover {
+  .btn-remove:hover {
     color: var(--danger);
     background: var(--danger-bg);
   }
