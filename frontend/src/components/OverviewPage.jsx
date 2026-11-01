@@ -55,7 +55,7 @@ function DishPill({ dish, move }) {
   const title = move?.from ? `Was ${move.from}` : move ? 'New' : undefined
   return (
     <a href={`#/menu/${dish.dish_id}`} title={title}
-       className={`rounded-full px-2.5 py-1 font-mono text-xs hover:underline ${style}`}>
+       className={`whitespace-nowrap rounded-full px-2.5 py-1 font-mono text-xs hover:underline ${style}`}>
       {move && move.mark !== 'new' && `${move.mark} `}{dish.dish_name}{move?.mark === 'new' && ' · new'}
     </a>
   )
@@ -84,15 +84,40 @@ function useMenuPriceChanges(range, reload) {
   return changes
 }
 
-function OverviewPage({ dishes, prevDishes, actions, range, unchecked = 0 }) {
-  const priceChanges = usePriceChanges(range, dishes)
-  const menuPrices = useMenuPriceChanges(range, dishes)
+// The overview's buttons and links, shown in the title row (App.jsx → Layout's
+// `actions`) so they don't take a row of their own above the tiles.
+export function OverviewActions({ dishes, range, unchecked = 0 }) {
   const checks = useSuggestions(range, dishes)
   const firing = checks ? checks.filter((c) => c.fires).length : 0
+  return (
+    <>
+      {unchecked > 0 && (
+        <span className="flex items-center gap-2">
+          <button type="button" onClick={openRecipes} className="chip chip-accent num">
+            {unchecked} unchecked AI recipe{unchecked === 1 ? '' : 's'}
+          </button>
+          <Hint label="About unchecked recipes"
+                content="Recipes estimated by AI and not yet checked. Their costs are estimates until you check them." />
+        </span>
+      )}
+      {firing > 0 && (
+        <a href="#/reports/suggestions" className="link font-mono text-sm font-normal">
+          {firing} business suggestion{firing === 1 ? '' : 's'} →
+        </a>
+      )}
+      <a href="#/reports" className="btn btn-primary">Generate report</a>
+    </>
+  )
+}
+
+function OverviewPage({ dishes, prevDishes, actions, range }) {
+  const priceChanges = usePriceChanges(range, dishes)
+  const menuPrices = useMenuPriceChanges(range, dishes)
   const now = summarise(dishes)
   const hasPrev = prevDishes.length > 0
   const before = hasPrev ? summarise(prevDishes) : null
   const vs = previousLabel(range)
+  const onPrev = (v) => `${v}% on ${vs.toLowerCase()}`   // every change says what it compares with
 
   const dishById = Object.fromEntries(dishes.map((d) => [d.dish_id, d]))
   const { moves, gone } = hasPrev ? movesSince(dishes, prevDishes) : { moves: {}, gone: 0 }
@@ -102,51 +127,32 @@ function OverviewPage({ dishes, prevDishes, actions, range, unchecked = 0 }) {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {unchecked > 0 ? (
-          <span className="flex items-center gap-2">
-            <button type="button" onClick={openRecipes} className="chip chip-accent num">
-              {unchecked} unchecked AI recipe{unchecked === 1 ? '' : 's'}
-            </button>
-            <Hint label="About unchecked recipes"
-                  content="Recipes estimated by AI and not yet checked. Their costs are estimates until you check them." />
-          </span>
-        ) : <span />}
-        <span className="flex flex-wrap items-center gap-4">
-          {firing > 0 && (
-            <a href="#/reports/suggestions" className="link font-mono text-sm font-normal">
-              {firing} business suggestion{firing === 1 ? '' : 's'} →
-            </a>
-          )}
-          <a href="#/reports" className="btn btn-primary">Generate report</a>
-        </span>
-      </div>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         <div className="tile tile-tomato min-h-[300px] px-8 py-7">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="tile-label">contribution · {rangeLabel(range).toLowerCase()}</span>
-            {hasPrev && <Delta onTile value={pctChange(now.contribution, before.contribution)}
-                               format={(v) => `${v}% on ${vs.toLowerCase()}`} />}
+            {hasPrev && <Delta onTile value={pctChange(now.contribution, before.contribution)} format={onPrev} />}
           </div>
           <span className="figure -ml-1 text-[clamp(6rem,14vw,13rem)] leading-[0.8] tracking-[-0.05em]">{short(now.contribution)}</span>
           <span className="tile-label num">{poundsRounded(now.contribution)} · {dishes.length} dishes</span>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <div className="tile tile-mustard">
+          {/* Paper tiles: the contribution tile is the one bright thing here. */}
+          <div className="tile tile-paper">
             <span className="tile-label">sales</span>
             <span className="figure text-[clamp(2.5rem,4.5vw,4.25rem)]">{poundsRounded(now.sales)}</span>
-            {hasPrev ? <span><Delta onTile value={pctChange(now.sales, before.sales)} /></span> : <span />}
+            {hasPrev ? <span><Delta value={pctChange(now.sales, before.sales)} format={onPrev} /></span> : <span />}
           </div>
-          <div className="tile tile-basil corner-bl">
+          <div className="tile tile-paper corner-bl">
             <span className="tile-label">dishes sold</span>
             <span className="figure text-[clamp(2.5rem,4.5vw,4.25rem)]">{now.units.toLocaleString('en-GB')}</span>
-            {hasPrev ? <span><Delta onTile value={pctChange(now.units, before.units)} /></span> : <span />}
+            {hasPrev ? <span><Delta value={pctChange(now.units, before.units)} format={onPrev} /></span> : <span />}
           </div>
           <div className="tile tile-outline col-span-2 flex-row items-center">
             <div className="flex flex-col items-start gap-2">
               <span className="tile-label">gross margin</span>
-              {hasPrev && <Delta value={now.grossMargin - before.grossMargin} format={(v) => `${v} pts`} />}
+              {hasPrev && <Delta value={now.grossMargin - before.grossMargin} format={(v) => `${v} pts on ${vs.toLowerCase()}`} />}
             </div>
             <span className="figure text-[clamp(3rem,6vw,5.5rem)]">{percent(now.grossMargin)}</span>
           </div>
@@ -184,7 +190,7 @@ function OverviewPage({ dishes, prevDishes, actions, range, unchecked = 0 }) {
                      style={{ backgroundColor: QUADRANTS[q].tint }}>
                   <div className="flex items-baseline justify-between">
                     <Hint content={QUADRANTS[q].meaning}>
-                      <span className="font-bold" style={{ color: quadrantTextColor(q) }}>{q.toLowerCase()}s</span>
+                      <span className="font-semibold" style={{ color: quadrantTextColor(q) }}>{q.toLowerCase()}s</span>
                     </Hint>
                     <span className="figure text-[2rem]">{members.length}</span>
                   </div>
@@ -218,7 +224,7 @@ function OverviewPage({ dishes, prevDishes, actions, range, unchecked = 0 }) {
                 {menuPrices.slice(0, 5).map((c) => (
                   <li key={`${c.dish_id}-${c.day}`}
                       className="flex items-baseline justify-between gap-4 border-t-[1.5px] border-dashed border-line-strong px-5 py-3">
-                    <a href={`#/menu/${c.dish_id}`} className="font-bold hover:underline">{c.name}</a>
+                    <a href={`#/menu/${c.dish_id}`} className="font-semibold hover:underline">{c.name}</a>
                     <span className="num text-sm">{pounds(c.old_price)} → {pounds(c.new_price)}</span>
                     <span className="num text-xs text-muted">{shortDate(c.day).toLowerCase()}</span>
                   </li>

@@ -14,7 +14,7 @@ export function PriceRiseList({ changes, limit = 4 }) {
         return (
           <li key={`${c.ingredient_id}-${c.day}`}
               className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-1 border-t-[1.5px] border-dashed border-line-strong px-5 py-3">
-            <a href="#/ingredients" className="font-bold hover:underline">{c.name}</a>
+            <a href="#/ingredients" className="font-semibold hover:underline">{c.name}</a>
             <span className="figure text-[1.5rem] text-accent">{c.period_effect < 0 ? '−' : '+'}{poundsRounded(Math.abs(c.period_effect))}</span>
             <span className="num text-sm">
               {priceMove(c)} <span className="chip chip-accent ml-1">{percentMove(c)}</span>

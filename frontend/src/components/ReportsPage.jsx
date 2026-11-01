@@ -59,7 +59,7 @@ function Item({ item, n, tone }) {
     <li className={`grid gap-4 p-6 md:grid-cols-[3rem_minmax(0,1fr)_minmax(0,0.9fr)] ${tone}`}>
       <span className="figure text-[2.5rem] leading-none">{String(n).padStart(2, '0')}</span>
       <div className="space-y-2">
-        <h3 className="text-xl font-extrabold leading-tight tracking-tight">{item.title}</h3>
+        <h3 className="text-xl font-semibold leading-tight">{item.title}</h3>
         <p className="leading-relaxed">{item.detail}</p>
       </div>
       <div className="flex flex-wrap content-start gap-2">

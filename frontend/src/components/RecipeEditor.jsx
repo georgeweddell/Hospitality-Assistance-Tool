@@ -235,7 +235,7 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-3.5">
-        <button type="button" onClick={addRow} className="link">+ Add ingredient</button>
+        <button type="button" onClick={addRow} className="link">Add ingredient</button>
         <p className="num text-muted">
           Plate cost <span className="font-display text-base font-semibold text-ink">{pounds(previewCost)}</span>
           <span className="mx-2">·</span>

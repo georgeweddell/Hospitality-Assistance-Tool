@@ -36,7 +36,8 @@ function Brand() {
 
 // account: the signed-in account (auth/me); a guest sees how much AI is left.
 // notes: status chips for the title row (e.g. how complete the period's sales are).
-function Layout({ page, title, toolbar, notes, account, badges = {}, children }) {
+// actions: a page's own buttons, at the end of the title row (the overview's report button).
+function Layout({ page, title, toolbar, notes, actions, account, badges = {}, children }) {
   const onSettings = page === 'settings'
   return (
     <div className="min-h-screen bg-bg text-ink">
@@ -64,16 +65,19 @@ function Layout({ page, title, toolbar, notes, account, badges = {}, children })
 
       <main className="mx-auto max-w-7xl px-4 py-7 sm:px-10 lg:py-9">
         {/* Status chips sit beside the page title, not in the header row, which has no room for them. */}
-        {(title || notes || account?.kind === 'guest') && (
+        {(title || notes || actions || account?.kind === 'guest') && (
           <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
             {title ? <h1 className="page-title">{title}</h1> : <span />}
-            <span className="flex flex-wrap items-center gap-2">
-              {notes}
-              {account?.kind === 'guest' && (
-                <a href="#/settings" className="chip chip-warn num" title="Demo account">
-                  guest · {account.ai_calls_left} AI left
-                </a>
-              )}
+            <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <span className="flex flex-wrap items-center gap-2">
+                {notes}
+                {account?.kind === 'guest' && (
+                  <a href="#/settings" className="chip chip-warn num" title="Demo account">
+                    guest · {account.ai_calls_left} AI left
+                  </a>
+                )}
+              </span>
+              {actions}
             </span>
           </div>
         )}

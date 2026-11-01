@@ -217,7 +217,7 @@ function IngredientsPage({ onChanged, ownCostShare }) {
         </div>
         <div className="flex gap-2">
           {invoiceImport.button}
-          {!adding && <button type="button" onClick={() => setAdding(true)} className="btn btn-primary">+ Add ingredient</button>}
+          {!adding && <button type="button" onClick={() => setAdding(true)} className="btn btn-primary">Add ingredient</button>}
         </div>
       </div>
       {invoiceImport.error && <p className="alert-error">{invoiceImport.error}</p>}

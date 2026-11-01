@@ -21,7 +21,7 @@ function BusinessChecks({ checks }) {
           {firing.map((c) => (
             <article key={c.key} className="card flex flex-col gap-3 p-5">
               <div className="flex items-start justify-between gap-2">
-                <h3 className="text-lg font-extrabold leading-tight tracking-tight">{c.title}</h3>
+                <h3 className="text-lg font-semibold leading-tight">{c.title}</h3>
                 <Hint align="right" label={`About ${c.title}`}
                   content={c.rule_of_thumb ? `${c.note} Rule of thumb: ${c.rule_of_thumb}.` : c.note} />
               </div>

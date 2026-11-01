@@ -3,7 +3,7 @@ import { SIGNED_OUT, getJson } from './api'
 import useHashRoute, { PAGES } from './useHashRoute'
 import { presets, previousRange, rangeQuery } from './dateRange'
 import Layout from './components/Layout'
-import OverviewPage from './components/OverviewPage'
+import OverviewPage, { OverviewActions } from './components/OverviewPage'
 import ActionList from './components/ActionList'
 import InsightsPage from './components/InsightsPage'
 import MenuPage from './components/MenuPage'
@@ -199,7 +199,7 @@ function Workspace({ account }) {
         <SetupChecklist status={data.setup} />
         {hasSales && (
           <OverviewPage dishes={data.dishes} prevDishes={data.prevDishes} actions={data.actions}
-                        range={data.range} unchecked={data.setup?.unchecked_recipes} />
+                        range={data.range} />
         )}
       </div>
     )
@@ -212,9 +212,13 @@ function Workspace({ account }) {
   } else {
     content = (
       <OverviewPage dishes={data.dishes} prevDishes={data.prevDishes} actions={data.actions}
-                    range={data.range} unchecked={data.setup?.unchecked_recipes} />
+                    range={data.range} />
     )
   }
+  // The overview's report button and links sit in the title row, whenever the overview has results.
+  const overviewActions = page === 'overview' && !error && data && hasSales && (
+    <OverviewActions dishes={data.dishes} range={data.range} unchecked={data.setup?.unchecked_recipes} />
+  )
 
   const showPicker = (RANGED_PAGES.includes(page) || (page === 'reports' && id === 'suggestions')) && range && lastSale !== undefined
   const picker = showPicker && (
@@ -229,6 +233,7 @@ function Workspace({ account }) {
       title={page === 'menu' && id ? null : TITLES[page]}
       toolbar={picker}
       notes={showPicker && data?.range === range ? <CoverageChips range={range} coverage={data.coverage} /> : null}
+      actions={overviewActions}
       badges={{ menu: data?.incomplete.length }}
     >
       {content}

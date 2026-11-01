@@ -72,7 +72,7 @@ function ActionList({ actions, dishes }) {
                     <tr key={item.dish_id}>
                       <td className="num text-muted">{String(ON_RAIL + i + 1).padStart(2, '0')}</td>
                       <td>
-                        <a href={`#/menu/${item.dish_id}`} className="text-lg font-bold hover:text-accent">{item.dish_name}</a>
+                        <a href={`#/menu/${item.dish_id}`} className="text-lg font-semibold hover:text-accent">{item.dish_name}</a>
                       </td>
                       <td><Hint content={explain(dish)}><QuadrantBadge quadrant={item.quadrant} /></Hint></td>
                       <td className="num text-right">{dish ? pounds(dish.margin_pounds) : '—'}</td>

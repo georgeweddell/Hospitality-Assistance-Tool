@@ -20,13 +20,13 @@ const MISSING = {
 
 const PLURAL = { Starter: 'Starters', Main: 'Mains', Side: 'Sides', Dessert: 'Desserts' }
 
-// The all-dishes view shows each category as its own tinted block, each with
-// one odd corner, like a menu board.
+// The all-dishes view shows each category as its own paper block, each with
+// one odd corner, like a menu board. No tints: colour on this page means a quadrant.
 const BLOCK = {
   Main: 'bg-surface corner-bl',
-  Starter: 'bg-mustard-soft corner-tl',
-  Side: 'bg-basil-soft corner-tr',
-  Dessert: 'bg-plum-soft corner-br',
+  Starter: 'bg-surface corner-tl',
+  Side: 'bg-surface corner-tr',
+  Dessert: 'bg-surface corner-br',
 }
 
 // Remember the chosen tab and filter, so "← Menu" from a dish page comes back
@@ -195,7 +195,7 @@ function MenuPage({ allDishes, analysed, incomplete, setup, range, onChanged }) 
         </nav>
         <div className="mb-1.5 flex gap-2">
           {menuImport.button}
-          {!adding && <button type="button" onClick={() => setAdding(true)} className="btn btn-primary">+ Add dish</button>}
+          {!adding && <button type="button" onClick={() => setAdding(true)} className="btn btn-primary">Add dish</button>}
         </div>
       </div>
       {menuImport.error && <p className="alert-error">{menuImport.error}</p>}

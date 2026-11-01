@@ -97,3 +97,15 @@ George asked for a large, messy dataset to test the imports and then to fix what
 - **Landing screenshot:** `frontend/public/landing/overview.webp`, the demo overview, taken with headless Edge (guest chip hidden).
 - **The notice is written from what the code stores.** If the cookie, storage keys, providers (Render, Anthropic) or kept files change, change `PrivacyPage.jsx` and `LEGAL_UPDATED`.
 - **George's to-dos:** create the project inbox and put it in `legal.js`; read the privacy and terms wording (drafted from the code, not legal advice; the notice promises big changes are emailed to account holders and deletion within 30 days); run the ICO "Do I need to pay a data protection fee?" self-assessment.
+
+## "Unslop" polish (1 Nov 2026)
+
+George ran the unslop skill (github.com/heydamir/unslop, installed in `~/.claude/skills/`) on the landing page, then the overview and menu. Both came out as light slop, so polish only: the deli-counter brand, heavy narrow headings, tickets, stamps and lowercase labels stay.
+- **One bright moment per screen.** The overview's red contribution tile; sales and dishes sold are paper tiles (`tile-paper`). The landing's "what it does" tiles are paper too.
+- **Colour means a quadrant.** The Menu page's category blocks are all paper (the tints clashed: desserts plum like Dog, sides green like Star).
+- **Every change says what it compares with** ("▲ 14.9% on july").
+- **No capitals with wide spacing** in table headers, chart tooltips or ticket labels ("tkt 01"); quadrant stamps keep them, being stamps.
+- **The overview's report button and links sit in the title row** (Layout's `actions`), with no row of their own.
+- **Fonts stay** (Bricolage Grotesque + DM Mono is the pairing unslop itself lists for "playful, bold"), and so does weight 800 for display (titles, figures, logo). Otherwise 400, 500 for buttons and 600 for emphasis: no 700, and no small 800 headings.
+- **No "+" on add buttons.** Landing: one sign in button (the header has a quiet link); on a phone the screenshot is cropped to its left side.
+- **Still to do:** the same mustard/basil tiles on the dish, sales, imports, ingredients, insights, reports and setup pages; the other pages aren't audited yet.
