@@ -37,8 +37,14 @@
   --danger-bg: #f6dcd2;
 
   /* Corners: things you press (buttons, tabs, toggles, dropdowns) have small
-     rounded corners; only small labels (chips, counts, the hint "i") are pills. */
+     rounded corners; only small labels (chips, counts, the hint "i") are pills.
+     Cards, tiles, tooltips and messages share one corner. */
   --radius-control: 8px;
+  --radius-card: 14px;
+
+  /* Lines: one hairline for cards, tiles, tables and fields. Ink outlines are
+     kept for things you press and for the tickets. */
+  --hairline: rgb(33 28 23 / 0.16);
 
   color-scheme: light;
   font-family: var(--font-sans);
@@ -59,6 +65,7 @@
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
+  --color-hairline: var(--hairline);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-soft: var(--accent-soft);
@@ -88,7 +95,9 @@ body {
 
 @layer components {
   /* --- Type --------------------------------------------------------- */
-  /* Headings and big figures: Bricolage at its narrowest and heaviest. */
+  /* Two voices: Bricolage for words, DM Mono only for figures (.num, tables,
+     ticket meta). Page titles and one hero figure a page use Bricolage at its
+     narrowest and heaviest; nothing else does. */
   .page-title {
     margin: 0;
     font-family: var(--font-display);
@@ -101,14 +110,14 @@ body {
   .section-title {
     margin: 0;
     font-family: var(--font-display);
-    font-weight: 800;
+    font-weight: 600;
     font-size: 1.5rem;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.02em;
     line-height: 1.1;
     text-transform: lowercase;   /* a label, like the nav; titles holding a name opt out with normal-case */
   }
   .label {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 0.8125rem;
     font-weight: 400;
     color: var(--muted);
@@ -119,11 +128,10 @@ body {
   }
   .stat-value {
     font-family: var(--font-display);
-    font-weight: 800;
-    font-stretch: 75%;
-    font-size: 2.75rem;
-    letter-spacing: -0.03em;
-    line-height: 0.9;
+    font-weight: 600;
+    font-size: 2.25rem;
+    letter-spacing: -0.02em;
+    line-height: 1;
     font-variant-numeric: tabular-nums;
   }
   .link {
@@ -137,17 +145,17 @@ body {
     color: var(--accent-hover);
   }
 
-  /* --- Buttons: pills with an ink outline ------------------------------- */
+  /* --- Buttons: an ink outline (the only controls that keep one) ------------ */
   .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    padding: 0.6875rem 1.125rem;
+    padding: 0.625rem 1.125rem;
     border: 1.5px solid var(--ink);
     border-radius: var(--radius-control);
-    font-family: var(--font-mono);
-    font-size: 0.8125rem;
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
     font-weight: 500;
     text-align: center;
     line-height: 1.25;
@@ -196,8 +204,8 @@ body {
     border: none;
     background: transparent;
     color: var(--muted);
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
     line-height: 1.25;
     text-transform: lowercase;
     cursor: pointer;
@@ -218,8 +226,8 @@ body {
     width: 100%;
     box-sizing: border-box;
     padding: 0.5625rem 0.875rem;
-    border: 1.5px solid var(--line-strong);
-    border-radius: 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-control);
     background: var(--surface);
     color: var(--ink);
     font: inherit;
@@ -240,11 +248,11 @@ body {
     border-color: var(--danger);
   }
 
-  /* --- Cards: paper with an ink outline -------------------------------- */
+  /* --- Cards: paper with a hairline ------------------------------------ */
   .card {
     background: var(--surface);
-    border: 2px solid var(--ink);
-    border-radius: 22px;
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-card);
   }
   .card-header {
     display: flex;
@@ -264,10 +272,15 @@ body {
     gap: 0.375rem;
     padding: 0.1875rem 0.625rem;
     border-radius: 999px;
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
     font-weight: 400;
     white-space: nowrap;
+  }
+  /* A chip holding figures (a change, a price) keeps the figures' mono. */
+  .chip.num {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
   }
   .chip-warn {
     background: var(--mustard-soft);
@@ -298,7 +311,7 @@ body {
     color: var(--ink);
   }
 
-  /* --- Tables: mono headers, dashed rows ---------------------------------- */
+  /* --- Tables: quiet headers, hairline rows -------------------------------- */
   .table {
     width: 100%;
     border-collapse: collapse;
@@ -307,8 +320,8 @@ body {
   .table th {
     padding: 0.625rem 0.75rem;
     text-align: left;
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
     font-weight: 400;
     text-transform: lowercase;   /* a label, like the nav */
     color: var(--muted);
@@ -316,7 +329,7 @@ body {
   }
   .table td {
     padding: 0.75rem;
-    border-top: 1.5px dashed var(--line-strong);
+    border-top: 1px solid var(--hairline);
     vertical-align: middle;
   }
   .table th:first-child,
@@ -334,7 +347,8 @@ body {
     background: var(--bg);
   }
 
-  /* --- Tabs and segmented controls: pills --------------------------------- */
+  /* --- Tabs and segmented controls ---------------------------------------- */
+  /* Tabs have no outline: the current one is filled with ink, the rest are words. */
   .tabs {
     display: flex;
     gap: 0.375rem;
@@ -351,13 +365,14 @@ body {
     align-items: center;
     justify-content: center;
     gap: 0.375rem;
-    padding: 0.5rem 0.9375rem;
-    border: 1.5px solid var(--ink);
+    padding: 0.5rem 0.875rem;
+    border: none;
     border-radius: var(--radius-control);
     background: transparent;
     color: var(--ink);
-    font-family: var(--font-mono);
-    font-size: 0.8125rem;
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 500;
     text-transform: lowercase;
     white-space: nowrap;
     cursor: pointer;
@@ -376,7 +391,7 @@ body {
     display: inline-flex;
     gap: 0.25rem;
     padding: 0.1875rem;
-    border: 1.5px solid var(--ink);
+    border: 1px solid var(--line-strong);
     border-radius: var(--radius-control);
   }
   .segmented button {
@@ -386,8 +401,9 @@ body {
     text-align: center;
     background: transparent;
     color: var(--ink);
-    font-family: var(--font-mono);
-    font-size: 0.8125rem;
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 500;
     text-transform: lowercase;
     cursor: pointer;
   }
@@ -436,7 +452,7 @@ body {
     width: max-content;
     max-width: 18rem;
     padding: 0.75rem 0.875rem;
-    border-radius: 14px;
+    border-radius: var(--radius-card);
     background: var(--ink);
     color: var(--bg);
     font-family: var(--font-sans);
@@ -463,39 +479,38 @@ body {
   }
 
   /* --- Chart tooltips (QuadrantChart, SalesMoney) --------------------------- */
-  /* An ink ticket: a coloured strip on top (the dish's quadrant, or the
-     accent), the name in heavy type, figures side by side in mono. */
+  /* Paper with a hairline and a small shadow (it floats over the chart): the
+     name, a muted kicker, figures side by side in mono. */
   .chart-tip {
     min-width: 13rem;
     padding: 0.75rem 0.9375rem 0.8125rem;
-    border-top: 5px solid var(--tip-edge, var(--accent));
-    border-radius: 14px;
-    background: var(--ink);
-    color: var(--bg);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    color: var(--ink);
     font-family: var(--font-sans);
+    box-shadow: 0 4px 16px rgb(33 28 23 / 0.08);
   }
   .chart-tip-title {
     margin: 0;
-    font-family: var(--font-display);
-    font-size: 1.25rem;
-    font-weight: 800;
-    font-stretch: 80%;
-    letter-spacing: -0.02em;
-    line-height: 1.1;
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.2;
   }
   .chart-tip-kicker {
     margin: 0.125rem 0 0;
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
     text-transform: lowercase;
-    color: var(--line-strong);
+    color: var(--muted);
   }
   .chart-tip-figures {
     display: flex;
     gap: 1.125rem;
     margin-top: 0.625rem;
     padding-top: 0.625rem;
-    border-top: 1.5px dashed rgb(241 233 214 / 0.35);
+    border-top: 1px solid var(--hairline);
   }
   .chart-tip-value {
     font-family: var(--font-mono);
@@ -505,9 +520,9 @@ body {
     font-variant-numeric: tabular-nums;
   }
   .chart-tip-label {
-    font-family: var(--font-mono);
-    font-size: 0.6875rem;
-    color: var(--line-strong);
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    color: var(--muted);
   }
 
   /* A select drawn like a button (the period picker; named before pills were dropped). */
@@ -516,8 +531,9 @@ body {
     border-color: var(--ink);
     border-radius: var(--radius-control);
     background: transparent;
-    font-family: var(--font-mono);
-    font-size: 0.8125rem;
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 500;
     text-align: center;
     text-align-last: center;   /* a select's shown option ignores text-align alone */
     cursor: pointer;
@@ -532,7 +548,7 @@ body {
     justify-content: space-between;
     gap: 0.75rem;
     padding: 1.25rem 1.5rem;
-    border-radius: 28px;
+    border-radius: var(--radius-card);
     background: var(--surface);
     color: var(--ink);
   }
@@ -549,20 +565,15 @@ body {
   }
   .tile-outline {
     background: transparent;
-    border: 2px solid var(--ink);
+    border: 1px solid var(--hairline);
   }
-  /* Paper with an ink outline, like a ticket: for tiles that sit beside a
-     brighter moment (the landing page's "what it does"). */
+  /* Paper with a hairline: the usual tile, beside a page's one coloured tile. */
   .tile-paper {
     background: var(--surface);
-    border: 2px solid var(--ink);
+    border: 1px solid var(--hairline);
   }
-  .corner-tl { border-top-left-radius: 6px; }
-  .corner-tr { border-top-right-radius: 6px; }
-  .corner-bl { border-bottom-left-radius: 6px; }
-  .corner-br { border-bottom-right-radius: 6px; }
   .tile-label {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 0.8125rem;
     text-transform: lowercase;
   }
@@ -571,14 +582,21 @@ body {
     border-color: currentColor;
     color: inherit;
   }
+  /* A tile's figure. Its size is set per use. */
   .figure {
     font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 2.5rem;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  /* The one hero figure on a page (the overview's contribution): narrowest and heaviest. */
+  .figure-hero {
     font-weight: 800;
     font-stretch: 75%;
-    font-size: 4.5rem;
     letter-spacing: -0.03em;
     line-height: 0.85;
-    font-variant-numeric: tabular-nums;
   }
 
   /* --- Ticket rail: recommended changes hanging off an ink rail (TicketRail.jsx) --- */
@@ -679,12 +697,11 @@ body {
     font-size: 0.8125rem;
   }
   .ticket-impact {
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-stretch: 75%;
-    font-size: 2.25rem;
-    letter-spacing: -0.03em;
-    line-height: 0.9;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    font-size: 1.375rem;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
     color: var(--accent);
   }
@@ -745,25 +762,25 @@ body {
   /* --- Messages ------------------------------------------------------------ */
   .alert-error {
     padding: 0.75rem 1rem;
-    border: 1.5px solid var(--danger);
-    border-radius: 14px;
+    border: 1px solid var(--danger);
+    border-radius: var(--radius-card);
     background: var(--danger-bg);
     color: var(--danger);
     font-size: 0.9375rem;
   }
   .alert-info {
     padding: 0.625rem 0.875rem;
-    border-radius: 14px;
+    border-radius: var(--radius-card);
     background: var(--mustard-soft);
     color: var(--ink);
     font-size: 0.9375rem;
   }
   .empty {
     padding: 2rem;
-    border: 2px dashed var(--line-strong);
-    border-radius: 22px;
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-card);
     text-align: center;
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-size: 0.875rem;
     color: var(--muted);
   }
@@ -804,9 +821,9 @@ body {
   stroke: var(--ink);
   stroke-opacity: 0.6;
 }
-/* Dish names on the quadrant chart sit in dark pills (QuadrantChart renderLabel). */
+/* Dish names on the quadrant chart sit in paper labels (QuadrantChart renderLabel). */
 .chart .recharts-label-list text {
-  fill: var(--bg);
-  font-family: var(--font-mono);
+  fill: var(--ink);
+  font-family: var(--font-sans);
   font-size: 12px;
 }

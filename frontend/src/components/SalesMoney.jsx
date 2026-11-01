@@ -26,7 +26,7 @@ function Figure({ label, value, sub, tone }) {
   return (
     <div className={`tile min-h-[132px] ${tone}`}>
       <span className="tile-label">{label}{sub && ` · ${sub}`}</span>
-      <span className="figure text-[clamp(2.5rem,4vw,3.75rem)]">{value}</span>
+      <span className="figure text-[clamp(2rem,3vw,2.5rem)]">{value}</span>
     </div>
   )
 }
@@ -102,16 +102,16 @@ function SalesMoney({ range, coverage }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Figure label="dish sales" value={poundsRounded(summary.total_sales)} tone="tile-tomato corner-tr" />
+        <Figure label="dish sales" value={poundsRounded(summary.total_sales)} tone="tile-tomato" />
         <Figure label="dishes sold" value={Math.round(summary.total_units).toLocaleString('en-GB')} tone="tile-outline" />
         <Figure label="busiest day" value={poundsRounded(busiest.sales)} sub={shortDate(busiest.day).toLowerCase()} tone="tile-paper" />
         <Figure label="average day" value={poundsRounded(summary.total_sales / trading.length)}
-                sub={`${trading.length} trading`} tone="tile-paper corner-tl" />
+                sub={`${trading.length} trading`} tone="tile-paper" />
       </div>
 
       <Card title="Sales by day"
             aside={
-              <span className="flex flex-wrap items-center gap-4 font-mono text-xs text-ink">
+              <span className="flex flex-wrap items-center gap-4 text-xs text-ink">
                 <Key className="h-3 w-3 rounded-[3px] bg-mustard" label="mon–thu" />
                 <Key className="h-3 w-3 rounded-[3px] bg-accent" label="fri–sun" />
                 <Key className="h-[3px] w-4 bg-ink" label="7-day average" />
@@ -154,8 +154,8 @@ function SalesMoney({ range, coverage }) {
 
       {shown > 0 && (
         <div className="grid gap-5 lg:grid-cols-2">
-          <Sellers title="Best sellers" dishes={summary.dishes.slice(0, shown)} className="corner-tl" />
-          <Sellers title="Lowest sellers" dishes={summary.dishes.slice(-shown).reverse()} className="corner-tr" />
+          <Sellers title="Best sellers" dishes={summary.dishes.slice(0, shown)} className="" />
+          <Sellers title="Lowest sellers" dishes={summary.dishes.slice(-shown).reverse()} className="" />
         </div>
       )}
     </div>

@@ -7,9 +7,10 @@ import usePageImport from '../usePageImport'
 import { emptyPrice, priceBody, priceProblem } from '../prices'
 import { priceForDisplay, shortDate, sourceLabel } from '../format'
 
-// Own prices (invoice, supplier list, manual) are highlighted; benchmarks are muted.
+// Own prices (invoice, supplier list, manual) get a chip; benchmarks are plain muted text.
 function SourceBadge({ source }) {
-  return <span className={`chip ${source === 'benchmark' ? 'chip-muted' : 'chip-accent'}`}>{sourceLabel(source)}</span>
+  if (source === 'benchmark') return <span className="text-sm text-muted">benchmark</span>
+  return <span className="chip chip-accent">{sourceLabel(source)}</span>
 }
 
 // Expanded row: record a new price, and the price history.
@@ -183,7 +184,7 @@ function IngredientsPage({ onChanged, ownCostShare }) {
 
   return (
     <div className="space-y-5">
-      <div className="tile tile-basil corner-bl flex-row flex-wrap items-center gap-x-12 gap-y-4 px-7 py-6">
+      <div className="tile tile-paper flex-row flex-wrap items-center gap-x-12 gap-y-4 px-7 py-6">
         <div className="flex flex-col gap-2">
           <span className="tile-label">your own prices</span>
           <span className="figure text-[4.5rem]">
@@ -191,9 +192,9 @@ function IngredientsPage({ onChanged, ownCostShare }) {
           </span>
         </div>
         <div className="flex min-w-[240px] flex-1 flex-col gap-2.5">
-          <div className="h-3 overflow-hidden rounded-full bg-bg/25" role="img"
+          <div className="h-3 overflow-hidden rounded-full bg-line" role="img"
                aria-label={`${ownInUse} of ${inUse.length} ingredients in use have your own prices`}>
-            <div className="h-full rounded-full bg-mustard" style={{ width: `${inUse.length ? (ownInUse / inUse.length) * 100 : 0}%` }} />
+            <div className="h-full rounded-full bg-basil" style={{ width: `${inUse.length ? (ownInUse / inUse.length) * 100 : 0}%` }} />
           </div>
           <span className="tile-label">ingredients in use · the rest on benchmark</span>
         </div>

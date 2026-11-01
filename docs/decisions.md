@@ -110,3 +110,14 @@ George ran the unslop skill (github.com/heydamir/unslop, installed in `~/.claude
 - **No "+" on add buttons.** Landing: one sign in button (the header has a quiet link); on a phone the screenshot is cropped to its left side.
 - **The other pages (second round):** one coloured tile at most per page (dish: margin; sales: dish sales; actions, ingredients and reports keep their one tile); insights' top earner and opportunity, imports and setup tiles are paper (setup keeps basil for a finished step). Best and lowest sellers are paper (they were tinted like Star and Dog). Days with sales are ink, not red. Recipe lines and menu prices say "remove" instead of "×" (`btn-remove`). Every change on insights says "on july". Business checks and settings had nothing to fix.
 - **Left as is:** the "×" inside a recipe's "Not costed" chips (a chip's dismiss), and the guest chip alone above a dish page's breadcrumb.
+
+## Quieter design system (agreed 1 Nov 2026, planned in plan mode)
+
+After the unslop rounds the app still looked AI-made to George. A full review found the cause was the system, not single details: 2px ink outlines and 22–28px corners on every card, odd corners, tilts and stamps everywhere, DM Mono on labels and buttons, poster-sized figures, 148 chips, 12 corner sizes. George chose to quiet the system, which reverses parts of the 25 Sep "deli counter" redesign:
+- **Lines and corners:** hairlines (`--hairline`) on cards, tiles, tables and fields; ink outlines only on buttons and tickets; one card corner (`--radius-card` 14px); the odd corners (`corner-*`) are gone.
+- **Two type voices:** Bricolage for words (labels, buttons, tabs, table headers, chips), DM Mono only for figures. Weight 800 narrow only for page titles and the overview's hero figure (`figure-hero`, now about 6.5rem, was 13rem); other figures 600.
+- **Nav tabs:** no outline; the current page filled with ink.
+- **Signature kept:** the tickets on the rail (overview, actions) with their tilt and stamps. The dish page shows its change as a plain card and its quadrant as a badge.
+- **Colour:** the overview's quadrant tiles are paper, with the quadrant's colour on its name and dot; the insights chart keeps its tinted zones (the page's moment). Chart labels and tooltips are paper.
+- **Pages:** business checks as one table (check · figures · target · action); a dish's recipe is read-only until "edit recipe"; sales' "enter totals" is behind a button; ingredients show a source chip only for your own prices; the insights figures are one card.
+

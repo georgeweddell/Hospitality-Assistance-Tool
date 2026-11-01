@@ -1,8 +1,8 @@
 import Hint from './Hint'
 
-// The business suggestions tab of Reports: each check that fires as a card (its figures
-// beside the target, then what to do), then the ones that pass as a single line.
-// The rule of thumb in words lives in the hint, not on the card.
+// The business suggestions tab of Reports: each check that fires as a row of one table
+// (its figures, the target, then what to do), then the ones that pass as a single line.
+// The rule of thumb in words lives in the hint, not in the table.
 // Every figure is worked out in the backend (suggestions.py), formatted there.
 function BusinessChecks({ checks }) {
   const firing = checks.filter((c) => c.fires)
@@ -11,42 +11,53 @@ function BusinessChecks({ checks }) {
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-baseline justify-end gap-2">
-        <span className="font-mono text-sm">{firing.length} of {checks.length} checks to look at</span>
+        <span className="text-sm">
+          <span className="num">{firing.length}</span> of <span className="num">{checks.length}</span> checks to look at
+        </span>
       </div>
 
       {firing.length === 0 ? (
         <div className="empty">Every check passes</div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {firing.map((c) => (
-            <article key={c.key} className="card flex flex-col gap-3 p-5">
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="text-lg font-semibold leading-tight">{c.title}</h3>
-                <Hint align="right" label={`About ${c.title}`}
-                  content={c.rule_of_thumb ? `${c.note} Rule of thumb: ${c.rule_of_thumb}.` : c.note} />
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {c.figures.slice(0, 4).map((f) => (
-                  <span key={f.label} className="flex min-w-0 flex-col rounded-2xl border-[1.5px] border-ink px-3 py-1.5">
-                    <span className="figure text-[1.375rem]">{f.display}</span>
-                    <span className="font-mono text-[0.6875rem] leading-snug text-muted">{f.label}</span>
-                  </span>
+        <section className="card">
+          <div className="overflow-x-auto">
+            <table className="table min-w-[720px]">
+              <thead>
+                <tr>
+                  <th className="w-52">check</th>
+                  <th>figures</th>
+                  <th className="w-40">target</th>
+                  <th className="w-64">action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {firing.map((c) => (
+                  <tr key={c.key}>
+                    <td className="align-top">
+                      <span className="font-semibold">{c.title}</span>{' '}
+                      <Hint label={`About ${c.title}`}
+                        content={c.rule_of_thumb ? `${c.note} Rule of thumb: ${c.rule_of_thumb}.` : c.note} />
+                    </td>
+                    <td className="align-top">
+                      {c.figures.slice(0, 4).map((f) => (
+                        <div key={f.label} className="flex flex-wrap items-baseline gap-x-2">
+                          <span className="num">{f.display}</span>
+                          <span className="text-[0.8125rem] text-muted">{f.label}</span>
+                        </div>
+                      ))}
+                    </td>
+                    <td className="align-top text-muted">{c.target}</td>
+                    <td className="align-top font-semibold">{c.action}</td>
+                  </tr>
                 ))}
-                {c.target && (
-                  <span className="flex min-w-0 flex-col rounded-2xl border-[1.5px] border-dashed border-ink px-3 py-1.5">
-                    <span className="figure text-[1.375rem]">{c.target}</span>
-                    <span className="font-mono text-[0.6875rem] leading-snug text-muted">target</span>
-                  </span>
-                )}
-              </div>
-              <p className="mt-auto font-semibold">{c.action}</p>
-            </article>
-          ))}
-        </div>
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
 
       {passing.length > 0 && (
-        <p className="font-mono text-sm text-muted">
+        <p className="text-sm text-muted">
           passing · {passing.map((c) => c.title.toLowerCase()).join(' · ')}
         </p>
       )}

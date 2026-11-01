@@ -46,10 +46,10 @@ function periodOf(report) {
 // A cited fact: the number (formatted by code) over what it is; how it's worked out on hover.
 function FactChip({ fact }) {
   return (
-    <span className="flex min-w-0 flex-col gap-0.5 rounded-2xl border-[1.5px] border-ink bg-surface px-3 py-2"
+    <span className="flex min-w-0 flex-col gap-0.5 rounded-[14px] border border-hairline bg-surface px-3 py-2"
           title={fact.note || undefined}>
       <span className="figure text-[1.5rem]">{fact.display}</span>
-      <span className="font-mono text-[0.6875rem] leading-snug text-muted">{fact.label}</span>
+      <span className="text-[0.6875rem] leading-snug text-muted">{fact.label}</span>
     </span>
   )
 }
@@ -82,7 +82,7 @@ function Trail({ report, seconds }) {
         {steps.map((s, i) => {
           const latest = i === steps.length - 1
           return (
-            <li key={i} className="flex items-center gap-4 border-t-[1.5px] border-dashed border-line-strong py-2.5 font-mono text-sm">
+            <li key={i} className="flex items-center gap-4 border-t border-hairline py-2.5 text-sm">
               <span className="w-6 text-muted">{String(i + 1).padStart(2, '0')}</span>
               <span className="grow">{s.label}</span>
               {latest ? (
@@ -92,7 +92,7 @@ function Trail({ report, seconds }) {
           )
         })}
         {steps.length === 0 && (
-          <li className="flex items-center gap-4 border-t-[1.5px] border-dashed border-line-strong py-2.5 font-mono text-sm">
+          <li className="flex items-center gap-4 border-t border-hairline py-2.5 text-sm">
             <span className="w-6 text-muted">01</span>
             <span className="grow">Starting</span>
             <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-accent" aria-label="In progress" />
@@ -108,13 +108,13 @@ function Report({ report }) {
     <div className="space-y-10">
       <section className="space-y-4">
         <h2 className="section-title text-[2rem]">next steps</h2>
-        <ol className="overflow-hidden rounded-[22px] border-2 border-ink [&>li+li]:border-t-2 [&>li+li]:border-ink">
+        <ol className="overflow-hidden rounded-[14px] border border-hairline [&>li+li]:border-t [&>li+li]:border-hairline">
           {report.next_steps.map((item, i) => <Item key={i} item={item} n={i + 1} tone={i === 0 ? 'bg-mustard' : 'bg-surface'} />)}
         </ol>
       </section>
       <section className="space-y-4">
         <h2 className="section-title text-[2rem]">findings</h2>
-        <ol className="overflow-hidden rounded-[22px] border-2 border-ink [&>li+li]:border-t-[1.5px] [&>li+li]:border-dashed [&>li+li]:border-line-strong">
+        <ol className="overflow-hidden rounded-[14px] border border-hairline [&>li+li]:border-t [&>li+li]:border-hairline">
           {report.findings.map((item, i) => <Item key={i} item={item} n={i + 1} tone="bg-surface" />)}
         </ol>
       </section>
@@ -154,7 +154,7 @@ function ReportView({ id, range }) {
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <p className="font-mono text-sm text-muted">
+        <p className="text-sm text-muted">
           <a href="#/reports" className="underline hover:text-ink print:hidden">reports</a>
           <span className="print:hidden"> / </span>
           {periodOf(report).toLowerCase()} · written {shortDate(report.created_at.slice(0, 10)).toLowerCase()}
@@ -165,7 +165,7 @@ function ReportView({ id, range }) {
       </div>
 
       {report.focus && (
-        <p className="max-w-3xl font-mono text-sm">
+        <p className="max-w-3xl text-sm">
           <span className="text-muted">focus · </span>{report.focus}
         </p>
       )}
@@ -198,10 +198,10 @@ function ReportList({ range }) {
   return (
     <div className="space-y-5">
       {range && (
-        <div className="tile tile-mustard corner-tr gap-5 px-7 py-6">
+        <div className="tile tile-mustard gap-5 px-7 py-6">
           <div className="flex flex-col gap-1.5">
             <span className="tile-label">new report</span>
-            <span className="figure text-[3rem]">{rangeLabel(range).toLowerCase()}</span>
+            <span className="section-title text-[1.75rem]">{rangeLabel(range).toLowerCase()}</span>
           </div>
           <label className="field">
             <span className="tile-label">any particular focus or question (optional)</span>

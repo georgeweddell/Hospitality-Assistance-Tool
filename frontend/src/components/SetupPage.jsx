@@ -25,11 +25,11 @@ const RAIL = [
 // What each upload step shows: its colour (as on the Imports page), the figure
 // label, the upload, and the way to do it by hand.
 const UPLOAD_STEPS = {
-  dishes: { tone: 'tile-paper corner-tr', label: 'dishes on your menu', kind: 'menu', upload: 'Upload your menu',
+  dishes: { tone: 'tile-paper', label: 'dishes on your menu', kind: 'menu', upload: 'Upload your menu',
             formats: 'pdf · photo', byHand: ['#/menu', 'add dishes by hand'] },
   prices: { tone: 'tile-paper', label: 'ingredients on your own prices', kind: 'invoice', upload: 'Upload invoices',
             formats: 'pdf · photo · several', byHand: ['#/ingredients', 'enter prices by hand'] },
-  sales: { tone: 'tile-paper corner-tl', label: 'sales', kind: 'sales', upload: 'Upload a till export',
+  sales: { tone: 'tile-paper', label: 'sales', kind: 'sales', upload: 'Upload a till export',
            formats: 'csv till export', byHand: ['#/sales', 'type totals by hand'] },
 }
 
@@ -101,7 +101,7 @@ function SetupPage({ status, onChanged }) {
         <div className={`tile min-h-[240px] flex-row flex-wrap items-end gap-8 px-8 py-7 ${u.tone}`}>
           <div className="flex flex-col gap-3">
             <span className="tile-label">{u.label}</span>
-            <span className="figure text-[clamp(5rem,10vw,8.5rem)] leading-[0.8]">{figure.toLowerCase()}</span>
+            <span className="figure text-[3rem]">{figure.toLowerCase()}</span>
           </div>
           <div className="flex flex-col items-start gap-3">
             <UploadButton kind={u.kind} label={u.upload} {...uploadProps}
@@ -130,17 +130,17 @@ function SetupPage({ status, onChanged }) {
     body = (
       <div className="space-y-5">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <div className="tile tile-paper corner-tr min-h-[140px]">
-            <span className="tile-label">dishes</span><span className="figure text-[3.5rem]">{status.dishes}</span>
+          <div className="tile tile-paper min-h-[140px]">
+            <span className="tile-label">dishes</span><span className="figure text-[clamp(2rem,3vw,2.5rem)]">{status.dishes}</span>
           </div>
           <div className="tile tile-outline min-h-[140px]">
-            <span className="tile-label">with a recipe</span><span className="figure text-[3.5rem]">{steps.recipes.figure}</span>
+            <span className="tile-label">with a recipe</span><span className="figure text-[clamp(2rem,3vw,2.5rem)]">{steps.recipes.figure}</span>
           </div>
           <div className="tile tile-paper min-h-[140px]">
-            <span className="tile-label">own prices</span><span className="figure text-[3.5rem]">{steps.prices.figure}</span>
+            <span className="tile-label">own prices</span><span className="figure text-[clamp(2rem,3vw,2.5rem)]">{steps.prices.figure}</span>
           </div>
-          <div className="tile tile-paper corner-tl min-h-[140px]">
-            <span className="tile-label">sales</span><span className="figure text-[3.5rem]">{steps.sales.figure.toLowerCase()}</span>
+          <div className="tile tile-paper min-h-[140px]">
+            <span className="tile-label">sales</span><span className="figure text-[clamp(2rem,3vw,2.5rem)]">{steps.sales.figure.toLowerCase()}</span>
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-3">

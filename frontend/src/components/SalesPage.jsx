@@ -107,7 +107,7 @@ function ManualEntry({ range, onSaved }) {
                 <tr key={e.dish_id}>
                   <td>
                     <span className="font-semibold">{e.dish_name}</span>
-                    {e.other_records > 0 && <span className="chip chip-muted ml-2">Daily sales recorded</span>}
+                    {e.other_records > 0 && <span className="ml-2 text-sm text-muted">daily sales recorded</span>}
                   </td>
                   <td className="w-40 text-right">
                     <input
@@ -141,6 +141,25 @@ function ManualEntry({ range, onSaved }) {
   )
 }
 
+// Hand entry stays behind a button unless the period has no sales yet. The choice is
+// made once per period, so saving totals doesn't snap the card shut.
+function ManualEntrySection({ range, startOpen, onSaved }) {
+  const [open, setOpen] = useState(startOpen)
+  if (!open) {
+    return (
+      <div>
+        <button type="button" onClick={() => setOpen(true)} className="btn btn-secondary">Enter totals by hand</button>
+      </div>
+    )
+  }
+  return (
+    <Card title={`Enter totals · ${rangeLabel(range)}`} flush
+          aside={<button type="button" onClick={() => setOpen(false)} className="btn btn-secondary btn-sm">Hide</button>}>
+      <ManualEntry range={range} onSaved={onSaved} />
+    </Card>
+  )
+}
+
 function SalesPage({ range, coverage, onSaved }) {
   const salesImport = usePageImport('sales', 'Import sales', onSaved)
   if (salesImport.review) return salesImport.review
@@ -156,9 +175,7 @@ function SalesPage({ range, coverage, onSaved }) {
         <CoverageStrip range={range} coverage={coverage} />
       </Card>
 
-      <Card title={`Enter totals · ${rangeLabel(range)}`} flush>
-        <ManualEntry range={range} onSaved={onSaved} />
-      </Card>
+      <ManualEntrySection key={`${range.from}:${range.to}`} range={range} startOpen={covered === 0} onSaved={onSaved} />
     </div>
   )
 }

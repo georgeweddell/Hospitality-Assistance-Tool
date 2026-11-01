@@ -13,9 +13,9 @@ const KIND_LABELS = { invoice: 'Invoice', sales: 'Sales', menu: 'Menu' }
 
 // One paper tile per kind of file, each with its upload button.
 const TILES = [
-  { kind: 'menu', word: 'menu', formats: 'pdf · photo', tone: 'tile-paper corner-tr' },
+  { kind: 'menu', word: 'menu', formats: 'pdf · photo', tone: 'tile-paper' },
   { kind: 'invoice', word: 'invoices', formats: 'pdf · photo · several', tone: 'tile-paper', multiple: true },
-  { kind: 'sales', word: 'sales', formats: 'csv till export', tone: 'tile-paper corner-tl' },
+  { kind: 'sales', word: 'sales', formats: 'csv till export', tone: 'tile-paper' },
 ]
 
 // Upload an invoice, a till export or a menu, check what Claude read, apply it; and
@@ -73,7 +73,7 @@ function ImportsPage({ onChanged }) {
       {TILES.map((t) => (
         <div key={t.kind} className={`tile min-h-[120px] flex-row items-center ${t.tone}`}>
           <div className="flex flex-col gap-1.5">
-            <span className="figure text-[3rem]">{t.word}</span>
+            <span className="section-title text-[1.75rem]">{t.word}</span>
             <span className="tile-label">{t.formats}</span>
           </div>
           <UploadButton kind={t.kind} label={t.multiple ? 'Choose files' : 'Choose file'} {...upload}

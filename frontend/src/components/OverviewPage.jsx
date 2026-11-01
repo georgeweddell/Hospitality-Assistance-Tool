@@ -19,13 +19,7 @@ import { pctChange, summarise } from '../figures'
 const short = (v) => (Math.abs(v) >= 10000 ? `£${Math.round(v / 1000)}k` : poundsRounded(v))
 
 // Tiles in the same places as the chart's zones: Puzzles top left, Stars top right.
-// Each keeps one round corner, the one facing the middle of the grid.
-const TILES = [
-  { q: 'Puzzle', corner: 'corner-tr corner-bl corner-br' },
-  { q: 'Star', corner: 'corner-tl corner-bl corner-br' },
-  { q: 'Dog', corner: 'corner-tl corner-tr corner-br' },
-  { q: 'Plowhorse', corner: 'corner-tl corner-tr corner-bl' },
-]
+const TILES = ['Puzzle', 'Star', 'Dog', 'Plowhorse']
 // Lower is better, for marking a move up or down.
 const STANDING = { Star: 0, Plowhorse: 1, Puzzle: 1, Dog: 2 }
 
@@ -48,14 +42,15 @@ function movesSince(dishes, prevDishes) {
 }
 
 function DishPill({ dish, move }) {
-  const style = !move ? 'bg-surface'
+  const style = !move ? 'bg-bg'
     : move.mark === 'new' ? 'bg-ink text-bg'
     : move.mark === '↓' ? 'bg-accent text-accent-ink'
     : 'bg-basil text-bg'
   const title = move?.from ? `Was ${move.from}` : move ? 'New' : undefined
   return (
-    <a href={`#/menu/${dish.dish_id}`} title={title}
-       className={`whitespace-nowrap rounded-full px-2.5 py-1 font-mono text-xs hover:underline ${style}`}>
+    // One line; on a narrow tile a long name is cut short with "…" (the full name is in the title).
+    <a href={`#/menu/${dish.dish_id}`} title={title ? `${dish.dish_name} · ${title}` : dish.dish_name}
+       className={`inline-block max-w-full truncate rounded-full px-2.5 py-1 text-[0.8125rem] hover:underline ${style}`}>
       {move && move.mark !== 'new' && `${move.mark} `}{dish.dish_name}{move?.mark === 'new' && ' · new'}
     </a>
   )
@@ -101,7 +96,7 @@ export function OverviewActions({ dishes, range, unchecked = 0 }) {
         </span>
       )}
       {firing > 0 && (
-        <a href="#/reports/suggestions" className="link font-mono text-sm font-normal">
+        <a href="#/reports/suggestions" className="link text-sm font-normal">
           {firing} business suggestion{firing === 1 ? '' : 's'} →
         </a>
       )}
@@ -134,19 +129,19 @@ function OverviewPage({ dishes, prevDishes, actions, range }) {
             <span className="tile-label">contribution · {rangeLabel(range).toLowerCase()}</span>
             {hasPrev && <Delta onTile value={pctChange(now.contribution, before.contribution)} format={onPrev} />}
           </div>
-          <span className="figure -ml-1 text-[clamp(6rem,14vw,13rem)] leading-[0.8] tracking-[-0.05em]">{short(now.contribution)}</span>
+          <span className="figure figure-hero -ml-0.5 text-[clamp(4rem,8vw,6.5rem)]">{short(now.contribution)}</span>
           <span className="tile-label num">{poundsRounded(now.contribution)} · {dishes.length} dishes</span>
         </div>
         <div className="grid grid-cols-2 gap-4">
           {/* Paper tiles: the contribution tile is the one bright thing here. */}
           <div className="tile tile-paper">
             <span className="tile-label">sales</span>
-            <span className="figure text-[clamp(2.5rem,4.5vw,4.25rem)]">{poundsRounded(now.sales)}</span>
+            <span className="figure text-[clamp(2rem,3vw,2.5rem)]">{poundsRounded(now.sales)}</span>
             {hasPrev ? <span><Delta value={pctChange(now.sales, before.sales)} format={onPrev} /></span> : <span />}
           </div>
-          <div className="tile tile-paper corner-bl">
+          <div className="tile tile-paper">
             <span className="tile-label">dishes sold</span>
-            <span className="figure text-[clamp(2.5rem,4.5vw,4.25rem)]">{now.units.toLocaleString('en-GB')}</span>
+            <span className="figure text-[clamp(2rem,3vw,2.5rem)]">{now.units.toLocaleString('en-GB')}</span>
             {hasPrev ? <span><Delta value={pctChange(now.units, before.units)} format={onPrev} /></span> : <span />}
           </div>
           <div className="tile tile-outline col-span-2 flex-row items-center">
@@ -154,7 +149,7 @@ function OverviewPage({ dishes, prevDishes, actions, range }) {
               <span className="tile-label">gross margin</span>
               {hasPrev && <Delta value={now.grossMargin - before.grossMargin} format={(v) => `${v} pts on ${vs.toLowerCase()}`} />}
             </div>
-            <span className="figure text-[clamp(3rem,6vw,5.5rem)]">{percent(now.grossMargin)}</span>
+            <span className="figure text-[clamp(2rem,3vw,2.5rem)]">{percent(now.grossMargin)}</span>
           </div>
         </div>
       </section>
@@ -163,10 +158,10 @@ function OverviewPage({ dishes, prevDishes, actions, range }) {
         <section className="min-w-0 space-y-4">
           <div className="flex items-baseline justify-between gap-2">
             <div className="flex items-center gap-2">
-              <h2 className="section-title text-[2rem]">recommended changes</h2>
+              <h2 className="section-title text-[1.75rem]">recommended changes</h2>
               <Hint content={IMPACT_EXPLAINED} label="How impact is worked out" />
             </div>
-            {actions.length > 0 && <a href="#/actions" className="link font-mono text-sm font-normal">all {actions.length} →</a>}
+            {actions.length > 0 && <a href="#/actions" className="link whitespace-nowrap text-sm font-normal">all {actions.length} →</a>}
           </div>
           {actions.length === 0 ? (
             <div className="empty">No changes</div>
@@ -177,22 +172,25 @@ function OverviewPage({ dishes, prevDishes, actions, range }) {
 
         <section className="space-y-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="section-title text-[2rem]">quadrants</h2>
+            <h2 className="section-title text-[1.75rem]">quadrants</h2>
             {hasPrev && sinceParts.length > 0 && (
-              <span className="font-mono text-sm">since {vs.toLowerCase()}: {sinceParts.join(' · ')}</span>
+              <span className="text-sm text-muted">since {vs.toLowerCase()}: {sinceParts.join(' · ')}</span>
             )}
           </div>
           <div className="grid grid-cols-2 gap-2.5">
-            {TILES.map(({ q, corner }) => {
+            {TILES.map((q) => {
               const members = dishes.filter((d) => d.quadrant === q)
+              // Paper tiles: the quadrant's colour is on its name and dot, not the whole tile.
               return (
-                <div key={q} className={`flex flex-col gap-2.5 rounded-[22px] p-4 ${corner}`}
-                     style={{ backgroundColor: QUADRANTS[q].tint }}>
+                <div key={q} className="tile tile-paper justify-start gap-2.5 p-4">
                   <div className="flex items-baseline justify-between">
                     <Hint content={QUADRANTS[q].meaning}>
-                      <span className="font-semibold" style={{ color: quadrantTextColor(q) }}>{q.toLowerCase()}s</span>
+                      <span className="flex items-center gap-1.5 font-semibold" style={{ color: quadrantTextColor(q) }}>
+                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: quadrantTextColor(q) }} aria-hidden="true" />
+                        {q.toLowerCase()}s
+                      </span>
                     </Hint>
-                    <span className="figure text-[2rem]">{members.length}</span>
+                    <span className="num text-lg font-medium">{members.length}</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {members.map((d) => <DishPill key={d.dish_id} dish={d} move={moves[d.dish_id]} />)}
@@ -218,12 +216,12 @@ function OverviewPage({ dishes, prevDishes, actions, range }) {
             {menuPrices && <span className="count">{menuPrices.length}</span>}
           </div>
           {!menuPrices ? <p className="card-body text-muted">Loading…</p>
-            : menuPrices.length === 0 ? <p className="card-body font-mono text-sm text-muted">none</p>
+            : menuPrices.length === 0 ? <p className="card-body text-sm text-muted">none</p>
             : (
               <ul>
                 {menuPrices.slice(0, 5).map((c) => (
                   <li key={`${c.dish_id}-${c.day}`}
-                      className="flex items-baseline justify-between gap-4 border-t-[1.5px] border-dashed border-line-strong px-5 py-3">
+                      className="flex items-baseline justify-between gap-4 border-t border-hairline px-5 py-3">
                     <a href={`#/menu/${c.dish_id}`} className="font-semibold hover:underline">{c.name}</a>
                     <span className="num text-sm">{pounds(c.old_price)} → {pounds(c.new_price)}</span>
                     <span className="num text-xs text-muted">{shortDate(c.day).toLowerCase()}</span>

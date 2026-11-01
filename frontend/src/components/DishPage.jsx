@@ -5,13 +5,12 @@ import DishForm from './DishForm'
 import MenuPrices from './MenuPrices'
 import Hint from './Hint'
 import RecipeEditor from './RecipeEditor'
-import Stamp from './Stamp'
-import { Ticket } from './TicketRail'
+import QuadrantBadge from './QuadrantBadge'
 import { percentMove, priceMove, usePriceChanges } from '../priceChanges'
-import { explain } from '../actionText'
+import { VERB, explain, proposal } from '../actionText'
 import { deleteJson, getJson, putJson } from '../api'
 import { navigate } from '../useHashRoute'
-import { percent, pounds, shortDate } from '../format'
+import { percent, pounds, poundsRounded, shortDate } from '../format'
 import { rangeLabel, rangeQuery } from '../dateRange'
 
 function menuDates(dish) {
@@ -20,12 +19,12 @@ function menuDates(dish) {
     : `On the menu since ${shortDate(dish.on_menu_from)}`
 }
 
-// One figure tile: `tone` is the tile colour class plus its odd corner.
+// One figure tile: `tone` is the tile class (paper, outline or the one coloured tile).
 function Stat({ label, value, sub, tone }) {
   return (
     <div className={`tile min-h-[150px] ${tone}`}>
       <span className="tile-label">{label}</span>
-      <span className="figure text-[clamp(2.5rem,4.5vw,4rem)]">{value}</span>
+      <span className="figure text-[clamp(2rem,3vw,2.5rem)]">{value}</span>
       <span className="tile-label num">{sub}</span>
     </div>
   )
@@ -87,7 +86,7 @@ function DishPage({ dishId, range, analysed, action, actionRank, onChanged }) {
       })
   }
 
-  const back = <a href="#/menu" className="font-mono text-sm text-muted underline hover:text-ink">menu</a>
+  const back = <a href="#/menu" className="text-sm text-muted underline hover:text-ink">menu</a>
 
   if (error) {
     return (
@@ -111,7 +110,7 @@ function DishPage({ dishId, range, analysed, action, actionRank, onChanged }) {
 
   return (
     <div className="space-y-7">
-      <p className="font-mono text-sm text-muted">{back} / {(dish.category ?? 'no category').toLowerCase()}</p>
+      <p className="text-sm text-muted">{back} / {(dish.category ?? 'no category').toLowerCase()}</p>
 
       {editing ? (
         <Card title="Edit details">
@@ -122,7 +121,7 @@ function DishPage({ dishId, range, analysed, action, actionRank, onChanged }) {
           <div>
             <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
               <h1 className="page-title text-[clamp(3.5rem,8vw,7rem)]">{dish.name}</h1>
-              {quadrant && <Hint content={explain(analysed)}><Stamp quadrant={quadrant} tilt={-5} className="mb-2 text-base" /></Hint>}
+              {quadrant && <Hint content={explain(analysed)}><span className="mb-2 inline-flex"><QuadrantBadge quadrant={quadrant} /></span></Hint>}
               {dish.recipe_check && (
                 <Hint content="The menu description changed on a menu import. Check the recipe still matches; saving the recipe clears this.">
                   <span className="chip chip-warn">Check recipe</span>
@@ -141,7 +140,7 @@ function DishPage({ dishId, range, analysed, action, actionRank, onChanged }) {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {/* Margin is the one coloured tile; the rest are paper. */}
-        <Stat label="menu price" value={pounds(dish.menu_price)} tone="tile-paper corner-tr"
+        <Stat label="menu price" value={pounds(dish.menu_price)} tone="tile-paper"
               sub={action?.target_price != null
                 ? `target ${pounds(action.target_price)} · +${pounds(action.margin_gap)}`
                 : current && earlier ? `from ${shortDate(current.effective_date)} · was ${pounds(earlier.price)}` : ''} />
@@ -149,7 +148,7 @@ function DishPage({ dishId, range, analysed, action, actionRank, onChanged }) {
               sub={ownShare != null ? `${ownShare}% own prices` : ''} />
         <Stat label="margin" value={costed ? pounds(dish.cost.margin_pounds) : '—'} tone="tile-basil"
               sub={costed ? `${percent(dish.cost.margin_percent)} gp` : ''} />
-        <Stat label={`sold · ${rangeLabel(range).toLowerCase()}`} value={dish.units_sold} tone="tile-paper corner-tl" />
+        <Stat label={`sold · ${rangeLabel(range).toLowerCase()}`} value={dish.units_sold} tone="tile-paper" />
       </div>
 
       {hits.length > 0 && (
@@ -170,13 +169,17 @@ function DishPage({ dishId, range, analysed, action, actionRank, onChanged }) {
         <RecipeEditor key={loads} dish={dish} ingredients={ingredients} onSaved={reload} />
         {(action || dish.prices.length > 1) && (
           <div className="space-y-8">
+            {/* This dish's recommended change, plainly; the tickets live on the overview and actions. */}
             {action && (
-              <div>
-                <div className="rail" />
-                <div className="-mt-0.5 px-6">
-                  <Ticket action={action} category={dish.category} number={actionRank} tilt={1.6} href="#/actions" />
+              <Card title="recommended change" aside={<a href="#/actions" className="link whitespace-nowrap font-normal">#{actionRank} in actions</a>}>
+                <div className="space-y-3">
+                  {proposal(action) && <span className="chip num chip-muted" title={proposal(action).hint}>{proposal(action).text}</span>}
+                  <p className="flex items-baseline justify-between gap-3">
+                    <span>{VERB[action.quadrant]?.toLowerCase()}</span>
+                    <span className="num font-medium text-accent">+{poundsRounded(action.impact_pounds)}</span>
+                  </p>
                 </div>
-              </div>
+              </Card>
             )}
             {dish.prices.length > 1 && <MenuPrices dishId={dish.id} prices={dish.prices} onChanged={reload} />}
           </div>

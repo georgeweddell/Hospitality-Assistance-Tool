@@ -22,7 +22,7 @@ function PublicLayout({ signedIn = false, bare = false, children }) {
       <main className="mx-auto w-full max-w-6xl grow px-4 py-10 sm:px-10">{children}</main>
 
       <footer className="mx-auto w-full max-w-6xl px-4 sm:px-10">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t-2 border-dashed border-line-strong py-6">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-hairline py-6">
           <a href="#/privacy" className="label hover:text-ink">privacy &amp; cookies</a>
           <a href="#/terms" className="label hover:text-ink">terms</a>
           <a href={`mailto:${CONTACT_EMAIL}`} className="label hover:text-ink">contact</a>

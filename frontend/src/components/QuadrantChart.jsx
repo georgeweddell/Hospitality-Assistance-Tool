@@ -108,7 +108,7 @@ function QuadrantChart({ dishes, category = null, labelled = new Set() }) {
     },
   )
 
-  // Draws each named dish as a dark pill at its placed position around the dot.
+  // Draws each named dish as a paper label at its placed position around the dot.
   const renderLabel = ({ x, y, width: w, height: h, index }) => {
     const dish = points[index]
     const p = dish && placement[dish.dish_id]
@@ -119,9 +119,9 @@ function QuadrantChart({ dishes, category = null, labelled = new Set() }) {
     const left = p.anchor === 'start' ? tx - 10 : p.anchor === 'end' ? tx - pw + 10 : tx - pw / 2
     return (
       <g pointerEvents="none">
-        <rect x={left} y={ty - 15} width={pw} height={22} rx={11} fill="var(--ink)" />
-        <text x={left + pw / 2} y={ty} textAnchor="middle" fill="var(--bg)" fontSize={12}
-              fontFamily="var(--font-mono)">
+        <rect x={left} y={ty - 15} width={pw} height={22} rx={6} fill="var(--surface)" stroke="var(--hairline)" />
+        <text x={left + pw / 2} y={ty} textAnchor="middle" fill="var(--ink)" fontSize={12}
+              fontFamily="var(--font-sans)">
           {dish.dish_name}
         </text>
       </g>
@@ -186,7 +186,7 @@ function DishTooltip({ active, payload }) {
   const dish = payload[0].payload
 
   return (
-    <div className="chart-tip" style={{ '--tip-edge': quadrantColor(dish.quadrant) }}>
+    <div className="chart-tip">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="chart-tip-title">{dish.dish_name}</p>

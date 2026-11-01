@@ -34,11 +34,12 @@ function saveCategory(category) {
   }
 }
 
+// One column of the figures card at the foot of the page.
 function Figure({ label, value, children }) {
   return (
-    <div className="tile tile-outline">
+    <div className="flex flex-col gap-2 p-5">
       <span className="tile-label">{label}</span>
-      <span className="figure text-[clamp(2.25rem,3.5vw,3.25rem)]">{value}</span>
+      <span className="figure text-[clamp(1.75rem,2.5vw,2.25rem)]">{value}</span>
       <div className="min-h-[22px]">{children}</div>
     </div>
   )
@@ -97,7 +98,7 @@ function InsightsPage({ dishes, prevDishes, actions, range }) {
 
         <div className="space-y-5">
           {earner && (
-            <div className="tile tile-paper corner-bl">
+            <div className="tile tile-paper">
               <span className="flex items-center justify-between gap-2">
                 <span className="tile-label">top earner</span>
                 <Hint align="right" label="About top earner" content="Margin × units sold: what the dish contributed over the period." />
@@ -109,7 +110,7 @@ function InsightsPage({ dishes, prevDishes, actions, range }) {
             </div>
           )}
 
-          <div className="tile tile-paper corner-tl">
+          <div className="tile tile-paper">
             <span className="flex items-center justify-between gap-2">
               <span className="tile-label">biggest opportunity</span>
               <Hint align="right" label="About the opportunity" content={IMPACT_EXPLAINED} />
@@ -132,7 +133,7 @@ function InsightsPage({ dishes, prevDishes, actions, range }) {
             ) : moved.length === 0 ? (
               <p className="card-body text-muted">No quadrant changes</p>
             ) : (
-              <ul className="divide-y-[1.5px] divide-dashed divide-line-strong border-t-[1.5px] border-dashed border-line-strong">
+              <ul className="divide-y divide-hairline border-t border-hairline">
                 {moved.map((d) => (
                   <li key={d.dish_id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
                     <a href={`#/menu/${d.dish_id}`} className="font-semibold hover:text-accent">{d.dish_name}</a>
@@ -147,7 +148,7 @@ function InsightsPage({ dishes, prevDishes, actions, range }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="card grid grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-hairline">
         <Figure label="Contribution" value={poundsRounded(now.contribution)}>
           {compare && <Delta value={pctChange(now.contribution, before.contribution)} format={onPrev} />}
         </Figure>

@@ -23,10 +23,10 @@ const PLURAL = { Starter: 'Starters', Main: 'Mains', Side: 'Sides', Dessert: 'De
 // The all-dishes view shows each category as its own paper block, each with
 // one odd corner, like a menu board. No tints: colour on this page means a quadrant.
 const BLOCK = {
-  Main: 'bg-surface corner-bl',
-  Starter: 'bg-surface corner-tl',
-  Side: 'bg-surface corner-tr',
-  Dessert: 'bg-surface corner-br',
+  Main: 'bg-surface',
+  Starter: 'bg-surface',
+  Side: 'bg-surface',
+  Dessert: 'bg-surface',
 }
 
 // Remember the chosen tab and filter, so "← Menu" from a dish page comes back
@@ -259,7 +259,7 @@ function MenuPage({ allDishes, analysed, incomplete, setup, range, onChanged }) 
             {grouped.map(({ c, dishes }) => (
               <section key={c ?? 'none'} className={`card overflow-hidden ${BLOCK[c] ?? ''}`}>
                 <div className="card-header">
-                  <h2 className="figure text-[2.75rem]">{c ? PLURAL[c].toLowerCase() : 'no category'}</h2>
+                  <h2 className="section-title text-[1.75rem]">{c ? PLURAL[c].toLowerCase() : 'no category'}</h2>
                   <span className="num text-sm text-muted">{dishes.length}</span>
                 </div>
                 <DishTable dishes={dishes} range={range} analysedById={analysedById} reasonsById={reasonsById} compact />

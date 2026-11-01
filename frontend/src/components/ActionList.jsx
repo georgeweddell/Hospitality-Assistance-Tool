@@ -33,8 +33,8 @@ function ActionList({ actions, dishes }) {
           ))}
         </div>
         {shown.length > 0 && (
-          <span className="chip num border-[1.5px] border-ink bg-mustard px-3 py-1.5 text-[0.8125rem] text-ink">
-            +{poundsRounded(total(shown))} total
+          <span className="text-sm">
+            <span className="num font-medium text-accent">+{poundsRounded(total(shown))}</span> <span className="text-muted">total</span>
           </span>
         )}
         <Hint content={IMPACT_EXPLAINED} label="How impact is worked out" />
@@ -72,7 +72,7 @@ function ActionList({ actions, dishes }) {
                     <tr key={item.dish_id}>
                       <td className="num text-muted">{String(ON_RAIL + i + 1).padStart(2, '0')}</td>
                       <td>
-                        <a href={`#/menu/${item.dish_id}`} className="text-lg font-semibold hover:text-accent">{item.dish_name}</a>
+                        <a href={`#/menu/${item.dish_id}`} className="font-semibold hover:text-accent">{item.dish_name}</a>
                       </td>
                       <td><Hint content={explain(dish)}><QuadrantBadge quadrant={item.quadrant} /></Hint></td>
                       <td className="num text-right">{dish ? pounds(dish.margin_pounds) : '—'}</td>
@@ -85,7 +85,7 @@ function ActionList({ actions, dishes }) {
                         ) : '—'}
                       </td>
                       <td className="text-right">
-                        <div className="figure text-[1.75rem] text-accent">+{poundsRounded(item.impact_pounds)}</div>
+                        <div className="num font-medium text-accent">+{poundsRounded(item.impact_pounds)}</div>
                         <div className="progress ml-auto mt-1.5 w-28">
                           <div className="progress-bar ml-auto" style={{ width: `${(item.impact_pounds / maxImpact) * 100}%` }} />
                         </div>

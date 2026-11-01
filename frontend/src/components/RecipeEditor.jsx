@@ -54,6 +54,11 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
   const [error, setError] = useState(null)
   const [showProblems, setShowProblems] = useState(false)
   const [confirmingEstimate, setConfirmingEstimate] = useState(false)
+  const [editing, setEditing] = useState(false)
+
+  // A saved recipe reads as a plain table; the editing rows show only when asked
+  // for, or when there's nothing saved, an AI draft, or unsaved changes.
+  const showEditor = editing || rows.length === 0 || isDraft || dirty
 
   const change = (updater) => {
     setRows(updater)
@@ -76,6 +81,7 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
     setIsDraft(false)
     setError(null)
     setShowProblems(false)
+    setEditing(false)
   }
 
   // With lines already there, ask before replacing them.
@@ -110,7 +116,10 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
       ingredients: rows.map((r) => ({ ingredient_id: Number(r.ingredientId), quantity: Number(r.quantity) })),
       skipped_ingredients: skipped,
     })
-      .then(() => onSaved())
+      .then(() => {
+        setEditing(false)
+        onSaved()
+      })
       .catch((err) => {
         setError(err.message)
         setSaving(false)
@@ -124,6 +133,8 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
   }
   const previewCost = rows.reduce((sum, r) => sum + (lineCost(r) ?? 0), 0)
   const previewMargin = dish.menu_price - previewCost
+  const shownCost = showEditor ? previewCost : dish.cost.plate_cost
+  const shownMargin = showEditor ? previewMargin : dish.cost.margin_pounds
 
   return (
     <Card
@@ -135,6 +146,12 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
               <span className="chip chip-accent">AI draft</span>
             </Hint>
           )}
+          {!showEditor && (
+            <button type="button" onClick={() => setEditing(true)} className="btn btn-secondary btn-sm">Edit recipe</button>
+          )}
+          {editing && !dirty && (
+            <button type="button" onClick={() => setEditing(false)} className="btn btn-secondary btn-sm">Cancel</button>
+          )}
           <button type="button" onClick={askToEstimate} disabled={estimating || saving} className="btn btn-secondary btn-sm">
             {estimating ? 'Estimating…' : 'Estimate with AI'}
           </button>
@@ -144,7 +161,35 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
     >
       {error && <p className="alert-error mx-5 mb-4">{error}</p>}
 
-      {rows.length === 0 ? (
+      {!showEditor ? (
+        <div className="overflow-x-auto">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Ingredient</th>
+                <th className="w-32 text-right">Quantity</th>
+                <th className="w-32 text-right">Price</th>
+                <th className="w-24 text-right">Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dish.lines.map((line) => (
+                <tr key={line.ingredient_id}>
+                  <td>{line.name}</td>
+                  <td className="num whitespace-nowrap text-right">
+                    {line.quantity} <span className="text-sm text-muted">{unitLabel(line.unit)}</span>
+                  </td>
+                  <td className="num whitespace-nowrap text-right text-sm">
+                    {priceForDisplay(line.price_per_unit, line.unit)}
+                    <div className="text-xs text-muted">{sourceLabel(line.price_source)}</div>
+                  </td>
+                  <td className="num whitespace-nowrap text-right font-semibold">{pounds(line.line_cost)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : rows.length === 0 ? (
         <div className="empty mx-5 mb-5">No recipe yet</div>
       ) : (
         <div className="overflow-x-auto">
@@ -234,13 +279,13 @@ function RecipeEditor({ dish, ingredients, onSaved }) {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-3.5">
-        <button type="button" onClick={addRow} className="link">Add ingredient</button>
+      <div className={`flex flex-wrap items-center gap-3 border-t border-line px-5 py-3.5 ${showEditor ? 'justify-between' : 'justify-end'}`}>
+        {showEditor && <button type="button" onClick={addRow} className="link">Add ingredient</button>}
         <p className="num text-muted">
-          Plate cost <span className="font-display text-base font-semibold text-ink">{pounds(previewCost)}</span>
+          Plate cost <span className="font-display text-base font-semibold text-ink">{pounds(shownCost)}</span>
           <span className="mx-2">·</span>
-          Margin <span className="font-display text-base font-semibold text-ink">{pounds(previewMargin)}</span>
-          {' '}({percent((previewMargin / dish.menu_price) * 100)})
+          Margin <span className="font-display text-base font-semibold text-ink">{pounds(shownMargin)}</span>
+          {' '}({percent((shownMargin / dish.menu_price) * 100)})
         </p>
       </div>
 
