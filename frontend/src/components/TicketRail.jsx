@@ -15,7 +15,7 @@ export function Ticket({ action, category, number, tilt = 0, stampTilt = -3, hre
     <a href={href} className="ticket" style={{ '--tilt': `${tilt}deg` }}>
       <span className="ticket-clip" aria-hidden="true" />
       <span className="ticket-meta">
-        <span>TKT {String(number).padStart(2, '0')}</span>
+        <span>tkt {String(number).padStart(2, '0')}</span>
         {category && <span>{category}</span>}
       </span>
       <span className="ticket-name">{action.dish_name}</span>

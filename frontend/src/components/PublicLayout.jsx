@@ -1,9 +1,9 @@
 import { CONTACT_EMAIL, OWNER } from '../legal'
 
 // The shell for the pages anyone can open (landing, login, privacy, terms):
-// the wordmark, one button, and a footer with the legal links.
-// signedIn: the header button opens the app instead of the login page.
-// bare: no header button (the login page itself).
+// the wordmark, one quiet link, and a footer with the legal links.
+// signedIn: the header link opens the app instead of the login page.
+// bare: no header link (the login page itself).
 function PublicLayout({ signedIn = false, bare = false, children }) {
   return (
     <div className="flex min-h-screen flex-col bg-bg text-ink">
@@ -14,8 +14,8 @@ function PublicLayout({ signedIn = false, bare = false, children }) {
         </a>
         {!bare && (
           signedIn
-            ? <a href="#/overview" className="btn btn-secondary">Open docket</a>
-            : <a href="#/login" className="btn btn-secondary">Sign in</a>
+            ? <a href="#/overview" className="label hover:text-ink">open docket</a>
+            : <a href="#/login" className="label hover:text-ink">sign in</a>
         )}
       </header>
 

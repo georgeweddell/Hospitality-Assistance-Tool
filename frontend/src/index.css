@@ -550,6 +550,12 @@ body {
     background: transparent;
     border: 2px solid var(--ink);
   }
+  /* Paper with an ink outline, like a ticket: for tiles that sit beside a
+     brighter moment (the landing page's "what it does"). */
+  .tile-paper {
+    background: var(--surface);
+    border: 2px solid var(--ink);
+  }
   .corner-tl { border-top-left-radius: 6px; }
   .corner-tr { border-top-right-radius: 6px; }
   .corner-bl { border-bottom-left-radius: 6px; }
@@ -592,6 +598,10 @@ body {
   .rail-tickets::-webkit-scrollbar {
     display: none;
   }
+  /* A short rail (the landing's three steps): the tickets spread to fill it. */
+  .rail-fill .ticket {
+    max-width: none;
+  }
   .ticket {
     position: relative;
     display: flex;
@@ -610,7 +620,8 @@ body {
     transform-origin: top center;
     transition: transform 0.15s;
   }
-  .ticket:hover {
+  /* Only tickets you can press straighten on hover (the landing's steps are plain). */
+  a.ticket:hover {
     transform: rotate(0deg);
   }
   .ticket:focus-visible {
@@ -632,9 +643,7 @@ body {
     display: flex;
     justify-content: space-between;
     font-family: var(--font-mono);
-    font-size: 0.6875rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-size: 0.75rem;
     color: var(--muted);
   }
   .ticket-name {

@@ -11,10 +11,10 @@ const STEPS = [
 ]
 
 const FEATURES = [
-  { label: 'menu engineering', title: 'Star · Plowhorse · Puzzle · Dog', tone: 'tile-tomato corner-tr' },
-  { label: 'action list', title: 'Every change ranked in £', tone: 'tile-mustard corner-bl' },
-  { label: 'price-rise alerts', title: 'New invoice, new costs', tone: 'tile-basil corner-tl' },
-  { label: 'ai report', title: 'Every number from code', tone: 'tile-outline corner-br' },
+  { label: 'menu engineering', title: 'Star · Plowhorse · Puzzle · Dog', corner: 'corner-tr' },
+  { label: 'action list', title: 'Every change ranked in £', corner: 'corner-bl' },
+  { label: 'price-rise alerts', title: 'New invoice, new costs', corner: 'corner-tl' },
+  { label: 'ai report', title: 'Every number from code', corner: 'corner-br' },
 ]
 
 function LandingPage() {
@@ -34,15 +34,16 @@ function LandingPage() {
               <a href={invite} className="btn btn-secondary">Request an invite</a>
             </div>
           </div>
+          {/* On a phone the whole screenshot is too small to read: show its left side larger. */}
           <img src="/landing/overview.webp" width="1600" height="1075" alt="The Docket overview page for the demo pizzeria"
-               className="w-full rounded-[22px] border-2 border-ink" />
+               className="aspect-[5/6] w-full rounded-[22px] border-2 border-ink object-cover object-left sm:aspect-auto" />
         </section>
 
         <section className="space-y-4">
           <h2 className="section-title">how it works</h2>
           <div>
             <div className="rail" />
-            <div className="rail-tickets">
+            <div className="rail-tickets rail-fill">
               {STEPS.map((step, i) => (
                 <div key={step.name} className="ticket" style={{ '--tilt': `${[-1.5, 1, -0.5][i]}deg` }}>
                   <span className="ticket-clip" />
@@ -59,7 +60,7 @@ function LandingPage() {
           <h2 className="section-title">what it does</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             {FEATURES.map((f) => (
-              <div key={f.label} className={`tile ${f.tone} min-h-36`}>
+              <div key={f.label} className={`tile tile-paper ${f.corner} min-h-36`}>
                 <span className="tile-label">{f.label}</span>
                 <span className="ticket-name">{f.title}</span>
               </div>
